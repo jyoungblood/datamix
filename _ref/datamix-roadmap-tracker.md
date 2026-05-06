@@ -1,7 +1,7 @@
 # Datamix v0 Roadmap and Progress Tracker
 
 Last updated: 2026-05-05
-Source of truth: [Datamix-PRD-revised.docx](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.docx)
+Source of truth: [Datamix-PRD-revised.md](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.md)
 
 ## Summary
 
@@ -23,6 +23,61 @@ Key product rules:
 - If a slice mixes deep backend work with broad UI polish, split it before implementation.
 - Prefer readable, contributor-friendly code over clever abstractions.
 - Do not pull v1 concepts into v0 unless a tiny enabling seam is clearly justified.
+
+## Technical Architecture Decisions
+
+This section is the default technical source of truth for roadmap execution. Future implementation work should follow these decisions unless this tracker is explicitly updated.
+
+### Confirmed Stack Decisions
+
+- Runtime/platform: `Cloudflare-only` in v0.
+- Frontend architecture: admin is a client-rendered `SPA`.
+- Frontend runtime/framework: `Vinext`.
+- UI library/design system: `shadcn`.
+- Styling system: `Tailwind CSS`.
+- Backend/API framework: `Hono` on `Cloudflare Workers`.
+- Admin hosting target: `Cloudflare Pages`.
+- Database: `Cloudflare D1`.
+- Object storage/media origin: `Cloudflare R2`.
+- Auth library: `better-auth`.
+- Client-side server state: `TanStack Query`.
+- Content delivery shape: `JSON-first` API.
+
+### Product-Architecture Constraints
+
+- Collection schema definition and the generated record edit form are the same system.
+- There is no separate admin-side form designer in v0.
+- Public-facing contact form and submission processing are deferred to v1.
+- v0 email scope is `auth-only`; the email adapter should remain reusable for v1 flows.
+- The project should stay vertically sliced during implementation rather than broad horizontal platform buildout.
+- The product should remain browser-first: a fresh instance should be deployable and usable without local setup.
+
+### UI and UX Constraints
+
+- `Tailwind CSS` and `shadcn` are required defaults for admin UI work unless this tracker is updated.
+- Do not substitute another component system or design system such as `MUI`, `Chakra`, `Ant Design`, or similar without an explicit decision.
+- The admin should keep a minimal, calm, collection-first information architecture.
+- `Dark mode` is out of scope for v0.
+
+### Infra and Integration Constraints
+
+- Media assets must be served from `R2` through Worker-managed routes.
+- Image transforms should be implemented in Worker routes; do not use `Cloudflare Image Resizing`.
+- Email delivery should go through an abstracted provider layer.
+- Supported email providers to design for are `SMTP`, `Resend`, `Mailgun`, `SendGrid`, and `Cloudflare Email`.
+
+### Collaboration Rule for Agents
+
+- Treat the decisions in this section as fixed unless the user changes them.
+- If implementation work appears to conflict with these decisions, pause and update the tracker before changing course.
+- If a tool, library, or architectural choice is not listed here, do not treat it as decided just because it is conventional.
+
+### Still Open / Do Not Assume Yet
+
+- Package manager is not yet fixed in the tracker.
+- Monorepo tooling details beyond shared TypeScript config are not yet fixed in the tracker.
+- Testing stack is not yet fixed in the tracker.
+- Form/editor implementation details beyond the v0 product rules are not yet fixed in the tracker.
 
 ## Status Legend
 
