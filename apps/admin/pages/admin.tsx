@@ -1,5 +1,6 @@
 import {
   datamixFieldTypes,
+  isPrimitiveRecordFieldDefinition,
   type DatamixCollectionDefinition,
   type DatamixFieldDefinition,
   type DatamixFieldType,
@@ -17,6 +18,14 @@ import {
   type StoredCollectionDefinition,
 } from "../lib/collection-definitions";
 import { sendInvite } from "../lib/invite";
+import {
+  CollectionRecordRequestError,
+  createCollectionRecord,
+  listCollectionRecords,
+  updateCollectionRecord,
+  type PrimitiveRecordValue,
+  type StoredCollectionRecord,
+} from "../lib/records";
 import { adminPublicEnv } from "../lib/runtime";
 import { useSetupStatus } from "../lib/setup";
 
@@ -113,6 +122,7 @@ type CollectionDraft = {
 type GeneratedRecordFormValue = boolean | string;
 type GeneratedRecordFormState = Record<string, GeneratedRecordFormValue>;
 type GeneratedRecordPayloadValue = boolean | number | string | string[] | null;
+type PrimitiveRecordPayload = Record<string, PrimitiveRecordValue>;
 
 let nextFieldKey = 0;
 
@@ -256,7 +266,15 @@ function serializeDraft(draft: CollectionDraft): DatamixCollectionDefinition {
 }
 
 function formatIssuePath(path: string) {
-  return path.startsWith("collection.") ? path.slice("collection.".length) : path;
+  if (path.startsWith("collection.")) {
+    return path.slice("collection.".length);
+  }
+
+  if (path.startsWith("record.values.")) {
+    return path.slice("record.values.".length);
+  }
+
+  return path;
 }
 
 function createGeneratedRecordFormState(
@@ -265,6 +283,36 @@ function createGeneratedRecordFormState(
   return Object.fromEntries(
     definition.fields.map((field) => [field.name, field.type === "boolean" ? false : ""]),
   );
+}
+
+function createGeneratedRecordFormStateFromRecord(
+  definition: DatamixCollectionDefinition,
+  record: StoredCollectionRecord,
+): GeneratedRecordFormState {
+  const defaultState = createGeneratedRecordFormState(definition);
+
+  for (const field of definition.fields) {
+    if (!isPrimitiveRecordFieldDefinition(field)) {
+      continue;
+    }
+
+    const recordValue = record.values[field.name];
+
+    switch (field.type) {
+      case "text":
+        defaultState[field.name] = typeof recordValue === "string" ? recordValue : "";
+        break;
+      case "number":
+        defaultState[field.name] =
+          typeof recordValue === "number" ? String(recordValue) : "";
+        break;
+      case "boolean":
+        defaultState[field.name] = recordValue === true;
+        break;
+    }
+  }
+
+  return defaultState;
 }
 
 function readListValues(value: string) {
@@ -310,6 +358,76 @@ function createGeneratedRecordPayload(
           return [field.name, stringValue];
       }
     }),
+  );
+}
+
+function createPrimitiveRecordPayload(
+  definition: DatamixCollectionDefinition,
+  values: GeneratedRecordFormState,
+): PrimitiveRecordPayload {
+  const payload: PrimitiveRecordPayload = {};
+
+  for (const field of definition.fields) {
+    if (!isPrimitiveRecordFieldDefinition(field)) {
+      continue;
+    }
+
+    const rawValue = values[field.name];
+
+    switch (field.type) {
+      case "text":
+        payload[field.name] =
+          typeof rawValue === "string" && rawValue.length > 0 ? rawValue : null;
+        break;
+      case "number": {
+        const parsedValue =
+          typeof rawValue === "string" && rawValue.trim().length > 0
+            ? Number(rawValue)
+            : null;
+
+        payload[field.name] =
+          typeof parsedValue === "number" && Number.isNaN(parsedValue) ? null : parsedValue;
+        break;
+      }
+      case "boolean":
+        payload[field.name] = rawValue === true;
+        break;
+    }
+  }
+
+  return payload;
+}
+
+function formatRecordTimestamp(value: string) {
+  return new Date(value).toLocaleString();
+}
+
+function summarizeRecord(
+  definition: DatamixCollectionDefinition,
+  record: StoredCollectionRecord,
+) {
+  const summaryField = definition.fields.find(
+    (field) =>
+      isPrimitiveRecordFieldDefinition(field) &&
+      field.type === "text" &&
+      typeof record.values[field.name] === "string" &&
+      record.values[field.name] !== null &&
+      String(record.values[field.name]).trim().length > 0,
+  );
+
+  if (!summaryField) {
+    return `Record ${record.id.slice(0, 8)}`;
+  }
+
+  return String(record.values[summaryField.name]);
+}
+
+function upsertRecord(
+  records: StoredCollectionRecord[],
+  nextRecord: StoredCollectionRecord,
+) {
+  return [...records.filter((record) => record.id !== nextRecord.id), nextRecord].sort(
+    (left, right) => right.updatedAt.localeCompare(left.updatedAt),
   );
 }
 
@@ -371,12 +489,14 @@ function createGeneratedFieldPlaceholder(field: DatamixFieldDefinition) {
 }
 
 type GeneratedRecordFieldInputProps = {
+  disabled?: boolean;
   field: DatamixFieldDefinition;
   value: GeneratedRecordFormValue;
   onChange: (nextValue: GeneratedRecordFormValue) => void;
 };
 
 function GeneratedRecordFieldInput({
+  disabled = false,
   field,
   value,
   onChange,
@@ -390,6 +510,7 @@ function GeneratedRecordFieldInput({
         <span>{label}</span>
         <input
           checked={value === true}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
           type="checkbox"
         />
@@ -403,6 +524,7 @@ function GeneratedRecordFieldInput({
       <label className="field">
         <span>{label}</span>
         <select
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           required={field.required}
           value={typeof value === "string" ? value : ""}
@@ -431,6 +553,7 @@ function GeneratedRecordFieldInput({
       <label className="field">
         <span>{label}</span>
         <textarea
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           placeholder={createGeneratedFieldPlaceholder(field)}
           required={field.required}
@@ -446,6 +569,7 @@ function GeneratedRecordFieldInput({
     <label className="field">
       <span>{label}</span>
       <input
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         placeholder={createGeneratedFieldPlaceholder(field)}
         required={field.required}
@@ -508,8 +632,15 @@ export default function AdminPage() {
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isSavingCollection, setIsSavingCollection] = useState(false);
   const [newFieldType, setNewFieldType] = useState<DatamixFieldType>("text");
+  const [records, setRecords] = useState<StoredCollectionRecord[]>([]);
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [recordDraft, setRecordDraft] = useState<GeneratedRecordFormState>({});
+  const [recordIssues, setRecordIssues] = useState<DatamixSchemaValidationIssue[]>([]);
+  const [recordLoadError, setRecordLoadError] = useState<string | null>(null);
   const [recordMessage, setRecordMessage] = useState<string | null>(null);
+  const [recordSupportedFieldNames, setRecordSupportedFieldNames] = useState("none");
+  const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  const [isSavingRecord, setIsSavingRecord] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -578,13 +709,61 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!activeCollection) {
+      setRecords([]);
+      setSelectedRecordId(null);
       setRecordDraft({});
+      setRecordIssues([]);
+      setRecordLoadError(null);
       setRecordMessage(null);
+      setRecordSupportedFieldNames("none");
       return;
     }
 
-    setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
-    setRecordMessage(null);
+    const activeDefinition = activeCollection.definition;
+    const activeCollectionName = activeDefinition.name;
+
+    setRecordDraft(createGeneratedRecordFormState(activeDefinition));
+
+    let cancelled = false;
+
+    async function loadRecords() {
+      setIsLoadingRecords(true);
+      setRecordIssues([]);
+      setRecordLoadError(null);
+      setRecordMessage(null);
+      setSelectedRecordId(null);
+
+      try {
+        const result = await listCollectionRecords(activeCollectionName);
+
+        if (cancelled) {
+          return;
+        }
+
+        setRecords(result.records);
+        setRecordSupportedFieldNames(result.supportedFieldNames);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setRecords([]);
+        setRecordSupportedFieldNames("none");
+        setRecordLoadError(
+          error instanceof Error ? error.message : "Unable to load collection records.",
+        );
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRecords(false);
+        }
+      }
+    }
+
+    void loadRecords();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeCollection]);
 
   if (session.isPending || setupStatus.isPending) {
@@ -622,8 +801,20 @@ export default function AdminPage() {
   const hasUnsavedSchemaChanges =
     activeCollection !== undefined &&
     JSON.stringify(activeCollection.definition) !== JSON.stringify(serializeDraft(draft));
+  const primitiveRecordFields = activeCollection
+    ? activeCollection.definition.fields.filter(isPrimitiveRecordFieldDefinition)
+    : [];
+  const unsupportedRecordFields = activeCollection
+    ? activeCollection.definition.fields.filter((field) => !isPrimitiveRecordFieldDefinition(field))
+    : [];
+  const selectedRecord = selectedRecordId
+    ? records.find((record) => record.id === selectedRecordId) ?? null
+    : null;
   const generatedRecordPayload = activeCollection
     ? createGeneratedRecordPayload(activeCollection.definition, recordDraft)
+    : null;
+  const primitiveRecordPayload = activeCollection
+    ? createPrimitiveRecordPayload(activeCollection.definition, recordDraft)
     : null;
 
   const handleSignOut = async () => {
@@ -791,6 +982,7 @@ export default function AdminPage() {
       ...currentRecordDraft,
       [fieldName]: nextValue,
     }));
+    setRecordIssues([]);
     setRecordMessage(null);
   };
 
@@ -799,20 +991,80 @@ export default function AdminPage() {
       return;
     }
 
-    setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
+    if (selectedRecord) {
+      setRecordDraft(
+        createGeneratedRecordFormStateFromRecord(activeCollection.definition, selectedRecord),
+      );
+    } else {
+      setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
+    }
+
+    setRecordIssues([]);
     setRecordMessage(null);
   };
 
-  const handleGeneratedRecordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleStartNewRecord = () => {
+    if (!activeCollection) {
+      return;
+    }
+
+    setSelectedRecordId(null);
+    setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
+    setRecordIssues([]);
+    setRecordMessage(null);
+  };
+
+  const handleEditRecord = (record: StoredCollectionRecord) => {
+    if (!activeCollection) {
+      return;
+    }
+
+    setSelectedRecordId(record.id);
+    setRecordDraft(createGeneratedRecordFormStateFromRecord(activeCollection.definition, record));
+    setRecordIssues([]);
+    setRecordMessage(null);
+  };
+
+  const handleGeneratedRecordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!activeCollection) {
       return;
     }
 
-    setRecordMessage(
-      `Local draft matches the saved ${activeCollection.definition.label} schema. Record persistence lands in M2-S5.`,
-    );
+    setIsSavingRecord(true);
+    setRecordIssues([]);
+    setRecordMessage(null);
+
+    try {
+      const result = selectedRecordId
+        ? await updateCollectionRecord(
+            activeCollection.definition.name,
+            selectedRecordId,
+            primitiveRecordPayload ?? {},
+          )
+        : await createCollectionRecord(
+            activeCollection.definition.name,
+            primitiveRecordPayload ?? {},
+          );
+
+      setRecords((currentRecords) => upsertRecord(currentRecords, result.record));
+      setSelectedRecordId(result.record.id);
+      setRecordSupportedFieldNames(result.supportedFieldNames);
+      setRecordDraft(
+        createGeneratedRecordFormStateFromRecord(activeCollection.definition, result.record),
+      );
+      setRecordMessage(result.message);
+    } catch (error) {
+      if (error instanceof CollectionRecordRequestError) {
+        setRecordIssues(error.issues ?? []);
+        setRecordMessage(error.message);
+      } else {
+        setRecordMessage(error instanceof Error ? error.message : "Unable to save record.");
+      }
+    } finally {
+      setIsSavingRecord(false);
+    }
   };
 
   return (
@@ -1413,7 +1665,9 @@ export default function AdminPage() {
                 <p className="card-eyebrow">Generated record editor</p>
                 <h3 className="card-title">
                   {activeCollection
-                    ? `${activeCollection.definition.label} record`
+                    ? selectedRecord
+                      ? `Editing ${activeCollection.definition.label} record`
+                      : `Create ${activeCollection.definition.label} record`
                     : "Select a saved collection to open its editor"}
                 </h3>
                 <p className="card-copy">
@@ -1426,6 +1680,9 @@ export default function AdminPage() {
                   <span className="status-pill">
                     {activeCollection.definition.fields.length} field
                     {activeCollection.definition.fields.length === 1 ? "" : "s"}
+                  </span>
+                  <span className="status-pill">
+                    {records.length} record{records.length === 1 ? "" : "s"}
                   </span>
                   <span className="status-pill status-pill-muted">
                     {activeCollection.tableName}
@@ -1454,6 +1711,80 @@ export default function AdminPage() {
                   </div>
                 ) : null}
 
+                <div className="section-row">
+                  <div>
+                    <p className="section-title">Primitive CRUD support</p>
+                    <p className="section-copy">
+                      This slice persists `text`, `number`, and `boolean` fields. Other
+                      schema fields stay visible here but remain read-only until later
+                      milestones.
+                    </p>
+                  </div>
+                  <div className="actions">
+                    <button
+                      className="button button-secondary"
+                      onClick={handleStartNewRecord}
+                      type="button"
+                    >
+                      New record
+                    </button>
+                  </div>
+                </div>
+
+                <div className="record-browser">
+                  <div className="record-browser-list">
+                    {isLoadingRecords ? (
+                      <p className="admin-sidebar-copy">Loading saved records...</p>
+                    ) : records.length === 0 ? (
+                      <div className="empty-state-box">
+                        <p className="list-title">No saved records yet</p>
+                        <p className="list-copy">
+                          Start with a new record to exercise the generated editor end to
+                          end.
+                        </p>
+                      </div>
+                    ) : (
+                      records.map((record) => (
+                        <button
+                          className={
+                            record.id === selectedRecordId
+                              ? "mini-list-item is-selected"
+                              : "mini-list-item"
+                          }
+                          key={record.id}
+                          onClick={() => handleEditRecord(record)}
+                          type="button"
+                        >
+                          <span>{summarizeRecord(activeCollection.definition, record)}</span>
+                          <small>{formatRecordTimestamp(record.updatedAt)}</small>
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <aside className="generated-record-preview">
+                    <p className="card-eyebrow">Persistence seam</p>
+                    <h4 className="section-title">Supported fields</h4>
+                    <p className="section-copy">
+                      API-backed in this slice: <strong>{recordSupportedFieldNames}</strong>
+                    </p>
+                    {primitiveRecordFields.length === 0 ? (
+                      <p className="section-copy">
+                        Add at least one `text`, `number`, or `boolean` field to create
+                        records in this slice.
+                      </p>
+                    ) : null}
+                    {unsupportedRecordFields.length > 0 ? (
+                      <p className="section-copy">
+                        Waiting for later slices:{" "}
+                        <strong>
+                          {unsupportedRecordFields.map((field) => field.name).join(", ")}
+                        </strong>
+                      </p>
+                    ) : null}
+                  </aside>
+                </div>
+
                 <div className="generated-record-layout">
                   <form className="generated-record-form" onSubmit={handleGeneratedRecordSubmit}>
                     {activeCollection.definition.fields.length === 0 ? (
@@ -1466,6 +1797,7 @@ export default function AdminPage() {
                     ) : (
                       activeCollection.definition.fields.map((field) => (
                         <GeneratedRecordFieldInput
+                          disabled={!isPrimitiveRecordFieldDefinition(field)}
                           field={field}
                           key={field.name}
                           onChange={(nextValue) =>
@@ -1477,12 +1809,40 @@ export default function AdminPage() {
                     )}
 
                     {recordMessage ? (
-                      <p className="form-success form-message-block">{recordMessage}</p>
+                      <p
+                        className={
+                          recordIssues.length > 0
+                            ? "form-error form-message-block"
+                            : "form-success form-message-block"
+                        }
+                      >
+                        {recordMessage}
+                      </p>
+                    ) : null}
+                    {recordLoadError ? <p className="form-error">{recordLoadError}</p> : null}
+                    {recordIssues.length > 0 ? (
+                      <ul className="issue-list">
+                        {recordIssues.map((issue) => (
+                          <li key={`${issue.path}-${issue.message}`}>
+                            <strong>{formatIssuePath(issue.path)}</strong>: {issue.message}
+                          </li>
+                        ))}
+                      </ul>
                     ) : null}
 
                     <div className="actions">
-                      <button className="button" type="submit">
-                        Review generated payload
+                      <button
+                        className="button"
+                        disabled={isSavingRecord || primitiveRecordFields.length === 0}
+                        type="submit"
+                      >
+                        {isSavingRecord
+                          ? selectedRecord
+                            ? "Saving record..."
+                            : "Creating record..."
+                          : selectedRecord
+                            ? "Save record"
+                            : "Create record"}
                       </button>
                       <button
                         className="button button-secondary"
@@ -1496,12 +1856,17 @@ export default function AdminPage() {
 
                   <aside className="generated-record-preview">
                     <p className="card-eyebrow">Payload preview</p>
-                    <h4 className="section-title">
-                      {activeCollection.definition.label} record JSON
-                    </h4>
+                    <h4 className="section-title">Primitive save payload</h4>
                     <p className="section-copy">
-                      This first pass stays local to the browser. Create and save flows
-                      arrive in `M2-S5`.
+                      This is the JSON shape sent to the protected Worker route for this
+                      slice.
+                    </p>
+                    <pre className="code-block">
+                      <code>{JSON.stringify(primitiveRecordPayload, null, 2)}</code>
+                    </pre>
+                    <p className="section-copy">
+                      Full local editor state still tracks the whole schema contract for
+                      `M2-S4`.
                     </p>
                     <pre className="code-block">
                       <code>{JSON.stringify(generatedRecordPayload, null, 2)}</code>
@@ -1527,9 +1892,9 @@ export default function AdminPage() {
               <p className="card-eyebrow">Coming online later</p>
               <h3 className="card-title">Media and richer editors still stay in later slices</h3>
               <p className="card-copy">
-                The generated editor is live now, but richer markdown and rich text
-                ergonomics, media picking, and record persistence still stay decoupled
-                until the next milestones.
+                Primitive record persistence is live now, but richer markdown and rich
+                text ergonomics, media picking, relationships, selects, and date-specific
+                editing still stay decoupled until the next milestones.
               </p>
             </article>
           </section>

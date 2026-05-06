@@ -575,6 +575,17 @@ textarea {
   background: rgba(246, 237, 216, 0.82);
 }
 
+.record-browser {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  gap: 1rem;
+}
+
+.record-browser-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .generated-checkbox-field {
   align-content: start;
 }
@@ -662,6 +673,10 @@ textarea {
   }
 
   .generated-record-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .record-browser {
     grid-template-columns: 1fr;
   }
 
