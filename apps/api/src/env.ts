@@ -8,12 +8,10 @@ import {
 export type ApiBindings = Pick<
   Env,
   "ADMIN_ORIGIN" | "APP_ENV" | "BETTER_AUTH_SECRET" | "DB"
-> &
-  Partial<Pick<Env, "AUTH_SETUP_TOKEN">>;
+>;
 
 export type ApiAuthRuntimeEnv = {
   BETTER_AUTH_SECRET: string;
-  AUTH_SETUP_TOKEN: string | null;
 };
 
 export class AuthConfigError extends Error {
@@ -38,7 +36,6 @@ export function readApiRuntime(env: ApiBindings): ApiRuntimeEnv {
 
 export function readApiAuthRuntime(env: ApiBindings): ApiAuthRuntimeEnv {
   const secret = env.BETTER_AUTH_SECRET?.trim();
-  const setupToken = env.AUTH_SETUP_TOKEN?.trim();
 
   if (!secret) {
     throw new AuthConfigError(
@@ -48,6 +45,5 @@ export function readApiAuthRuntime(env: ApiBindings): ApiAuthRuntimeEnv {
 
   return {
     BETTER_AUTH_SECRET: secret,
-    AUTH_SETUP_TOKEN: setupToken ? setupToken : null,
   };
 }

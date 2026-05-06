@@ -1,11 +1,23 @@
 import { datamixProduct, datamixSurfaces } from "@datamix/core";
 import { adminPublicEnv } from "../lib/runtime";
 import { authClient } from "../lib/auth-client";
+import { useSetupStatus } from "../lib/setup";
 
 const adminSurface = datamixSurfaces.find((surface) => surface.id === "admin");
 
 export default function HomePage() {
   const session = authClient.useSession();
+  const setupStatus = useSetupStatus();
+
+  const authDescription = setupStatus.isPending
+    ? "Checking whether this instance still needs its first admin account..."
+    : setupStatus.errorMessage
+      ? setupStatus.errorMessage
+      : setupStatus.data?.setupRequired
+        ? "No admin exists yet. This instance is ready for first-run setup."
+        : session.data
+          ? `Signed in as ${session.data.user.email}.`
+          : "Admin account exists. Sign in to continue.";
 
   return (
     <main className="shell">
@@ -30,18 +42,18 @@ export default function HomePage() {
 
         <section className="surface-card stack" aria-label="Authentication status">
           <p className="surface-name">Authentication status</p>
-          <p className="surface-description">
-            {session.isPending
-              ? "Checking for an existing session..."
-              : session.data
-                ? `Signed in as ${session.data.user.email}.`
-                : "No active session in this browser."}
-          </p>
+          <p className="surface-description">{authDescription}</p>
 
           <div className="actions">
-            <a className="button button-secondary" href="/login">
-              {session.data ? "Switch account" : "Open login"}
-            </a>
+            {setupStatus.data?.setupRequired ? (
+              <a className="button button-secondary" href="/setup">
+                Start first-run setup
+              </a>
+            ) : (
+              <a className="button button-secondary" href="/login">
+                {session.data ? "Switch account" : "Open login"}
+              </a>
+            )}
             <a className="button" href="/admin">
               Open protected admin
             </a>

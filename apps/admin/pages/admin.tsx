@@ -1,19 +1,28 @@
 import { useEffect } from "react";
 
 import { authClient } from "../lib/auth-client";
+import { useSetupStatus } from "../lib/setup";
 
 const loginHref = "/login?next=/admin";
 
 export default function AdminPage() {
   const session = authClient.useSession();
+  const setupStatus = useSetupStatus();
 
   useEffect(() => {
-    if (!session.isPending && !session.data) {
-      window.location.replace(loginHref);
+    if (session.isPending || setupStatus.isPending || session.data) {
+      return;
     }
-  }, [session.data, session.isPending]);
 
-  if (session.isPending) {
+    if (setupStatus.data?.setupRequired) {
+      window.location.replace("/setup");
+      return;
+    }
+
+    window.location.replace(loginHref);
+  }, [session.data, session.isPending, setupStatus.data, setupStatus.isPending]);
+
+  if (session.isPending || setupStatus.isPending) {
     return (
       <main className="shell">
         <div className="panel stack">
@@ -22,6 +31,18 @@ export default function AdminPage() {
           <p className="body">
             Datamix is asking the API Worker whether this browser already has a valid session.
           </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (setupStatus.errorMessage) {
+    return (
+      <main className="shell">
+        <div className="panel stack">
+          <p className="eyebrow">Admin</p>
+          <h1 className="page-title">Auth config is incomplete</h1>
+          <p className="body">{setupStatus.errorMessage}</p>
         </div>
       </main>
     );

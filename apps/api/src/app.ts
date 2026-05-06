@@ -2,18 +2,34 @@ import { createServiceStatus } from "@datamix/core";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
 
-import { createAuth, runAuthMigrations } from "./auth";
+import { createAuth, getAuthSetupStatus } from "./auth";
 import { requireSession } from "./auth-guard";
 import {
   AuthConfigError,
-  readApiAuthRuntime,
   readApiRuntime,
   type ApiBindings,
 } from "./env";
 
 export const app = new Hono<{ Bindings: ApiBindings }>();
 
+function allowAdminBrowser(origin: string) {
+  return cors({
+    origin,
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  });
+}
+
 app.use("/api/auth/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/setup/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/session", async (c, next) => {
   const corsMiddleware = cors({
     origin: c.env.ADMIN_ORIGIN,
     allowMethods: ["GET", "POST", "OPTIONS"],
@@ -46,11 +62,14 @@ app.get("/", (c) => {
   });
 });
 
-app.post("/setup/auth/migrate", async (c) => {
-  let authRuntime;
-
+app.get("/setup/status", async (c) => {
   try {
-    authRuntime = readApiAuthRuntime(c.env);
+    const auth = await getAuthSetupStatus(c.env);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      auth,
+    });
   } catch (error) {
     if (error instanceof AuthConfigError) {
       return c.json({ error: error.message }, 503);
@@ -58,32 +77,6 @@ app.post("/setup/auth/migrate", async (c) => {
 
     throw error;
   }
-
-  const requestToken = c.req.header("x-datamix-setup-token")?.trim();
-
-  if (!authRuntime.AUTH_SETUP_TOKEN) {
-    return c.json(
-      {
-        error:
-          "AUTH_SETUP_TOKEN is not configured. Set it before running auth migrations through the API.",
-      },
-      503,
-    );
-  }
-
-  if (!requestToken || requestToken !== authRuntime.AUTH_SETUP_TOKEN) {
-    return c.json({ error: "Unauthorized setup token." }, 401);
-  }
-
-  const result = await runAuthMigrations(c.env);
-
-  return c.json({
-    ...createServiceStatus("api"),
-    auth: {
-      migrated: true,
-      ...result,
-    },
-  });
 });
 
 app.get("/session", requireSession, (c) => {

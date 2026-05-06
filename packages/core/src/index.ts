@@ -41,6 +41,13 @@ export type ApiRuntimeEnv = {
   APP_ENV: DatamixEnvironment;
 };
 
+export type AuthSetupStatus = {
+  canCreateFirstUser: boolean;
+  canLogin: boolean;
+  setupRequired: boolean;
+  userCount: number;
+};
+
 export const defaultAdminPublicEnv: AdminPublicEnv = {
   NEXT_PUBLIC_API_ORIGIN: "http://127.0.0.1:8787",
   NEXT_PUBLIC_APP_ENV: "development",
@@ -53,6 +60,15 @@ export const defaultApiRuntimeEnv: ApiRuntimeEnv = {
 
 export function createAuthBaseUrl(apiOrigin: string) {
   return new URL(datamixAuthPath, apiOrigin).toString();
+}
+
+export function createAuthSetupStatus(userCount: number): AuthSetupStatus {
+  return {
+    canCreateFirstUser: userCount === 0,
+    canLogin: userCount > 0,
+    setupRequired: userCount === 0,
+    userCount,
+  };
 }
 
 export function createServiceStatus(surface: DatamixSurfaceId) {

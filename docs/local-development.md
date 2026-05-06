@@ -15,8 +15,7 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate "g
 2. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`.
 3. Copy `apps/admin/.env.example` to `apps/admin/.env.local`.
 4. Run `npm run typegen:api` once after changing `apps/api/wrangler.jsonc`.
-5. Run the auth table migration once:
-   `curl -X POST http://127.0.0.1:8787/setup/auth/migrate -H "x-datamix-setup-token: <AUTH_SETUP_TOKEN>"`
+5. Start the apps and open `http://127.0.0.1:3000/setup` to create the first admin account in-browser.
 
 ## Daily workflow
 
@@ -41,13 +40,13 @@ Then open `http://127.0.0.1:3000`.
 ## Auth env expectations
 
 - `BETTER_AUTH_SECRET` is required in `apps/api/.dev.vars` and should be a long random string.
-- `AUTH_SETUP_TOKEN` is required for the temporary auth migration endpoint at `/setup/auth/migrate`.
 - The admin auth client reuses `NEXT_PUBLIC_API_ORIGIN`; there is no separate public auth origin variable.
+- The API Worker prepares auth tables through the public first-run setup status route at `/setup/status`.
 
 ## Deliberate non-goals for this slice
 
 - No Cloudflare resource bindings yet for D1, R2, KV, or Queues
 - No deploy scripts or environment-specific deployment topology
-- No browser-first first-run account creation yet
+- No password reset or invite email flows yet
 
-The real first-run setup UX lands in `M1-S3` on top of this auth scaffold.
+Those land in later auth slices on top of this setup flow.
