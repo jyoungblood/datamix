@@ -28,7 +28,7 @@ export default function HomePage() {
         <p className="body">
           The admin app is scaffolded with Vinext and kept intentionally narrow while the
           foundation slices are still in motion. Auth now lives on the API Worker and the
-          first protected admin route is wired.
+          first authenticated admin shell is wired.
         </p>
 
         <section className="surface-list" aria-label="Workspace surfaces">
@@ -55,7 +55,7 @@ export default function HomePage() {
               </a>
             )}
             <a className="button" href="/admin">
-              Open protected admin
+              Open admin dashboard
             </a>
           </div>
         </section>
