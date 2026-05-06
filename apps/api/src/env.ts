@@ -7,7 +7,20 @@ import {
 
 export type ApiBindings = Pick<
   Env,
-  "ADMIN_ORIGIN" | "APP_ENV" | "BETTER_AUTH_SECRET" | "DB"
+  | "ADMIN_ORIGIN"
+  | "APP_ENV"
+  | "BETTER_AUTH_SECRET"
+  | "DB"
+  | "AUTH_EMAIL_PROVIDER"
+  | "AUTH_EMAIL_FROM_EMAIL"
+  | "AUTH_EMAIL_FROM_NAME"
+  | "AUTH_EMAIL_REPLY_TO_EMAIL"
+  | "AUTH_RESEND_API_KEY"
+  | "AUTH_SMTP_HOST"
+  | "AUTH_SMTP_PORT"
+  | "AUTH_SMTP_USERNAME"
+  | "AUTH_SMTP_PASSWORD"
+  | "AUTH_SMTP_TLS"
 >;
 
 export type ApiAuthRuntimeEnv = {

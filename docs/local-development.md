@@ -40,13 +40,15 @@ Then open `http://127.0.0.1:3000`.
 ## Auth env expectations
 
 - `BETTER_AUTH_SECRET` is required in `apps/api/.dev.vars` and should be a long random string.
+- `AUTH_EMAIL_PROVIDER` selects `smtp` or `resend` for auth-only mail delivery.
+- `AUTH_EMAIL_FROM_EMAIL` is required for both providers.
+- `AUTH_RESEND_API_KEY` is required when `AUTH_EMAIL_PROVIDER=resend`.
+- `AUTH_SMTP_HOST`, `AUTH_SMTP_PORT`, `AUTH_SMTP_USERNAME`, `AUTH_SMTP_PASSWORD`, and `AUTH_SMTP_TLS` are required when `AUTH_EMAIL_PROVIDER=smtp`.
 - The admin auth client reuses `NEXT_PUBLIC_API_ORIGIN`; there is no separate public auth origin variable.
 - The API Worker prepares auth tables through the public first-run setup status route at `/setup/status`.
 
-## Deliberate non-goals for this slice
+## Auth email flows
 
-- No Cloudflare resource bindings yet for D1, R2, KV, or Queues
-- No deploy scripts or environment-specific deployment topology
-- No password reset or invite email flows yet
-
-Those land in later auth slices on top of this setup flow.
+- `/forgot-password` requests a password-reset email through `better-auth`.
+- `/reset-password` completes both standard password resets and invite acceptance.
+- The protected `/admin` screen exposes a minimal invite form that sends an invite email and routes the recipient through password setup.

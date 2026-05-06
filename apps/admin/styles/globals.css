@@ -175,6 +175,16 @@ input {
   color: #b2302d;
 }
 
+.form-success {
+  margin: 0;
+  color: #315b2a;
+}
+
+.inline-link-row {
+  margin: 0;
+  color: #5e4d36;
+}
+
 @media (max-width: 640px) {
   .shell {
     padding: 1rem;

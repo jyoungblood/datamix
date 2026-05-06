@@ -7,7 +7,9 @@ import {
 import { createAuthSetupStatus, datamixAuthPath, datamixProduct } from "@datamix/core";
 import { getMigrations } from "better-auth/db/migration";
 
+import { sendAuthEmail } from "./email";
 import { readApiAuthRuntime, type ApiBindings } from "./env";
+import { getExecutionContext } from "./request-context";
 
 export type DatamixAuth = ReturnType<typeof createAuth>;
 export type DatamixSession = DatamixAuth["$Infer"]["Session"];
@@ -27,6 +29,43 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
     trustedOrigins: [env.ADMIN_ORIGIN],
     emailAndPassword: {
       enabled: true,
+      sendResetPassword: async ({ user, url }, request) => {
+        const templateHeader = request?.headers.get("x-datamix-email-template");
+        const template = templateHeader === "invite" ? "invite" : "reset-password";
+        const inviterName = request?.headers.get("x-datamix-inviter-name");
+        const inviteeName = request?.headers.get("x-datamix-invitee-name");
+        const emailInput = {
+          template,
+          appName: datamixProduct.name,
+          actionUrl: url,
+          recipientEmail: user.email,
+          recipientName: inviteeName || user.name || user.email,
+          ...(inviterName ? { inviterName } : {}),
+        } as const;
+
+        await sendAuthEmail(
+          env,
+          emailInput,
+          [
+            { name: "datamix_flow", value: template === "invite" ? "invite" : "password_reset" },
+            { name: "datamix_surface", value: "auth" },
+          ],
+        );
+      },
+    },
+    advanced: {
+      backgroundTasks: {
+        handler(promise) {
+          const executionContext = getExecutionContext();
+
+          if (executionContext) {
+            executionContext.waitUntil(promise);
+            return;
+          }
+
+          void promise;
+        },
+      },
     },
     databaseHooks: {
       user: {

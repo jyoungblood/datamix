@@ -48,6 +48,12 @@ export type AuthSetupStatus = {
   userCount: number;
 };
 
+export const authEmailProviders = ["smtp", "resend"] as const;
+export const authEmailTemplates = ["invite", "reset-password"] as const;
+
+export type AuthEmailProvider = (typeof authEmailProviders)[number];
+export type AuthEmailTemplate = (typeof authEmailTemplates)[number];
+
 export const defaultAdminPublicEnv: AdminPublicEnv = {
   NEXT_PUBLIC_API_ORIGIN: "http://127.0.0.1:8787",
   NEXT_PUBLIC_APP_ENV: "development",

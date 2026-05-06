@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { authClient } from "../lib/auth-client";
+import { sendInvite } from "../lib/invite";
 import { useSetupStatus } from "../lib/setup";
 
 const loginHref = "/login?next=/admin";
@@ -8,6 +9,11 @@ const loginHref = "/login?next=/admin";
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [isInviting, setIsInviting] = useState(false);
 
   useEffect(() => {
     if (session.isPending || setupStatus.isPending || session.data) {
@@ -57,6 +63,34 @@ export default function AdminPage() {
     window.location.replace("/login");
   };
 
+  const handleInviteSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setInviteError(null);
+    setInviteMessage(null);
+    setIsInviting(true);
+
+    try {
+      const message = await sendInvite(
+        inviteName
+          ? {
+              email: inviteEmail,
+              name: inviteName,
+            }
+          : {
+              email: inviteEmail,
+            },
+      );
+
+      setInviteMessage(message);
+      setInviteEmail("");
+      setInviteName("");
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : "Unable to send invite.");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   return (
     <main className="shell">
       <div className="panel stack">
@@ -70,6 +104,44 @@ export default function AdminPage() {
         <section className="surface-card stack" aria-label="Current session">
           <p className="surface-name">{session.data.user.name || session.data.user.email}</p>
           <p className="surface-description">{session.data.user.email}</p>
+        </section>
+
+        <section className="surface-card stack" aria-label="Invite a teammate">
+          <p className="surface-name">Invite a teammate</p>
+          <p className="surface-description">
+            Datamix will email a secure invite link that drops them into password setup.
+          </p>
+
+          <form className="auth-form" onSubmit={handleInviteSubmit}>
+            <label className="field">
+              <span>Name</span>
+              <input
+                onChange={(event) => setInviteName(event.target.value)}
+                placeholder="Optional display name"
+                type="text"
+                value={inviteName}
+              />
+            </label>
+
+            <label className="field">
+              <span>Email</span>
+              <input
+                onChange={(event) => setInviteEmail(event.target.value)}
+                required
+                type="email"
+                value={inviteEmail}
+              />
+            </label>
+
+            {inviteError ? <p className="form-error">{inviteError}</p> : null}
+            {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
+
+            <div className="actions">
+              <button className="button" disabled={isInviting} type="submit">
+                {isInviting ? "Sending invite..." : "Send invite"}
+              </button>
+            </div>
+          </form>
         </section>
 
         <div className="actions">

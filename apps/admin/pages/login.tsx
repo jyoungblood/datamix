@@ -13,10 +13,18 @@ function readNextPath() {
   return next && next.startsWith("/") ? next : "/admin";
 }
 
+function readPrefillEmail() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return new URLSearchParams(window.location.search).get("email") ?? "";
+}
+
 export default function LoginPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(readPrefillEmail);
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -129,6 +137,10 @@ export default function LoginPage() {
           </label>
 
           {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+
+          <p className="inline-link-row">
+            <a href="/forgot-password">Forgot your password?</a>
+          </p>
 
           <div className="actions">
             <a className="button button-secondary" href="/">

@@ -74,7 +74,7 @@ Suggested remote resource names:
 - Media URLs should ultimately resolve through Worker-managed routes, not raw public bucket URLs.
 - Preview and production must use separate remote D1 databases and separate remote R2 buckets.
 - The placeholder IDs and `.example` domains in config files are intentional and must be replaced before the first real deploy.
-- Auth secrets are not checked into `wrangler.jsonc`; set `BETTER_AUTH_SECRET` as a Worker secret per environment.
+- Auth secrets are not checked into `wrangler.jsonc`; set `BETTER_AUTH_SECRET` and the chosen auth-email provider credentials as Worker secrets per environment.
 
 ## Auth contract
 
@@ -83,6 +83,10 @@ Suggested remote resource names:
 - Protected admin pages must verify session state through the API Worker; the Pages app does not read D1 directly.
 - `GET /setup/status` is the browser-first bootstrap seam. It prepares auth tables if needed and reports whether the instance still needs its first admin user.
 - Public email/password sign-up is only permitted for the very first account. After that, the sign-up route is blocked until a later invite/user-management slice expands it intentionally.
+- Auth email delivery is provider-swappable through env-only configuration:
+  `AUTH_EMAIL_PROVIDER=resend` uses the Resend HTTPS API.
+  `AUTH_EMAIL_PROVIDER=smtp` uses outbound Worker TCP sockets to an SMTP server on ports such as `465` or `587`.
+- Password reset and invite emails share the same provider abstraction and template layer.
 
 ## Provisioning notes
 
@@ -100,3 +104,4 @@ After provisioning:
 3. Set the matching `NEXT_PUBLIC_API_ORIGIN` value in the admin Pages build environment
 4. Rerun `npm run typegen:api`
 5. Set `BETTER_AUTH_SECRET` for the Worker in each environment
+6. Set the auth email provider secrets and sender identity vars for the chosen delivery mode
