@@ -282,10 +282,16 @@ textarea {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.9rem;
+  width: 100%;
   padding: 0.9rem 1rem;
-  border-radius: 20px;
   border: 1px solid rgba(73, 54, 24, 0.08);
+  border-radius: 20px;
   background: rgba(255, 255, 255, 0.72);
+  text-align: left;
+}
+
+button.admin-nav-item {
+  cursor: pointer;
 }
 
 .admin-nav-item.is-current {
@@ -392,6 +398,15 @@ textarea {
 
 .mini-list-item small {
   color: #6d5a40;
+}
+
+.mini-list-item-stacked {
+  align-items: flex-start;
+}
+
+.mini-list-content {
+  display: grid;
+  gap: 0.2rem;
 }
 
 .mini-list-item.is-selected {
@@ -573,6 +588,15 @@ textarea {
 .generated-record-notice {
   margin-bottom: 0.25rem;
   background: rgba(246, 237, 216, 0.82);
+}
+
+.workspace-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.compact-box {
+  padding: 0.85rem 0.95rem;
 }
 
 .record-browser {

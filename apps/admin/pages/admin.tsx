@@ -33,25 +33,7 @@ const loginHref = "/login?next=/admin";
 const apiHealthHref = `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/health`;
 const fieldTypeOptions = [...datamixFieldTypes];
 
-const adminNavItems = [
-  {
-    id: "overview",
-    label: "Dashboard",
-    description: "Collection modeling, status, and next actions",
-    state: "current",
-  },
-  {
-    id: "collections-builder",
-    label: "Collections",
-    description: "Create, edit, and reorder field definitions",
-    state: "ready",
-  },
-  {
-    id: "record-editor",
-    label: "Record editor",
-    description: "Generated directly from each saved schema",
-    state: "ready",
-  },
+const adminUtilityItems = [
   {
     id: "invite",
     label: "Team access",
@@ -77,7 +59,12 @@ const shellCapabilities = [
   "First-run setup is complete and public sign-up is closed again.",
   "Password reset and invite emails share the same auth email provider layer.",
   "Saved collection schemas now generate a matching record editor in the admin.",
+  "Collections and their records now drive the sidebar navigation.",
 ] as const;
+
+const overviewSectionId = "overview";
+const collectionBuilderSectionId = "collections-builder";
+const recordEditorSectionId = "record-editor";
 
 type BaseFieldDraft<TType extends DatamixFieldType> = {
   key: string;
@@ -431,6 +418,22 @@ function upsertRecord(
   );
 }
 
+function formatCollectionSummary(
+  collection: StoredCollectionDefinition,
+  options?: { recordCount?: number },
+) {
+  const fieldCount = collection.definition.fields.length;
+  const fieldLabel = `${fieldCount} field${fieldCount === 1 ? "" : "s"}`;
+
+  if (typeof options?.recordCount === "number") {
+    const recordLabel = `${options.recordCount} record${options.recordCount === 1 ? "" : "s"}`;
+
+    return `${fieldLabel} • ${recordLabel}`;
+  }
+
+  return fieldLabel;
+}
+
 function createGeneratedFieldHint(field: DatamixFieldDefinition) {
   if (field.description) {
     return field.description;
@@ -620,12 +623,28 @@ function formatPlanSummary(plan: SavedCollectionPlanSummary) {
   return `${fragments.join(" • ")} • table ${plan.tableName}`;
 }
 
+function jumpToSection(sectionId: string) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const element = document.getElementById(sectionId);
+
+  if (!element) {
+    return;
+  }
+
+  element.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.history.replaceState(null, "", `#${sectionId}`);
+}
+
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
   const [collections, setCollections] = useState<StoredCollectionDefinition[]>([]);
   const [draft, setDraft] = useState<CollectionDraft>(createEmptyCollectionDraft);
   const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [collectionIssues, setCollectionIssues] = useState<DatamixSchemaValidationIssue[]>([]);
   const [collectionMessage, setCollectionMessage] = useState<string | null>(null);
   const [collectionLoadError, setCollectionLoadError] = useState<string | null>(null);
@@ -706,6 +725,25 @@ export default function AdminPage() {
   const activeCollection = collections.find(
     (collection) => collection.definition.name === selectedCollectionName,
   );
+
+  useEffect(() => {
+    if (isLoadingCollections || isCreatingCollection || selectedCollectionName !== null) {
+      return;
+    }
+
+    if (collections.length === 0) {
+      return;
+    }
+
+    const firstCollection = collections[0];
+
+    if (!firstCollection) {
+      return;
+    }
+
+    setSelectedCollectionName(firstCollection.definition.name);
+    setDraft(createDraftFromDefinition(firstCollection.definition));
+  }, [collections, isCreatingCollection, isLoadingCollections, selectedCollectionName]);
 
   useEffect(() => {
     if (!activeCollection) {
@@ -797,7 +835,8 @@ export default function AdminPage() {
   }
 
   const userLabel = session.data.user.name || session.data.user.email;
-  const isEditingExistingCollection = selectedCollectionName !== null;
+  const isEditingExistingCollection =
+    selectedCollectionName !== null && !isCreatingCollection;
   const hasUnsavedSchemaChanges =
     activeCollection !== undefined &&
     JSON.stringify(activeCollection.definition) !== JSON.stringify(serializeDraft(draft));
@@ -823,13 +862,16 @@ export default function AdminPage() {
   };
 
   const handleStartNewCollection = () => {
+    setIsCreatingCollection(true);
     setSelectedCollectionName(null);
     setDraft(createEmptyCollectionDraft());
     setCollectionIssues([]);
     setCollectionMessage(null);
+    setSelectedRecordId(null);
   };
 
   const handleEditCollection = (collection: StoredCollectionDefinition) => {
+    setIsCreatingCollection(false);
     setSelectedCollectionName(collection.definition.name);
     setDraft(createDraftFromDefinition(collection.definition));
     setCollectionIssues([]);
@@ -929,6 +971,7 @@ export default function AdminPage() {
           left.definition.label.localeCompare(right.definition.label),
         );
       });
+      setIsCreatingCollection(false);
       setSelectedCollectionName(nextStoredCollection.definition.name);
       setDraft(createDraftFromDefinition(nextStoredCollection.definition));
       setCollectionMessage(`${result.message} ${formatPlanSummary(result.plan)}`);
@@ -1012,6 +1055,7 @@ export default function AdminPage() {
     setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
     setRecordIssues([]);
     setRecordMessage(null);
+    jumpToSection(recordEditorSectionId);
   };
 
   const handleEditRecord = (record: StoredCollectionRecord) => {
@@ -1023,6 +1067,7 @@ export default function AdminPage() {
     setRecordDraft(createGeneratedRecordFormStateFromRecord(activeCollection.definition, record));
     setRecordIssues([]);
     setRecordMessage(null);
+    jumpToSection(recordEditorSectionId);
   };
 
   const handleGeneratedRecordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -1073,48 +1118,12 @@ export default function AdminPage() {
         <aside className="admin-sidebar" aria-label="Admin navigation">
           <div className="admin-brand">
             <p className="eyebrow">Datamix admin</p>
-            <h1 className="admin-brand-title">Dashboard</h1>
+            <h1 className="admin-brand-title">Collections</h1>
             <p className="admin-brand-copy">
-              Calm control room for auth, collection modeling, and the slices that land
-              next.
+              Collection-first workspace for defining models, editing records, and moving
+              through content without leaving the browser.
             </p>
           </div>
-
-          <nav className="admin-nav">
-            {adminNavItems.map((item) => {
-              const itemClassName =
-                item.state === "current"
-                  ? "admin-nav-item is-current"
-                  : item.state === "ready"
-                    ? "admin-nav-item"
-                    : "admin-nav-item is-muted";
-
-              return item.state === "soon" ? (
-                <div className={itemClassName} key={item.id}>
-                  <div>
-                    <p className="admin-nav-label">{item.label}</p>
-                    <p className="admin-nav-copy">{item.description}</p>
-                  </div>
-                  <span className="status-pill status-pill-muted">Soon</span>
-                </div>
-              ) : (
-                <a
-                  aria-current={item.state === "current" ? "page" : undefined}
-                  className={itemClassName}
-                  href={`#${item.id}`}
-                  key={item.id}
-                >
-                  <div>
-                    <p className="admin-nav-label">{item.label}</p>
-                    <p className="admin-nav-copy">{item.description}</p>
-                  </div>
-                  <span className="status-pill">
-                    {item.state === "current" ? "Live" : "Ready"}
-                  </span>
-                </a>
-              );
-            })}
-          </nav>
 
           <section className="admin-sidebar-card">
             <p className="admin-sidebar-heading">Current session</p>
@@ -1131,7 +1140,7 @@ export default function AdminPage() {
 
           <section className="admin-sidebar-card">
             <div className="section-row">
-              <p className="admin-sidebar-heading">Collections</p>
+              <p className="admin-sidebar-heading">Collection list</p>
               <button className="mini-button" onClick={handleStartNewCollection} type="button">
                 New
               </button>
@@ -1149,18 +1158,160 @@ export default function AdminPage() {
                   <button
                     className={
                       collection.definition.name === selectedCollectionName
-                        ? "mini-list-item is-selected"
-                        : "mini-list-item"
+                        ? "mini-list-item is-selected mini-list-item-stacked"
+                        : "mini-list-item mini-list-item-stacked"
                     }
                     key={collection.definition.name}
                     onClick={() => handleEditCollection(collection)}
                     type="button"
                   >
-                    <span>{collection.definition.label}</span>
-                    <small>{collection.definition.fields.length} fields</small>
+                    <div className="mini-list-content">
+                      <span>{collection.definition.label}</span>
+                      <small>
+                        {formatCollectionSummary(
+                          collection,
+                          collection.definition.name === selectedCollectionName
+                            ? { recordCount: records.length }
+                            : undefined,
+                        )}
+                      </small>
+                    </div>
+                    <small>{collection.definition.name}</small>
                   </button>
                 ))
               )}
+            </div>
+          </section>
+
+          <section className="admin-sidebar-card">
+            <div className="section-row">
+              <div>
+                <p className="admin-sidebar-heading">Collection workspace</p>
+                <p className="admin-sidebar-copy">
+                  {activeCollection
+                    ? activeCollection.definition.label
+                    : "Select a collection to center the workspace on its schema and records."}
+                </p>
+              </div>
+              {activeCollection ? (
+                <span className="status-pill">{records.length} records</span>
+              ) : null}
+            </div>
+
+            {activeCollection ? (
+              <div className="workspace-actions">
+                <button
+                  className="admin-nav-item"
+                  onClick={() => jumpToSection(collectionBuilderSectionId)}
+                  type="button"
+                >
+                  <div>
+                    <p className="admin-nav-label">Schema</p>
+                    <p className="admin-nav-copy">
+                      Edit fields, order, and collection details.
+                    </p>
+                  </div>
+                  <span className="status-pill">Model</span>
+                </button>
+
+                <button
+                  className="admin-nav-item"
+                  onClick={() => jumpToSection(recordEditorSectionId)}
+                  type="button"
+                >
+                  <div>
+                    <p className="admin-nav-label">Records</p>
+                    <p className="admin-nav-copy">
+                      Create and edit records from the saved schema.
+                    </p>
+                  </div>
+                  <span className="status-pill">Content</span>
+                </button>
+              </div>
+            ) : (
+              <div className="empty-state-box compact-box">
+                <p className="list-title">No collection selected</p>
+                <p className="list-copy">
+                  Pick a collection from the list above or start a new one.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section className="admin-sidebar-card">
+            <div className="section-row">
+              <p className="admin-sidebar-heading">Saved records</p>
+              {activeCollection ? (
+                <button className="mini-button" onClick={handleStartNewRecord} type="button">
+                  New
+                </button>
+              ) : null}
+            </div>
+            <div className="mini-list">
+              {!activeCollection ? (
+                <p className="admin-sidebar-copy">
+                  Records appear here once a collection is selected.
+                </p>
+              ) : isLoadingRecords ? (
+                <p className="admin-sidebar-copy">Loading saved records...</p>
+              ) : records.length === 0 ? (
+                <p className="admin-sidebar-copy">
+                  No records yet for {activeCollection.definition.label}. Start with a new
+                  one.
+                </p>
+              ) : (
+                records.map((record) => (
+                  <button
+                    className={
+                      record.id === selectedRecordId
+                        ? "mini-list-item is-selected mini-list-item-stacked"
+                        : "mini-list-item mini-list-item-stacked"
+                    }
+                    key={record.id}
+                    onClick={() => handleEditRecord(record)}
+                    type="button"
+                  >
+                    <div className="mini-list-content">
+                      <span>{summarizeRecord(activeCollection.definition, record)}</span>
+                      <small>{formatRecordTimestamp(record.updatedAt)}</small>
+                    </div>
+                    <small>{record.id.slice(0, 8)}</small>
+                  </button>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="admin-sidebar-card">
+            <p className="admin-sidebar-heading">Administration</p>
+            <div className="workspace-actions">
+              {adminUtilityItems.map((item) => {
+                const itemClassName =
+                  item.state === "ready" ? "admin-nav-item" : "admin-nav-item is-muted";
+
+                return item.state === "soon" ? (
+                  <div className={itemClassName} key={item.id}>
+                    <div>
+                      <p className="admin-nav-label">{item.label}</p>
+                      <p className="admin-nav-copy">{item.description}</p>
+                    </div>
+                    <span className="status-pill status-pill-muted">Soon</span>
+                  </div>
+                ) : (
+                  <button
+                    className={itemClassName}
+                    key={item.id}
+                    onClick={() => jumpToSection(item.id)}
+                    type="button"
+                  >
+                    <div>
+                      <p className="admin-nav-label">{item.label}</p>
+                      <p className="admin-nav-copy">{item.description}</p>
+                    </div>
+                    <span className="status-pill">Ready</span>
+                  </button>
+                );
+              })}
             </div>
           </section>
         </aside>
@@ -1168,22 +1319,43 @@ export default function AdminPage() {
         <div className="admin-main">
           <header className="admin-topbar">
             <div>
-              <p className="eyebrow">Authenticated shell</p>
-              <h2 className="admin-page-title">Define collections directly from the admin</h2>
+              <p className="eyebrow">Collection-first shell</p>
+              <h2 className="admin-page-title">
+                {activeCollection
+                  ? activeCollection.definition.label
+                  : "Choose a collection to begin"}
+              </h2>
               <p className="admin-page-copy">
-                The collection schema is the edit-form contract. Define fields once, then
-                use the saved schema to generate a matching record editor without leaving
-                the browser.
+                {activeCollection
+                  ? "Move between schema and records from one collection workspace. The saved schema defines the editing surface, and the record list stays one click away."
+                  : "Collections now anchor the admin experience. Start a new collection or pick an existing one to open its schema and records."}
               </p>
             </div>
 
             <div className="actions">
-              <a className="button button-secondary" href="#collections-builder">
-                Open builder
-              </a>
-              <a className="button button-secondary" href="#record-editor">
-                Open record editor
-              </a>
+              <button
+                className="button button-secondary"
+                onClick={() => jumpToSection(collectionBuilderSectionId)}
+                type="button"
+              >
+                Open schema
+              </button>
+              <button
+                className="button button-secondary"
+                onClick={() => jumpToSection(recordEditorSectionId)}
+                type="button"
+              >
+                Open records
+              </button>
+              {activeCollection ? (
+                <button className="button button-secondary" onClick={handleStartNewRecord} type="button">
+                  New record
+                </button>
+              ) : (
+                <button className="button button-secondary" onClick={handleStartNewCollection} type="button">
+                  New collection
+                </button>
+              )}
               <a
                 className="button button-secondary"
                 href={apiHealthHref}
@@ -1198,41 +1370,65 @@ export default function AdminPage() {
             </div>
           </header>
 
-          <section className="admin-grid" id="overview">
+          <section className="admin-grid" id={overviewSectionId}>
             <article className="admin-card admin-card-hero">
-              <p className="card-eyebrow">Collection modeling</p>
-              <h3 className="card-title">Schema definition now starts in this shell</h3>
+              <p className="card-eyebrow">Collection workspace</p>
+              <h3 className="card-title">
+                {activeCollection
+                  ? `${activeCollection.definition.label} stays at the center`
+                  : "Collections now drive the shell"}
+              </h3>
               <p className="card-copy">
-                Use the builder below to define a collection name, add field types, and
-                move them into the same order the generated record editor will follow.
+                {activeCollection
+                  ? `Use the sidebar to switch between ${activeCollection.definition.label} records and schema changes without losing the collection context.`
+                  : "The sidebar now prioritizes collections first, with records nested under the active collection and admin utilities moved lower."}
               </p>
               <div className="status-row">
                 <span className="status-pill">Authenticated</span>
                 <span className="status-pill">Schema validation live</span>
                 <span className="status-pill">D1 planning live</span>
                 <span className="status-pill">Generated record editor live</span>
+                <span className="status-pill">Collection navigation live</span>
               </div>
             </article>
 
             <article className="admin-card" id="collections">
-              <p className="card-eyebrow">Instance state</p>
+              <p className="card-eyebrow">Active focus</p>
               <h3 className="card-title">
-                {collections.length === 0
-                  ? "No collections saved yet"
-                  : `${collections.length} collection${collections.length === 1 ? "" : "s"} saved`}
+                {activeCollection
+                  ? `${activeCollection.definition.fields.length} field${activeCollection.definition.fields.length === 1 ? "" : "s"} • ${records.length} record${records.length === 1 ? "" : "s"}`
+                  : collections.length === 0
+                    ? "No collections saved yet"
+                    : `${collections.length} collection${collections.length === 1 ? "" : "s"} saved`}
               </h3>
               <p className="card-copy">
-                {collections.length === 0
-                  ? "Start with a narrow content model and iterate. Additive field changes are the smoothest first path."
-                  : "Select an existing collection from the sidebar or start a fresh one to shape another content type."}
+                {activeCollection
+                  ? `Currently centered on ${activeCollection.definition.label}. Open schema to adjust the model or open records to work directly with saved content.`
+                  : collections.length === 0
+                    ? "Start with a narrow content model and iterate. Additive field changes are the smoothest first path."
+                    : "Pick a collection from the sidebar to open its workspace, or start a fresh one to shape another content type."}
               </p>
               <div className="actions">
                 <button className="button button-secondary" onClick={handleStartNewCollection} type="button">
                   New collection
                 </button>
-                <a className="button button-secondary" href="#invite">
-                  Invite teammate
-                </a>
+                {activeCollection ? (
+                  <button
+                    className="button button-secondary"
+                    onClick={() => jumpToSection(recordEditorSectionId)}
+                    type="button"
+                  >
+                    Open records
+                  </button>
+                ) : (
+                  <button
+                    className="button button-secondary"
+                    onClick={() => jumpToSection("invite")}
+                    type="button"
+                  >
+                    Invite teammate
+                  </button>
+                )}
               </div>
             </article>
           </section>
@@ -1308,8 +1504,8 @@ export default function AdminPage() {
                 <div>
                   <p className="section-title">Fields</p>
                   <p className="section-copy">
-                    Add field definitions, then move them into the order future record
-                    editors should follow.
+                    Add field definitions, then move them into the order record editors
+                    should follow for this collection.
                   </p>
                 </div>
                 <div className="add-field-controls">
