@@ -7,6 +7,7 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate "g
 - `apps/api` runs through `wrangler dev` on `http://127.0.0.1:8787`
 - `apps/admin` runs through `vinext dev --port 3000` on `http://127.0.0.1:3000`
 - The admin talks to the API through `NEXT_PUBLIC_API_ORIGIN`
+- Preview and production topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1)
 
 ## First-time setup
 

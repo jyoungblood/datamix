@@ -1,10 +1,71 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "datamix-api",
+  // Top-level config is the local development contract.
+  // Replace the placeholder IDs and example domains before real preview/production deploys.
+  "name": "datamix-api-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-06",
   "vars": {
     "APP_ENV": "development",
     "ADMIN_ORIGIN": "http://127.0.0.1:3000"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "datamix-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "preview_database_id": "datamix-local"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "datamix-media-local",
+      "preview_bucket_name": "datamix-media-local"
+    }
+  ],
+  "env": {
+    "preview": {
+      "name": "datamix-api-preview",
+      "vars": {
+        "APP_ENV": "preview",
+        "ADMIN_ORIGIN": "https://preview-admin.datamix.example"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "datamix-preview",
+          "database_id": "11111111-1111-1111-1111-111111111111"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "datamix-media-preview",
+          "preview_bucket_name": "datamix-media-preview"
+        }
+      ]
+    },
+    "production": {
+      "name": "datamix-api",
+      "vars": {
+        "APP_ENV": "production",
+        "ADMIN_ORIGIN": "https://admin.datamix.example"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "datamix-production",
+          "database_id": "22222222-2222-2222-2222-222222222222"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "datamix-media-production",
+          "preview_bucket_name": "datamix-media-production"
+        }
+      ]
+    }
   }
 }

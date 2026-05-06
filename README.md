@@ -34,4 +34,8 @@ Environment files live beside the app that consumes them:
 
 Example files and the detailed contributor notes live in [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1).
 
+## Deploy/runtime contract
+
+The Cloudflare deploy boundary for v0 lives in [docs/deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
+
 This repo is intentionally thin right now. `M0-S3` adds Cloudflare runtime conventions and typed env contracts without pulling deployment topology or product features forward from later slices.
