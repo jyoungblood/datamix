@@ -1,0 +1,22 @@
+{
+  "name": "datamix",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@11.8.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc -b",
+    "check": "npm run typecheck",
+    "clean": "node ./scripts/clean.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
