@@ -38,6 +38,12 @@ const adminNavItems = [
     state: "ready",
   },
   {
+    id: "record-editor",
+    label: "Record editor",
+    description: "Generated directly from each saved schema",
+    state: "ready",
+  },
+  {
     id: "invite",
     label: "Team access",
     description: "Invite another admin through email",
@@ -61,6 +67,7 @@ const shellCapabilities = [
   "Persistent browser session is active on the API origin.",
   "First-run setup is complete and public sign-up is closed again.",
   "Password reset and invite emails share the same auth email provider layer.",
+  "Saved collection schemas now generate a matching record editor in the admin.",
 ] as const;
 
 type BaseFieldDraft<TType extends DatamixFieldType> = {
@@ -102,6 +109,10 @@ type CollectionDraft = {
   label: string;
   name: string;
 };
+
+type GeneratedRecordFormValue = boolean | string;
+type GeneratedRecordFormState = Record<string, GeneratedRecordFormValue>;
+type GeneratedRecordPayloadValue = boolean | number | string | string[] | null;
 
 let nextFieldKey = 0;
 
@@ -248,6 +259,204 @@ function formatIssuePath(path: string) {
   return path.startsWith("collection.") ? path.slice("collection.".length) : path;
 }
 
+function createGeneratedRecordFormState(
+  definition: DatamixCollectionDefinition,
+): GeneratedRecordFormState {
+  return Object.fromEntries(
+    definition.fields.map((field) => [field.name, field.type === "boolean" ? false : ""]),
+  );
+}
+
+function readListValues(value: string) {
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function createGeneratedRecordPayload(
+  definition: DatamixCollectionDefinition,
+  values: GeneratedRecordFormState,
+): Record<string, GeneratedRecordPayloadValue> {
+  return Object.fromEntries(
+    definition.fields.map((field) => {
+      const rawValue = values[field.name];
+
+      if (field.type === "boolean") {
+        return [field.name, rawValue === true];
+      }
+
+      const stringValue = typeof rawValue === "string" ? rawValue : "";
+
+      switch (field.type) {
+        case "number":
+          return [
+            field.name,
+            stringValue.trim().length === 0 ? null : Number(stringValue),
+          ];
+        case "relationship":
+          return [
+            field.name,
+            field.multiple ? readListValues(stringValue) : stringValue.trim(),
+          ];
+        case "imageGallery":
+          return [field.name, readListValues(stringValue)];
+        case "text":
+        case "date":
+        case "select":
+        case "richText":
+        case "markdown":
+        case "image":
+          return [field.name, stringValue];
+      }
+    }),
+  );
+}
+
+function createGeneratedFieldHint(field: DatamixFieldDefinition) {
+  if (field.description) {
+    return field.description;
+  }
+
+  switch (field.type) {
+    case "text":
+      return "Short text value.";
+    case "number":
+      return "Numeric value saved to a number column.";
+    case "boolean":
+      return "True or false toggle.";
+    case "date":
+      return "Date-only value.";
+    case "select":
+      return "Choose one of the saved options.";
+    case "relationship":
+      return field.multiple
+        ? `Enter one ${field.targetCollection || "target"} record id per line.`
+        : `Enter one ${field.targetCollection || "target"} record id.`;
+    case "richText":
+      return "First-pass rich text editing uses a plain multiline field.";
+    case "markdown":
+      return "Markdown preview lands in a later slice.";
+    case "image":
+      return "Paste an asset URL or storage key for now. Media picking lands in M4.";
+    case "imageGallery":
+      return "Enter one asset URL or storage key per line until gallery tools land.";
+  }
+}
+
+function createGeneratedFieldPlaceholder(field: DatamixFieldDefinition) {
+  switch (field.type) {
+    case "text":
+      return `Enter ${field.label.toLowerCase()}`;
+    case "number":
+      return "42";
+    case "date":
+      return "";
+    case "relationship":
+      return field.multiple
+        ? `${field.targetCollection || "record"}-1\n${field.targetCollection || "record"}-2`
+        : `${field.targetCollection || "record"}-1`;
+    case "richText":
+      return "Start writing rich text content...";
+    case "markdown":
+      return "## Start writing in markdown";
+    case "image":
+      return "https://cdn.example.com/hero.jpg";
+    case "imageGallery":
+      return "https://cdn.example.com/hero.jpg\nhttps://cdn.example.com/detail.jpg";
+    case "select":
+    case "boolean":
+      return "";
+  }
+}
+
+type GeneratedRecordFieldInputProps = {
+  field: DatamixFieldDefinition;
+  value: GeneratedRecordFormValue;
+  onChange: (nextValue: GeneratedRecordFormValue) => void;
+};
+
+function GeneratedRecordFieldInput({
+  field,
+  value,
+  onChange,
+}: GeneratedRecordFieldInputProps) {
+  const label = field.required ? `${field.label} *` : field.label;
+  const hint = createGeneratedFieldHint(field);
+
+  if (field.type === "boolean") {
+    return (
+      <label className="field checkbox-field generated-checkbox-field">
+        <span>{label}</span>
+        <input
+          checked={value === true}
+          onChange={(event) => onChange(event.target.checked)}
+          type="checkbox"
+        />
+        <small className="field-hint">{hint}</small>
+      </label>
+    );
+  }
+
+  if (field.type === "select") {
+    return (
+      <label className="field">
+        <span>{label}</span>
+        <select
+          onChange={(event) => onChange(event.target.value)}
+          required={field.required}
+          value={typeof value === "string" ? value : ""}
+        >
+          <option disabled={field.required} value="">
+            Select an option
+          </option>
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <small className="field-hint">{hint}</small>
+      </label>
+    );
+  }
+
+  if (
+    field.type === "markdown" ||
+    field.type === "richText" ||
+    field.type === "imageGallery" ||
+    (field.type === "relationship" && field.multiple)
+  ) {
+    return (
+      <label className="field">
+        <span>{label}</span>
+        <textarea
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={createGeneratedFieldPlaceholder(field)}
+          required={field.required}
+          rows={field.type === "imageGallery" ? 4 : 6}
+          value={typeof value === "string" ? value : ""}
+        />
+        <small className="field-hint">{hint}</small>
+      </label>
+    );
+  }
+
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={createGeneratedFieldPlaceholder(field)}
+        required={field.required}
+        type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+        value={typeof value === "string" ? value : ""}
+      />
+      <small className="field-hint">{hint}</small>
+    </label>
+  );
+}
+
 function moveItem<TItem>(items: TItem[], fromIndex: number, direction: -1 | 1) {
   const nextIndex = fromIndex + direction;
 
@@ -299,6 +508,8 @@ export default function AdminPage() {
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
   const [isSavingCollection, setIsSavingCollection] = useState(false);
   const [newFieldType, setNewFieldType] = useState<DatamixFieldType>("text");
+  const [recordDraft, setRecordDraft] = useState<GeneratedRecordFormState>({});
+  const [recordMessage, setRecordMessage] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -361,6 +572,21 @@ export default function AdminPage() {
     };
   }, [session.data]);
 
+  const activeCollection = collections.find(
+    (collection) => collection.definition.name === selectedCollectionName,
+  );
+
+  useEffect(() => {
+    if (!activeCollection) {
+      setRecordDraft({});
+      setRecordMessage(null);
+      return;
+    }
+
+    setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
+    setRecordMessage(null);
+  }, [activeCollection]);
+
   if (session.isPending || setupStatus.isPending) {
     return (
       <main className="shell">
@@ -392,10 +618,13 @@ export default function AdminPage() {
   }
 
   const userLabel = session.data.user.name || session.data.user.email;
-  const activeCollection = collections.find(
-    (collection) => collection.definition.name === selectedCollectionName,
-  );
   const isEditingExistingCollection = selectedCollectionName !== null;
+  const hasUnsavedSchemaChanges =
+    activeCollection !== undefined &&
+    JSON.stringify(activeCollection.definition) !== JSON.stringify(serializeDraft(draft));
+  const generatedRecordPayload = activeCollection
+    ? createGeneratedRecordPayload(activeCollection.definition, recordDraft)
+    : null;
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -554,6 +783,38 @@ export default function AdminPage() {
     }
   };
 
+  const handleRecordFieldChange = (
+    fieldName: string,
+    nextValue: GeneratedRecordFormValue,
+  ) => {
+    setRecordDraft((currentRecordDraft) => ({
+      ...currentRecordDraft,
+      [fieldName]: nextValue,
+    }));
+    setRecordMessage(null);
+  };
+
+  const handleResetGeneratedRecord = () => {
+    if (!activeCollection) {
+      return;
+    }
+
+    setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
+    setRecordMessage(null);
+  };
+
+  const handleGeneratedRecordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!activeCollection) {
+      return;
+    }
+
+    setRecordMessage(
+      `Local draft matches the saved ${activeCollection.definition.label} schema. Record persistence lands in M2-S5.`,
+    );
+  };
+
   return (
     <main className="admin-shell-page">
       <div className="admin-shell">
@@ -658,15 +919,18 @@ export default function AdminPage() {
               <p className="eyebrow">Authenticated shell</p>
               <h2 className="admin-page-title">Define collections directly from the admin</h2>
               <p className="admin-page-copy">
-                The collection schema is the edit-form contract. This first builder keeps
-                the UI simple and readable while letting you create, adjust, and reorder
-                fields without leaving the browser.
+                The collection schema is the edit-form contract. Define fields once, then
+                use the saved schema to generate a matching record editor without leaving
+                the browser.
               </p>
             </div>
 
             <div className="actions">
               <a className="button button-secondary" href="#collections-builder">
                 Open builder
+              </a>
+              <a className="button button-secondary" href="#record-editor">
+                Open record editor
               </a>
               <a
                 className="button button-secondary"
@@ -688,12 +952,13 @@ export default function AdminPage() {
               <h3 className="card-title">Schema definition now starts in this shell</h3>
               <p className="card-copy">
                 Use the builder below to define a collection name, add field types, and
-                move them into the order the future record editor should follow.
+                move them into the same order the generated record editor will follow.
               </p>
               <div className="status-row">
                 <span className="status-pill">Authenticated</span>
                 <span className="status-pill">Schema validation live</span>
                 <span className="status-pill">D1 planning live</span>
+                <span className="status-pill">Generated record editor live</span>
               </div>
             </article>
 
@@ -731,7 +996,7 @@ export default function AdminPage() {
                 </h3>
                 <p className="card-copy">
                   Keep names stable and human-readable. The field order here becomes the
-                  future editing order for records.
+                  generated editing order for records.
                 </p>
               </div>
               <div className="actions">
@@ -1142,6 +1407,111 @@ export default function AdminPage() {
             </form>
           </section>
 
+          <section className="admin-card admin-card-wide" id="record-editor">
+            <div className="section-row">
+              <div>
+                <p className="card-eyebrow">Generated record editor</p>
+                <h3 className="card-title">
+                  {activeCollection
+                    ? `${activeCollection.definition.label} record`
+                    : "Select a saved collection to open its editor"}
+                </h3>
+                <p className="card-copy">
+                  This surface is generated directly from the saved collection schema.
+                  Field order here matches the stored schema order exactly.
+                </p>
+              </div>
+              {activeCollection ? (
+                <div className="status-row">
+                  <span className="status-pill">
+                    {activeCollection.definition.fields.length} field
+                    {activeCollection.definition.fields.length === 1 ? "" : "s"}
+                  </span>
+                  <span className="status-pill status-pill-muted">
+                    {activeCollection.tableName}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            {!activeCollection ? (
+              <div className="empty-state-box">
+                <p className="list-title">No saved collection selected</p>
+                <p className="list-copy">
+                  Save a collection from the builder, or choose one from the sidebar, to
+                  see its generated record editor.
+                </p>
+              </div>
+            ) : (
+              <>
+                {hasUnsavedSchemaChanges ? (
+                  <div className="generated-record-notice">
+                    <p className="list-title">Saved schema is driving this editor</p>
+                    <p className="list-copy">
+                      You have builder changes that are not saved yet. Save the collection
+                      to refresh this record editor with the updated schema.
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="generated-record-layout">
+                  <form className="generated-record-form" onSubmit={handleGeneratedRecordSubmit}>
+                    {activeCollection.definition.fields.length === 0 ? (
+                      <div className="empty-state-box">
+                        <p className="list-title">This collection has no fields yet</p>
+                        <p className="list-copy">
+                          Add fields in the builder and save them to generate the editor.
+                        </p>
+                      </div>
+                    ) : (
+                      activeCollection.definition.fields.map((field) => (
+                        <GeneratedRecordFieldInput
+                          field={field}
+                          key={field.name}
+                          onChange={(nextValue) =>
+                            handleRecordFieldChange(field.name, nextValue)
+                          }
+                          value={recordDraft[field.name] ?? ""}
+                        />
+                      ))
+                    )}
+
+                    {recordMessage ? (
+                      <p className="form-success form-message-block">{recordMessage}</p>
+                    ) : null}
+
+                    <div className="actions">
+                      <button className="button" type="submit">
+                        Review generated payload
+                      </button>
+                      <button
+                        className="button button-secondary"
+                        onClick={handleResetGeneratedRecord}
+                        type="button"
+                      >
+                        Reset values
+                      </button>
+                    </div>
+                  </form>
+
+                  <aside className="generated-record-preview">
+                    <p className="card-eyebrow">Payload preview</p>
+                    <h4 className="section-title">
+                      {activeCollection.definition.label} record JSON
+                    </h4>
+                    <p className="section-copy">
+                      This first pass stays local to the browser. Create and save flows
+                      arrive in `M2-S5`.
+                    </p>
+                    <pre className="code-block">
+                      <code>{JSON.stringify(generatedRecordPayload, null, 2)}</code>
+                    </pre>
+                  </aside>
+                </div>
+              </>
+            )}
+          </section>
+
           <section className="admin-grid" aria-label="Shell capabilities">
             <article className="admin-card">
               <p className="card-eyebrow">In place today</p>
@@ -1157,9 +1527,9 @@ export default function AdminPage() {
               <p className="card-eyebrow">Coming online later</p>
               <h3 className="card-title">Media and richer editors still stay in later slices</h3>
               <p className="card-copy">
-                This builder intentionally stops at schema definition. Record editing,
-                markdown/rich text ergonomics, and media picking stay decoupled until the
-                next milestones.
+                The generated editor is live now, but richer markdown and rich text
+                ergonomics, media picking, and record persistence still stay decoupled
+                until the next milestones.
               </p>
             </article>
           </section>
