@@ -1,3 +1,5 @@
+export * from "./collections";
+
 export const datamixProduct = {
   name: "Datamix",
   tagline: "The 1-click Edge Content Studio designed specifically for Cloudflare.",
