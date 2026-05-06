@@ -6,6 +6,13 @@ import { Hono } from "hono";
 import { createAuth, getAuthSetupStatus } from "./auth";
 import { requireSession } from "./auth-guard";
 import {
+  CollectionSchemaError,
+  formatCollectionDefinitionResponse,
+  getCollectionDefinition,
+  listCollectionDefinitions,
+  saveCollectionDefinition,
+} from "./collections";
+import {
   AuthConfigError,
   readApiRuntime,
   type ApiBindings,
@@ -38,6 +45,14 @@ app.use("/setup/*", async (c, next) => {
 });
 
 app.use("/invites", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/collection-definitions", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/collection-definitions/*", async (c, next) => {
   return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
 });
 
@@ -131,6 +146,113 @@ app.post("/invites", requireSession, async (c) => {
       return c.json(
         { error: error.message },
         typeof error.statusCode === "number" ? (error.statusCode as 400) : 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/collection-definitions", requireSession, async (c) => {
+  try {
+    const collections = await listCollectionDefinitions(c.env);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collections: collections.map((collection) => ({
+        createdAt: collection.createdAt,
+        definition: collection.definition,
+        tableName: collection.tableName,
+        updatedAt: collection.updatedAt,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof CollectionSchemaError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/collection-definitions/:name", requireSession, async (c) => {
+  try {
+    const collection = await getCollectionDefinition(c.env, c.req.param("name"));
+
+    if (!collection) {
+      return c.json({ error: "Collection definition not found." }, 404);
+    }
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: collection.createdAt,
+        definition: collection.definition,
+        tableName: collection.tableName,
+        updatedAt: collection.updatedAt,
+      },
+    });
+  } catch (error) {
+    if (error instanceof CollectionSchemaError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.put("/collection-definitions/:name", requireSession, async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Collection definition payload must be valid JSON." }, 400);
+  }
+
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    "name" in body &&
+    typeof body.name === "string" &&
+    body.name !== c.req.param("name")
+  ) {
+    return c.json(
+      {
+        error: "Route collection name must match the definition name.",
+      },
+      400,
+    );
+  }
+
+  try {
+    const result = await saveCollectionDefinition(c.env, body);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      ...formatCollectionDefinitionResponse(result),
+      message: "Collection definition saved.",
+    });
+  } catch (error) {
+    if (error instanceof CollectionSchemaError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
       );
     }
 
