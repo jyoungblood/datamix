@@ -1,0 +1,108 @@
+:root {
+  color-scheme: light;
+  font-family:
+    "Iowan Old Style",
+    "Palatino Linotype",
+    "Book Antiqua",
+    Palatino,
+    Georgia,
+    serif;
+  background:
+    radial-gradient(circle at top, #efe3c8 0%, #f8f3e8 38%, #f3eee2 100%);
+  color: #1d1a14;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.panel {
+  width: min(760px, 100%);
+  padding: 2rem;
+  border: 1px solid rgba(29, 26, 20, 0.12);
+  border-radius: 28px;
+  background: rgba(255, 252, 245, 0.88);
+  box-shadow: 0 30px 90px rgba(57, 42, 15, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.75rem;
+  color: #7b6240;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.75rem, 6vw, 4.75rem);
+  line-height: 0.95;
+}
+
+.lede {
+  margin: 1rem 0 0;
+  max-width: 38rem;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  color: #473824;
+}
+
+.body {
+  margin: 1rem 0 0;
+  max-width: 36rem;
+  line-height: 1.7;
+  color: #5e4d36;
+}
+
+.surface-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.surface-card {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(73, 54, 24, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.surface-name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.surface-description {
+  margin: 0.4rem 0 0;
+  line-height: 1.5;
+  color: #5e4d36;
+}
+
+.status {
+  margin: 2rem 0 0;
+  color: #3d2f1d;
+}
+
+@media (max-width: 640px) {
+  .shell {
+    padding: 1rem;
+  }
+
+  .panel {
+    padding: 1.5rem;
+    border-radius: 24px;
+  }
+}

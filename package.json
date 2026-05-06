@@ -4,19 +4,23 @@
   "private": true,
   "packageManager": "npm@11.8.0",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "tsc -b",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "npm run typecheck",
+    "dev:admin": "npm run dev --workspace @datamix/admin",
+    "dev:api": "npm run dev --workspace @datamix/api",
+    "typegen:api": "npm run typegen --workspace @datamix/api",
     "clean": "node ./scripts/clean.mjs"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "typescript": "^5.9.3"
   }
 }
