@@ -5,6 +5,7 @@
   "name": "datamix-api-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-06",
+  "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "APP_ENV": "development",
     "ADMIN_ORIGIN": "http://127.0.0.1:3000"

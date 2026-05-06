@@ -3,6 +3,8 @@ export const datamixProduct = {
   tagline: "The 1-click Edge Content Studio designed specifically for Cloudflare.",
 } as const;
 
+export const datamixAuthPath = "/api/auth";
+
 export const datamixEnvironments = ["development", "preview", "production"] as const;
 
 export const datamixSurfaces = [
@@ -48,6 +50,10 @@ export const defaultApiRuntimeEnv: ApiRuntimeEnv = {
   ADMIN_ORIGIN: "http://127.0.0.1:3000",
   APP_ENV: "development",
 };
+
+export function createAuthBaseUrl(apiOrigin: string) {
+  return new URL(datamixAuthPath, apiOrigin).toString();
+}
 
 export function createServiceStatus(surface: DatamixSurfaceId) {
   return {

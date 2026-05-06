@@ -37,6 +37,7 @@ The current contract uses these Cloudflare project/resource names:
 - API Worker: `datamix-api` with local top-level config and named `preview` / `production` environments
 - D1 binding: `DB`
 - R2 binding: `MEDIA_BUCKET`
+- Worker compatibility flag: `nodejs_compat` for `better-auth` runtime support on Cloudflare Workers
 
 Suggested remote resource names:
 
@@ -52,6 +53,7 @@ Suggested remote resource names:
 - Preview admin origin: replace the placeholder in `apps/api/wrangler.jsonc` with your real Pages preview domain
 - Production admin origin: replace the placeholder in `apps/api/wrangler.jsonc` with your real production admin domain
 - Admin-to-API browser traffic is configured by `NEXT_PUBLIC_API_ORIGIN` at admin build time
+- Auth cookies are issued by the API origin, so deployed admin and API domains should stay on the same parent site when possible (for example `admin.example.com` + `api.example.com`)
 
 ## Config files
 
@@ -72,6 +74,14 @@ Suggested remote resource names:
 - Media URLs should ultimately resolve through Worker-managed routes, not raw public bucket URLs.
 - Preview and production must use separate remote D1 databases and separate remote R2 buckets.
 - The placeholder IDs and `.example` domains in config files are intentional and must be replaced before the first real deploy.
+- Auth secrets are not checked into `wrangler.jsonc`; set `BETTER_AUTH_SECRET` and `AUTH_SETUP_TOKEN` as Worker secrets per environment.
+
+## Auth contract
+
+- `better-auth` is mounted on the API Worker at `/api/auth/*`.
+- Auth sessions persist as cookies on the API origin and are consumed by the SPA with credentialed `fetch`.
+- Protected admin pages must verify session state through the API Worker; the Pages app does not read D1 directly.
+- The temporary migration seam for this slice is `POST /setup/auth/migrate` with the `x-datamix-setup-token` header.
 
 ## Provisioning notes
 
@@ -88,3 +98,4 @@ After provisioning:
 2. Replace the placeholder admin domains in `apps/api/wrangler.jsonc`
 3. Set the matching `NEXT_PUBLIC_API_ORIGIN` value in the admin Pages build environment
 4. Rerun `npm run typegen:api`
+5. Set `BETTER_AUTH_SECRET` and `AUTH_SETUP_TOKEN` for the Worker in each environment
