@@ -36,6 +36,8 @@ export type GeneratedCollectionCrudRoute = {
   tableName: string;
 };
 
+export type PublicCollectionCrudRoute = Omit<GeneratedCollectionCrudRoute, "tableName">;
+
 export class CollectionRecordError extends Error {
   readonly issues: DatamixSchemaValidationIssue[] | undefined;
   readonly statusCode: number;
@@ -101,6 +103,14 @@ function createGeneratedRecordsPath(collectionName: string) {
 
 function createGeneratedRecordItemPath(collectionName: string) {
   return `${createGeneratedRecordsPath(collectionName)}/{id}`;
+}
+
+function createPublicGeneratedRecordsPath(collectionName: string) {
+  return `/api${createGeneratedRecordsPath(collectionName)}`;
+}
+
+function createPublicGeneratedRecordItemPath(collectionName: string) {
+  return `${createPublicGeneratedRecordsPath(collectionName)}/{id}`;
 }
 
 async function resolveCollectionRecordContext(env: ApiBindings, collectionName: string) {
@@ -533,10 +543,48 @@ function formatGeneratedCollectionCrudRoute(
   };
 }
 
+function formatPublicCollectionCrudRoute(
+  collection: StoredCollectionDefinition,
+): PublicCollectionCrudRoute {
+  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+
+  return {
+    collectionName: collection.definition.name,
+    label: collection.definition.label,
+    recordItemPath: createPublicGeneratedRecordItemPath(collection.definition.name),
+    recordsPath: createPublicGeneratedRecordsPath(collection.definition.name),
+    supportedFieldNames: listPrimitiveFieldTypes(primitiveFields),
+  };
+}
+
 export async function listGeneratedCollectionCrudRoutes(env: ApiBindings) {
   const collections = await listCollectionDefinitions(env);
 
   return collections.map(formatGeneratedCollectionCrudRoute);
+}
+
+export async function listPublicCollectionCrudRoutes(env: ApiBindings) {
+  const collections = await listCollectionDefinitions(env);
+
+  return collections.map(formatPublicCollectionCrudRoute);
+}
+
+export async function getPublicCollectionCrudRoute(
+  env: ApiBindings,
+  collectionName: string,
+): Promise<PublicCollectionCrudRoute> {
+  const { collection, primitiveFields } = await resolveCollectionRecordContext(
+    env,
+    collectionName,
+  );
+
+  return {
+    collectionName: collection.definition.name,
+    label: collection.definition.label,
+    recordItemPath: createPublicGeneratedRecordItemPath(collection.definition.name),
+    recordsPath: createPublicGeneratedRecordsPath(collection.definition.name),
+    supportedFieldNames: listPrimitiveFieldTypes(primitiveFields),
+  };
 }
 
 export function createGeneratedCollectionCrudRoute(
@@ -545,5 +593,14 @@ export function createGeneratedCollectionCrudRoute(
   return {
     recordItemPath: createGeneratedRecordItemPath(collectionName),
     recordsPath: createGeneratedRecordsPath(collectionName),
+  };
+}
+
+export function createPublicCollectionCrudRoute(
+  collectionName: string,
+): Pick<PublicCollectionCrudRoute, "recordItemPath" | "recordsPath"> {
+  return {
+    recordItemPath: createPublicGeneratedRecordItemPath(collectionName),
+    recordsPath: createPublicGeneratedRecordsPath(collectionName),
   };
 }

@@ -8,7 +8,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "APP_ENV": "development",
-    "ADMIN_ORIGIN": "http://127.0.0.1:3000"
+    "ADMIN_ORIGIN": "http://127.0.0.1:3000",
+    "PUBLIC_API_READ_ACCESS": "public",
+    "PUBLIC_API_WRITE_ACCESS": "disabled"
   },
   "d1_databases": [
     {
@@ -30,7 +32,9 @@
       "name": "datamix-api-preview",
       "vars": {
         "APP_ENV": "preview",
-        "ADMIN_ORIGIN": "https://preview-admin.datamix.example"
+        "ADMIN_ORIGIN": "https://preview-admin.datamix.example",
+        "PUBLIC_API_READ_ACCESS": "public",
+        "PUBLIC_API_WRITE_ACCESS": "disabled"
       },
       "d1_databases": [
         {
@@ -51,7 +55,9 @@
       "name": "datamix-api",
       "vars": {
         "APP_ENV": "production",
-        "ADMIN_ORIGIN": "https://admin.datamix.example"
+        "ADMIN_ORIGIN": "https://admin.datamix.example",
+        "PUBLIC_API_READ_ACCESS": "public",
+        "PUBLIC_API_WRITE_ACCESS": "disabled"
       },
       "d1_databases": [
         {

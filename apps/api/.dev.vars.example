@@ -1,6 +1,10 @@
 APP_ENV=development
 ADMIN_ORIGIN=http://127.0.0.1:3000
 BETTER_AUTH_SECRET=replace-with-a-long-random-string
+PUBLIC_API_READ_ACCESS=public
+PUBLIC_API_WRITE_ACCESS=disabled
+PUBLIC_API_READ_KEY=replace-with-read-only-api-key
+PUBLIC_API_WRITE_KEY=replace-with-read-write-api-key
 AUTH_EMAIL_PROVIDER=resend
 AUTH_EMAIL_FROM_EMAIL=noreply@example.com
 AUTH_EMAIL_FROM_NAME=Datamix

@@ -88,6 +88,22 @@ Suggested remote resource names:
   `AUTH_EMAIL_PROVIDER=smtp` uses outbound Worker TCP sockets to an SMTP server on ports such as `465` or `587`.
 - Password reset and invite emails share the same provider abstraction and template layer.
 
+## Content API contract
+
+- Admin-facing collection management and record editing routes stay session-protected at `/collections/*` and `/records/*`.
+- Public content delivery routes live at `/api/collections/*`.
+- Public read access is controlled by `PUBLIC_API_READ_ACCESS`:
+  `public` allows anonymous reads,
+  `api-key` requires either `X-API-Key` or `Authorization: Bearer <key>`,
+  `disabled` rejects reads.
+- Public write access is controlled by `PUBLIC_API_WRITE_ACCESS`:
+  `disabled` rejects writes,
+  `api-key` requires a configured write key.
+- Temporary v0 key configuration is env-backed:
+  `PUBLIC_API_READ_KEY` grants read access when read mode is `api-key`.
+  `PUBLIC_API_WRITE_KEY` grants write access and also satisfies read access.
+- This env-backed key check is intentionally the pre-M5 seam; managed key lifecycle and UI land later without changing the public route family.
+
 ## Provisioning notes
 
 When the team is ready to attach real remote resources, these are the expected Wrangler commands:

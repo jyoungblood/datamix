@@ -11,6 +11,10 @@ export type ApiBindings = Pick<
   | "APP_ENV"
   | "BETTER_AUTH_SECRET"
   | "DB"
+  | "PUBLIC_API_READ_ACCESS"
+  | "PUBLIC_API_WRITE_ACCESS"
+  | "PUBLIC_API_READ_KEY"
+  | "PUBLIC_API_WRITE_KEY"
   | "AUTH_EMAIL_PROVIDER"
   | "AUTH_EMAIL_FROM_EMAIL"
   | "AUTH_EMAIL_FROM_NAME"
@@ -27,6 +31,19 @@ export type ApiAuthRuntimeEnv = {
   BETTER_AUTH_SECRET: string;
 };
 
+export const publicApiReadAccessModes = ["public", "api-key", "disabled"] as const;
+export const publicApiWriteAccessModes = ["disabled", "api-key"] as const;
+
+export type PublicApiReadAccessMode = (typeof publicApiReadAccessModes)[number];
+export type PublicApiWriteAccessMode = (typeof publicApiWriteAccessModes)[number];
+
+export type PublicApiRuntimeEnv = {
+  readAccess: PublicApiReadAccessMode;
+  readKey: string | null;
+  writeAccess: PublicApiWriteAccessMode;
+  writeKey: string | null;
+};
+
 export class AuthConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -34,8 +51,42 @@ export class AuthConfigError extends Error {
   }
 }
 
+export class PublicApiConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PublicApiConfigError";
+  }
+}
+
 function isDatamixEnvironment(value: string): value is DatamixEnvironment {
   return datamixEnvironments.includes(value as DatamixEnvironment);
+}
+
+function readOptionalSecret(value: string | undefined) {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : null;
+}
+
+function readEnumValue<TValue extends string>(
+  value: string | undefined,
+  allowedValues: readonly TValue[],
+  envName: string,
+  fallback: TValue,
+) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return fallback;
+  }
+
+  if (allowedValues.includes(trimmed as TValue)) {
+    return trimmed as TValue;
+  }
+
+  throw new PublicApiConfigError(
+    `${envName} must be one of: ${allowedValues.join(", ")}.`,
+  );
 }
 
 export function readApiRuntime(env: ApiBindings): ApiRuntimeEnv {
@@ -58,5 +109,41 @@ export function readApiAuthRuntime(env: ApiBindings): ApiAuthRuntimeEnv {
 
   return {
     BETTER_AUTH_SECRET: secret,
+  };
+}
+
+export function readPublicApiRuntime(env: ApiBindings): PublicApiRuntimeEnv {
+  const readAccess = readEnumValue(
+    env.PUBLIC_API_READ_ACCESS,
+    publicApiReadAccessModes,
+    "PUBLIC_API_READ_ACCESS",
+    "public",
+  );
+  const writeAccess = readEnumValue(
+    env.PUBLIC_API_WRITE_ACCESS,
+    publicApiWriteAccessModes,
+    "PUBLIC_API_WRITE_ACCESS",
+    "disabled",
+  );
+  const readKey = readOptionalSecret(env.PUBLIC_API_READ_KEY);
+  const writeKey = readOptionalSecret(env.PUBLIC_API_WRITE_KEY);
+
+  if (readAccess === "api-key" && !readKey && !writeKey) {
+    throw new PublicApiConfigError(
+      "PUBLIC_API_READ_ACCESS is set to api-key, but no PUBLIC_API_READ_KEY or PUBLIC_API_WRITE_KEY is configured.",
+    );
+  }
+
+  if (writeAccess === "api-key" && !writeKey) {
+    throw new PublicApiConfigError(
+      "PUBLIC_API_WRITE_ACCESS is set to api-key, but PUBLIC_API_WRITE_KEY is missing.",
+    );
+  }
+
+  return {
+    readAccess,
+    readKey,
+    writeAccess,
+    writeKey,
   };
 }
