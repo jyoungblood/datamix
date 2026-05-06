@@ -35,9 +35,8 @@ async function readApiBody<TValue>(response: Response) {
 }
 
 function buildRecordsUrl(collectionName: string, recordId?: string) {
-  const pathname = recordId
-    ? `/records/${encodeURIComponent(collectionName)}/${encodeURIComponent(recordId)}`
-    : `/records/${encodeURIComponent(collectionName)}`;
+  const basePath = `/collections/${encodeURIComponent(collectionName)}/records`;
+  const pathname = recordId ? `${basePath}/${encodeURIComponent(recordId)}` : basePath;
 
   return `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}${pathname}`;
 }

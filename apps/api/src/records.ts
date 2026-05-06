@@ -1,10 +1,15 @@
 import {
   isPrimitiveRecordFieldDefinition,
   type DatamixSchemaValidationIssue,
+  type DatamixPrimitiveRecordFieldType,
   type DatamixPrimitiveRecordFieldDefinition,
 } from "@datamix/core";
 
-import { getCollectionDefinition } from "./collections";
+import {
+  getCollectionDefinition,
+  listCollectionDefinitions,
+  type StoredCollectionDefinition,
+} from "./collections";
 import type { ApiBindings } from "./env";
 
 type PrimitiveRecordValue = boolean | number | string | null;
@@ -20,6 +25,15 @@ export type StoredCollectionRecord = {
   id: string;
   updatedAt: string;
   values: Record<string, PrimitiveRecordValue>;
+};
+
+export type GeneratedCollectionCrudRoute = {
+  collectionName: string;
+  label: string;
+  recordItemPath: string;
+  recordsPath: string;
+  supportedFieldNames: DatamixPrimitiveRecordFieldType[];
+  tableName: string;
 };
 
 export class CollectionRecordError extends Error {
@@ -60,6 +74,16 @@ function listPrimitiveFields(fields: readonly DatamixPrimitiveRecordFieldDefinit
   return fields.map((field) => field.name).join(", ");
 }
 
+function listPrimitiveFieldTypes(fields: readonly DatamixPrimitiveRecordFieldDefinition[]) {
+  const fieldTypes = new Set<DatamixPrimitiveRecordFieldType>();
+
+  for (const field of fields) {
+    fieldTypes.add(field.type);
+  }
+
+  return [...fieldTypes];
+}
+
 function assertPrimitiveCrudFields(
   fields: readonly DatamixPrimitiveRecordFieldDefinition[],
 ) {
@@ -69,6 +93,32 @@ function assertPrimitiveCrudFields(
       { statusCode: 409 },
     );
   }
+}
+
+function createGeneratedRecordsPath(collectionName: string) {
+  return `/collections/${encodeURIComponent(collectionName)}/records`;
+}
+
+function createGeneratedRecordItemPath(collectionName: string) {
+  return `${createGeneratedRecordsPath(collectionName)}/{id}`;
+}
+
+async function resolveCollectionRecordContext(env: ApiBindings, collectionName: string) {
+  const collection = await getCollectionDefinition(env, collectionName);
+
+  if (!collection) {
+    throw new CollectionRecordError("Collection definition not found.", {
+      statusCode: 404,
+    });
+  }
+
+  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+
+  return {
+    collection,
+    primitiveFields,
+    supportedFieldNames: listPrimitiveFields(primitiveFields),
+  };
 }
 
 function normalizePrimitiveRecordValues(
@@ -274,6 +324,13 @@ async function readStoredRecord(
   return row ? mapStoredRecord(row, fields) : null;
 }
 
+function buildDeleteRecordSql(tableName: string) {
+  return `
+    DELETE FROM ${quoteIdentifier(tableName)}
+    WHERE "id" = ?
+  `.trim();
+}
+
 function createWriteStatement(
   database: D1DatabaseSession,
   tableName: string,
@@ -326,15 +383,8 @@ function createWriteStatement(
 }
 
 export async function listCollectionRecords(env: ApiBindings, collectionName: string) {
-  const collection = await getCollectionDefinition(env, collectionName);
-
-  if (!collection) {
-    throw new CollectionRecordError("Collection definition not found.", {
-      statusCode: 404,
-    });
-  }
-
-  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+  const { collection, primitiveFields, supportedFieldNames } =
+    await resolveCollectionRecordContext(env, collectionName);
   const result = await env.DB
     .prepare(buildListRecordsSql(collection.tableName, primitiveFields))
     .all<RawRecordRow>();
@@ -342,7 +392,29 @@ export async function listCollectionRecords(env: ApiBindings, collectionName: st
   return {
     collection,
     records: result.results.map((row) => mapStoredRecord(row, primitiveFields)),
-    supportedFieldNames: listPrimitiveFields(primitiveFields),
+    supportedFieldNames,
+  };
+}
+
+export async function getCollectionRecord(
+  env: ApiBindings,
+  collectionName: string,
+  recordId: string,
+) {
+  const { collection, primitiveFields, supportedFieldNames } =
+    await resolveCollectionRecordContext(env, collectionName);
+  const record = await readStoredRecord(env.DB, collection.tableName, primitiveFields, recordId);
+
+  if (!record) {
+    throw new CollectionRecordError("Record not found.", {
+      statusCode: 404,
+    });
+  }
+
+  return {
+    collection,
+    record,
+    supportedFieldNames,
   };
 }
 
@@ -351,15 +423,8 @@ export async function createCollectionRecord(
   collectionName: string,
   input: unknown,
 ) {
-  const collection = await getCollectionDefinition(env, collectionName);
-
-  if (!collection) {
-    throw new CollectionRecordError("Collection definition not found.", {
-      statusCode: 404,
-    });
-  }
-
-  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+  const { collection, primitiveFields, supportedFieldNames } =
+    await resolveCollectionRecordContext(env, collectionName);
   assertPrimitiveCrudFields(primitiveFields);
   const values = normalizePrimitiveRecordValues(primitiveFields, input);
   const session = env.DB.withSession("first-primary");
@@ -378,7 +443,7 @@ export async function createCollectionRecord(
   return {
     collection,
     record,
-    supportedFieldNames: listPrimitiveFields(primitiveFields),
+    supportedFieldNames,
   };
 }
 
@@ -388,15 +453,8 @@ export async function updateCollectionRecord(
   recordId: string,
   input: unknown,
 ) {
-  const collection = await getCollectionDefinition(env, collectionName);
-
-  if (!collection) {
-    throw new CollectionRecordError("Collection definition not found.", {
-      statusCode: 404,
-    });
-  }
-
-  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+  const { collection, primitiveFields, supportedFieldNames } =
+    await resolveCollectionRecordContext(env, collectionName);
   assertPrimitiveCrudFields(primitiveFields);
   const values = normalizePrimitiveRecordValues(primitiveFields, input);
   const session = env.DB.withSession("first-primary");
@@ -429,6 +487,63 @@ export async function updateCollectionRecord(
   return {
     collection,
     record,
-    supportedFieldNames: listPrimitiveFields(primitiveFields),
+    supportedFieldNames,
+  };
+}
+
+export async function deleteCollectionRecord(
+  env: ApiBindings,
+  collectionName: string,
+  recordId: string,
+) {
+  const { collection, primitiveFields, supportedFieldNames } =
+    await resolveCollectionRecordContext(env, collectionName);
+  const session = env.DB.withSession("first-primary");
+  const existingRecord = await readStoredRecord(session, collection.tableName, primitiveFields, recordId);
+
+  if (!existingRecord) {
+    throw new CollectionRecordError("Record not found.", {
+      statusCode: 404,
+    });
+  }
+
+  await session.batch([
+    session.prepare(buildDeleteRecordSql(collection.tableName)).bind(recordId),
+  ]);
+
+  return {
+    collection,
+    deletedRecordId: recordId,
+    supportedFieldNames,
+  };
+}
+
+function formatGeneratedCollectionCrudRoute(
+  collection: StoredCollectionDefinition,
+): GeneratedCollectionCrudRoute {
+  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+
+  return {
+    collectionName: collection.definition.name,
+    label: collection.definition.label,
+    recordItemPath: createGeneratedRecordItemPath(collection.definition.name),
+    recordsPath: createGeneratedRecordsPath(collection.definition.name),
+    supportedFieldNames: listPrimitiveFieldTypes(primitiveFields),
+    tableName: collection.tableName,
+  };
+}
+
+export async function listGeneratedCollectionCrudRoutes(env: ApiBindings) {
+  const collections = await listCollectionDefinitions(env);
+
+  return collections.map(formatGeneratedCollectionCrudRoute);
+}
+
+export function createGeneratedCollectionCrudRoute(
+  collectionName: string,
+): Pick<GeneratedCollectionCrudRoute, "recordItemPath" | "recordsPath"> {
+  return {
+    recordItemPath: createGeneratedRecordItemPath(collectionName),
+    recordsPath: createGeneratedRecordsPath(collectionName),
   };
 }

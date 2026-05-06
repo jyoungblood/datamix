@@ -24,7 +24,7 @@ type CollectionDefinitionRow = {
   updated_at: string;
 };
 
-type StoredCollectionDefinition = {
+export type StoredCollectionDefinition = {
   createdAt: string;
   definition: DatamixCollectionDefinition;
   tableName: string;

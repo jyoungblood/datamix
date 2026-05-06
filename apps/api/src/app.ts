@@ -20,7 +20,11 @@ import {
 import { createInvite } from "./invite";
 import {
   CollectionRecordError,
+  createGeneratedCollectionCrudRoute,
   createCollectionRecord,
+  deleteCollectionRecord,
+  getCollectionRecord,
+  listGeneratedCollectionCrudRoutes,
   listCollectionRecords,
   updateCollectionRecord,
 } from "./records";
@@ -59,6 +63,14 @@ app.use("/collection-definitions", async (c, next) => {
 });
 
 app.use("/collection-definitions/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/collections", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/collections/*", async (c, next) => {
   return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
 });
 
@@ -261,6 +273,242 @@ app.put("/collection-definitions/:name", requireSession, async (c) => {
     });
   } catch (error) {
     if (error instanceof CollectionSchemaError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/collections", requireSession, async (c) => {
+  try {
+    const collections = await listGeneratedCollectionCrudRoutes(c.env);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collections,
+      message: "Generated collection CRUD routes are available.",
+    });
+  } catch (error) {
+    if (error instanceof CollectionRecordError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/collections/:name", requireSession, async (c) => {
+  try {
+    const collection = await getCollectionDefinition(c.env, c.req.param("name"));
+
+    if (!collection) {
+      return c.json({ error: "Collection definition not found." }, 404);
+    }
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: collection.createdAt,
+        definition: collection.definition,
+        routes: createGeneratedCollectionCrudRoute(collection.definition.name),
+        tableName: collection.tableName,
+        updatedAt: collection.updatedAt,
+      },
+    });
+  } catch (error) {
+    if (error instanceof CollectionSchemaError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/collections/:name/records", requireSession, async (c) => {
+  try {
+    const result = await listCollectionRecords(c.env, c.req.param("name"));
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: result.collection.createdAt,
+        definition: result.collection.definition,
+        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+        tableName: result.collection.tableName,
+        updatedAt: result.collection.updatedAt,
+      },
+      records: result.records,
+      supportedFieldNames: result.supportedFieldNames,
+    });
+  } catch (error) {
+    if (error instanceof CollectionRecordError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.post("/collections/:name/records", requireSession, async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Record payload must be valid JSON." }, 400);
+  }
+
+  try {
+    const result = await createCollectionRecord(c.env, c.req.param("name"), body);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: result.collection.createdAt,
+        definition: result.collection.definition,
+        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+        tableName: result.collection.tableName,
+        updatedAt: result.collection.updatedAt,
+      },
+      message: "Record created.",
+      record: result.record,
+      supportedFieldNames: result.supportedFieldNames,
+    });
+  } catch (error) {
+    if (error instanceof CollectionRecordError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/collections/:name/records/:id", requireSession, async (c) => {
+  try {
+    const result = await getCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: result.collection.createdAt,
+        definition: result.collection.definition,
+        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+        tableName: result.collection.tableName,
+        updatedAt: result.collection.updatedAt,
+      },
+      record: result.record,
+      supportedFieldNames: result.supportedFieldNames,
+    });
+  } catch (error) {
+    if (error instanceof CollectionRecordError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.put("/collections/:name/records/:id", requireSession, async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Record payload must be valid JSON." }, 400);
+  }
+
+  try {
+    const result = await updateCollectionRecord(
+      c.env,
+      c.req.param("name"),
+      c.req.param("id"),
+      body,
+    );
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: result.collection.createdAt,
+        definition: result.collection.definition,
+        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+        tableName: result.collection.tableName,
+        updatedAt: result.collection.updatedAt,
+      },
+      message: "Record updated.",
+      record: result.record,
+      supportedFieldNames: result.supportedFieldNames,
+    });
+  } catch (error) {
+    if (error instanceof CollectionRecordError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.delete("/collections/:name/records/:id", requireSession, async (c) => {
+  try {
+    const result = await deleteCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
+
+    return c.json({
+      ...createServiceStatus("api"),
+      collection: {
+        createdAt: result.collection.createdAt,
+        definition: result.collection.definition,
+        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+        tableName: result.collection.tableName,
+        updatedAt: result.collection.updatedAt,
+      },
+      deletedRecordId: result.deletedRecordId,
+      message: "Record deleted.",
+      supportedFieldNames: result.supportedFieldNames,
+    });
+  } catch (error) {
+    if (error instanceof CollectionRecordError) {
       return c.json(
         {
           error: error.message,
