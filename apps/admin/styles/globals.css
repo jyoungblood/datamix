@@ -364,6 +364,12 @@ button.admin-nav-item {
   gap: 1rem;
 }
 
+.section-stack {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
 .section-title {
   margin: 0;
   font-weight: 700;

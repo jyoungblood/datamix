@@ -1,7 +1,9 @@
 import {
   createMediaObjectUrl,
+  datamixRolePresets,
   datamixFieldTypes,
   isRecordCrudFieldDefinition,
+  listDatamixPermissionResourcesForRole,
   type DatamixCollectionDefinition,
   type DatamixFieldDefinition,
   type DatamixFieldType,
@@ -69,6 +71,11 @@ const shellCapabilities = [
   "Saved collection schemas now generate a matching record editor in the admin.",
   "Collections and their records now drive the sidebar navigation.",
 ] as const;
+
+const rolePresetPreviewItems = datamixRolePresets.map((role) => ({
+  ...role,
+  resources: listDatamixPermissionResourcesForRole(role),
+}));
 
 const overviewSectionId = "overview";
 const collectionBuilderSectionId = "collections-builder";
@@ -3394,6 +3401,39 @@ export default function AdminPage() {
                   </button>
                 </div>
               </form>
+
+              <div className="section-stack">
+                <div>
+                  <h4 className="section-title">Role presets for v0</h4>
+                  <p className="section-copy">
+                    The shared RBAC model is now defined in core so later slices can
+                    wire API enforcement and admin guards against one readable source
+                    of truth.
+                  </p>
+                </div>
+
+                <div className="mini-list">
+                  {rolePresetPreviewItems.map((role) => (
+                    <div className="mini-list-item mini-list-item-stacked" key={role.id}>
+                      <div className="mini-list-content">
+                        <strong>{role.label}</strong>
+                        <small>{role.description}</small>
+                      </div>
+
+                      <div className="status-row status-row-compact">
+                        <span className="status-pill">
+                          {role.permissions.length} permissions
+                        </span>
+                        {role.resources.map((resource) => (
+                          <span className="status-pill status-pill-muted" key={resource.id}>
+                            {resource.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </article>
 
             <article className="admin-card" id="settings">
