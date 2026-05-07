@@ -197,6 +197,16 @@ textarea {
   cursor: pointer;
 }
 
+.button-shortcut {
+  margin-left: 0.55rem;
+  padding-left: 0.55rem;
+  border-left: 1px solid rgba(73, 54, 24, 0.18);
+  color: #6d5a40;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .button:disabled {
   cursor: wait;
   opacity: 0.72;
@@ -249,6 +259,72 @@ textarea {
 .inline-link-row {
   margin: 0;
   color: #5e4d36;
+}
+
+.command-palette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: start center;
+  padding: 6vh 1rem 1rem;
+  background: rgba(29, 26, 20, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.command-palette-panel {
+  width: min(760px, 100%);
+  display: grid;
+  gap: 1rem;
+  padding: 1.3rem;
+  border: 1px solid rgba(29, 26, 20, 0.1);
+  border-radius: 28px;
+  background: rgba(255, 252, 245, 0.96);
+  box-shadow: 0 30px 90px rgba(57, 42, 15, 0.16);
+}
+
+.command-palette-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.command-palette-results {
+  display: grid;
+  gap: 0.7rem;
+  max-height: min(62vh, 640px);
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.command-palette-group-label {
+  margin: 0 0 0.4rem;
+  padding-top: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7b6240;
+}
+
+.command-palette-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(73, 54, 24, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  text-align: left;
+  cursor: pointer;
+}
+
+.command-palette-item.is-active {
+  border-color: rgba(87, 62, 25, 0.24);
+  background: rgba(246, 237, 216, 0.92);
 }
 
 .admin-shell-page {
@@ -941,6 +1017,14 @@ button.admin-nav-item:disabled {
   }
 
   .actions {
+    flex-direction: column;
+  }
+
+  .command-palette-overlay {
+    padding-top: 1rem;
+  }
+
+  .command-palette-header {
     flex-direction: column;
   }
 }

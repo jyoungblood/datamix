@@ -22,7 +22,7 @@ import {
   type DatamixSchemaValidationIssue,
   type DatamixSelectOption,
 } from "@datamix/core";
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 
 import { authClient } from "../lib/auth-client";
 import {
@@ -163,6 +163,15 @@ type RoleDraft = {
 type ApiKeyDraft = {
   accessLevel: DatamixApiKeyAccessLevel;
   label: string;
+};
+
+type CommandPaletteItem = {
+  group: "collections" | "records" | "admin";
+  id: string;
+  keywords: string[];
+  onSelect: () => void;
+  subtitle: string;
+  title: string;
 };
 
 let nextFieldKey = 0;
@@ -693,6 +702,175 @@ function FlowStateBox({
           ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function createCommandPaletteSearchText(item: CommandPaletteItem) {
+  return [item.title, item.subtitle, ...item.keywords].join(" ").trim().toLowerCase();
+}
+
+function filterCommandPaletteItems(items: CommandPaletteItem[], query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (normalizedQuery.length === 0) {
+    return items;
+  }
+
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  return items.filter((item) => {
+    const haystack = createCommandPaletteSearchText(item);
+
+    return terms.every((term) => haystack.includes(term));
+  });
+}
+
+function CommandPaletteDialog({
+  activeIndex,
+  items,
+  onClose,
+  onMoveActive,
+  onQueryChange,
+  onSelectActive,
+  onSelectItem,
+  query,
+}: {
+  activeIndex: number;
+  items: CommandPaletteItem[];
+  onClose: () => void;
+  onMoveActive: (direction: -1 | 1) => void;
+  onQueryChange: (value: string) => void;
+  onSelectActive: () => void;
+  onSelectItem: (index: number) => void;
+  query: string;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  let lastRenderedGroup: CommandPaletteItem["group"] | null = null;
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return (
+    <div
+      aria-modal="true"
+      className="command-palette-overlay"
+      onClick={onClose}
+      role="dialog"
+    >
+      <div
+        className="command-palette-panel"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="command-palette-header">
+          <div>
+            <p className="card-eyebrow">Command palette</p>
+            <h3 className="section-title">Jump anywhere with one command</h3>
+          </div>
+          <button className="mini-button" onClick={onClose} type="button">
+            Close
+          </button>
+        </div>
+
+        <label className="field">
+          <span>Search collections, records, and admin actions</span>
+          <input
+            onChange={(event) => onQueryChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                onMoveActive(1);
+                return;
+              }
+
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                onMoveActive(-1);
+                return;
+              }
+
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onSelectActive();
+                return;
+              }
+
+              if (event.key === "Escape") {
+                event.preventDefault();
+                onClose();
+              }
+            }}
+            placeholder="Try “media”, “new record”, or a collection name"
+            ref={inputRef}
+            type="text"
+            value={query}
+          />
+        </label>
+
+        <p className="helper-text">
+          Use <strong>Up</strong> and <strong>Down</strong> to move, <strong>Enter</strong>{" "}
+          to run a command, and <strong>Esc</strong> to close.
+        </p>
+
+        <div className="command-palette-results" role="listbox">
+          {items.length === 0 ? (
+            <div className="empty-state-box">
+              <p className="section-title">No matching commands</p>
+              <p className="section-copy">
+                Try a collection name, a record summary, or an admin area like settings or
+                media.
+              </p>
+            </div>
+          ) : (
+            items.map((item, index) => {
+              const shouldRenderGroup = item.group !== lastRenderedGroup;
+
+              lastRenderedGroup = item.group;
+
+              return (
+                <div key={item.id}>
+                  {shouldRenderGroup ? (
+                    <p className="command-palette-group-label">
+                      {item.group === "collections"
+                        ? "Collections"
+                        : item.group === "records"
+                          ? "Records"
+                          : "Admin actions"}
+                    </p>
+                  ) : null}
+
+                  <button
+                    aria-selected={index === activeIndex}
+                    className={
+                      index === activeIndex
+                        ? "command-palette-item is-active"
+                        : "command-palette-item"
+                    }
+                    onClick={() => onSelectItem(index)}
+                    type="button"
+                  >
+                    <div className="mini-list-content">
+                      <strong>{item.title}</strong>
+                      <small>{item.subtitle}</small>
+                    </div>
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1453,6 +1631,9 @@ export default function AdminPage() {
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
   const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
+  const [activeCommandPaletteIndex, setActiveCommandPaletteIndex] = useState(0);
   const [sessionAuthorization, setSessionAuthorization] =
     useState<DatamixAuthorizationSummary | null>(null);
   const [sessionAuthorizationError, setSessionAuthorizationError] = useState<string | null>(null);
@@ -1963,6 +2144,33 @@ export default function AdminPage() {
     void loadRecords(activeCollection);
   }, [activeCollection, canViewRecords]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+
+        if (isCommandPaletteOpen) {
+          closeCommandPalette();
+        } else {
+          openCommandPalette();
+        }
+
+        return;
+      }
+
+      if (event.key === "Escape" && isCommandPaletteOpen) {
+        event.preventDefault();
+        closeCommandPalette();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCommandPaletteOpen]);
+
   if (
     session.isPending ||
     setupStatus.isPending ||
@@ -2080,6 +2288,7 @@ export default function AdminPage() {
     ? null
     : availableRoles.find((role) => role.id === selectedRoleId) ?? null;
   const rolePreviewItems = availableRoles.length > 0 ? availableRoles : datamixRolePresets;
+  const deferredCommandPaletteQuery = useDeferredValue(commandPaletteQuery);
   const generatedRecordPayload = activeCollection
     ? createGeneratedRecordPayload(activeCollection.definition, recordDraft)
     : null;
@@ -2112,6 +2321,18 @@ export default function AdminPage() {
   const handleSignOut = async () => {
     await authClient.signOut();
     window.location.replace("/login");
+  };
+
+  const openCommandPalette = () => {
+    setCommandPaletteQuery("");
+    setActiveCommandPaletteIndex(0);
+    setIsCommandPaletteOpen(true);
+  };
+
+  const closeCommandPalette = () => {
+    setIsCommandPaletteOpen(false);
+    setCommandPaletteQuery("");
+    setActiveCommandPaletteIndex(0);
   };
 
   const handleStartNewCollection = () => {
@@ -2744,6 +2965,22 @@ export default function AdminPage() {
     setRecordMessage(null);
   };
 
+  const handleOpenCollectionRecord = (
+    collection: StoredCollectionDefinition,
+    record: StoredCollectionRecord,
+  ) => {
+    setIsCreatingCollection(false);
+    setSelectedCollectionName(collection.definition.name);
+    setDraft(createDraftFromDefinition(collection.definition));
+    setCollectionIssues([]);
+    setCollectionMessage(null);
+    setSelectedRecordId(record.id);
+    setRecordDraft(createGeneratedRecordFormStateFromRecord(collection.definition, record));
+    setRecordIssues([]);
+    setRecordMessage(null);
+    jumpToSection(recordEditorSectionId);
+  };
+
   const handleStartNewRecord = () => {
     if (!activeCollection || !canCreateRecords) {
       return;
@@ -2761,11 +2998,7 @@ export default function AdminPage() {
       return;
     }
 
-    setSelectedRecordId(record.id);
-    setRecordDraft(createGeneratedRecordFormStateFromRecord(activeCollection.definition, record));
-    setRecordIssues([]);
-    setRecordMessage(null);
-    jumpToSection(recordEditorSectionId);
+    handleOpenCollectionRecord(activeCollection, record);
   };
 
   const handleGeneratedRecordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2811,8 +3044,321 @@ export default function AdminPage() {
     }
   };
 
+  const commandPaletteItems: CommandPaletteItem[] = [
+    {
+      group: "admin",
+      id: "admin-overview",
+      keywords: ["dashboard", "home", "overview"],
+      onSelect: () => {
+        jumpToSection(overviewSectionId);
+      },
+      subtitle: "Jump back to the admin overview cards.",
+      title: "Open overview",
+    },
+    {
+      group: "admin",
+      id: "admin-schema",
+      keywords: ["schema", "builder", "fields", "model"],
+      onSelect: () => {
+        jumpToSection(collectionBuilderSectionId);
+      },
+      subtitle: activeCollection
+        ? `Open the ${activeCollection.definition.label} schema builder.`
+        : "Open the collection schema builder.",
+      title: activeCollection ? `Open ${activeCollection.definition.label} schema` : "Open schema",
+    },
+  ];
+
+  if (canCreateCollections) {
+    commandPaletteItems.push({
+      group: "collections",
+      id: "collections-create",
+      keywords: ["new", "create", "content model"],
+      onSelect: handleStartNewCollection,
+      subtitle: "Start a fresh collection definition from the builder.",
+      title: "Create new collection",
+    });
+  }
+
+  if (canViewCollections) {
+    collections.forEach((collection) => {
+      commandPaletteItems.push({
+        group: "collections",
+        id: `collection-${collection.definition.name}`,
+        keywords: [
+          collection.definition.name,
+          collection.definition.description ?? "",
+          "schema",
+          "collection",
+        ],
+        onSelect: () => {
+          handleEditCollection(collection);
+          jumpToSection(collectionBuilderSectionId);
+        },
+        subtitle: `${collection.definition.fields.length} field${
+          collection.definition.fields.length === 1 ? "" : "s"
+        } • open this collection workspace`,
+        title: collection.definition.label,
+      });
+
+      if (canAccessRecordsWorkspace) {
+        commandPaletteItems.push({
+          group: "collections",
+          id: `collection-records-${collection.definition.name}`,
+          keywords: [collection.definition.name, "records", "entries", "content"],
+          onSelect: () => {
+            handleEditCollection(collection);
+            jumpToSection(recordEditorSectionId);
+          },
+          subtitle: `Open the ${collection.definition.label} records workspace.`,
+          title: `Open ${collection.definition.label} records`,
+        });
+      }
+    });
+  }
+
+  if (activeCollection && canAccessRecordsWorkspace) {
+    commandPaletteItems.push({
+      group: "records",
+      id: "records-open",
+      keywords: [activeCollection.definition.name, "records", "entries", "editor"],
+      onSelect: () => {
+        jumpToSection(recordEditorSectionId);
+      },
+      subtitle: `Open the generated record editor for ${activeCollection.definition.label}.`,
+      title: `Open ${activeCollection.definition.label} records`,
+    });
+  }
+
+  if (activeCollection && canCreateRecords) {
+    commandPaletteItems.push({
+      group: "records",
+      id: "records-create",
+      keywords: [activeCollection.definition.name, "new", "create", "record"],
+      onSelect: handleStartNewRecord,
+      subtitle: `Start a new ${activeCollection.definition.label.toLowerCase()} record.`,
+      title: `Create new ${activeCollection.definition.label} record`,
+    });
+  }
+
+  if (activeCollection && canViewRecords) {
+    records.forEach((record) => {
+      commandPaletteItems.push({
+        group: "records",
+        id: `record-${record.id}`,
+        keywords: [record.id, activeCollection.definition.name, "record", "edit"],
+        onSelect: () => {
+          handleOpenCollectionRecord(activeCollection, record);
+        },
+        subtitle: `${activeCollection.definition.label} • updated ${formatRecordTimestamp(
+          record.updatedAt,
+        )}`,
+        title: summarizeRecord(activeCollection.definition, record),
+      });
+    });
+  }
+
+  if (canRefreshCollections) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-refresh-collections",
+      keywords: ["reload", "refresh", "collections"],
+      onSelect: handleRefreshCollections,
+      subtitle: "Fetch the latest saved collection definitions from the API Worker.",
+      title: "Refresh collections",
+    });
+  }
+
+  if (canRefreshRecords) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-refresh-records",
+      keywords: ["reload", "refresh", "records"],
+      onSelect: handleRefreshRecords,
+      subtitle: "Reload the current saved record list.",
+      title: "Refresh records",
+    });
+  }
+
+  if (canAccessTeamAccess) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-team-access",
+      keywords: ["invite", "users", "roles", "team"],
+      onSelect: () => {
+        jumpToSection("invite");
+      },
+      subtitle: "Jump to user invites, user roles, and role previews.",
+      title: "Open team access",
+    });
+  }
+
+  if (canAccessMediaWorkspace) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-media",
+      keywords: ["media", "assets", "upload", "library"],
+      onSelect: () => {
+        jumpToSection("media");
+      },
+      subtitle: "Open the shared media upload and library workspace.",
+      title: "Open media library",
+    });
+  }
+
+  if (canAccessSettingsWorkspace) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-settings",
+      keywords: ["settings", "api keys", "permissions", "oauth"],
+      onSelect: () => {
+        jumpToSection("settings");
+      },
+      subtitle: "Jump to runtime posture, OAuth status, API keys, and permissions.",
+      title: "Open settings",
+    });
+  }
+
+  if (canRefreshMediaAssets) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-refresh-media",
+      keywords: ["reload", "refresh", "media", "assets"],
+      onSelect: handleRefreshMediaAssets,
+      subtitle: "Reload the shared media asset list.",
+      title: "Refresh media assets",
+    });
+  }
+
+  if (canRefreshUsers) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-refresh-users",
+      keywords: ["reload", "refresh", "users"],
+      onSelect: handleRefreshUsers,
+      subtitle: "Reload the current Datamix user list.",
+      title: "Refresh users",
+    });
+  }
+
+  if (canRefreshRoles) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-refresh-roles",
+      keywords: ["reload", "refresh", "roles", "permissions"],
+      onSelect: handleRefreshRoles,
+      subtitle: "Reload built-in and custom role definitions.",
+      title: "Refresh roles",
+    });
+  }
+
+  if (canRefreshApiKeys) {
+    commandPaletteItems.push({
+      group: "admin",
+      id: "admin-refresh-api-keys",
+      keywords: ["reload", "refresh", "api", "keys"],
+      onSelect: handleRefreshApiKeys,
+      subtitle: "Reload managed API keys and public API runtime posture.",
+      title: "Refresh API keys",
+    });
+  }
+
+  commandPaletteItems.push(
+    {
+      group: "admin",
+      id: "admin-api-health",
+      keywords: ["health", "api", "runtime"],
+      onSelect: () => {
+        window.open(apiHealthHref, "_blank", "noopener,noreferrer");
+      },
+      subtitle: "Open the API health endpoint in a new tab.",
+      title: "Check API health",
+    },
+    {
+      group: "admin",
+      id: "admin-sign-out",
+      keywords: ["logout", "session", "account"],
+      onSelect: () => {
+        void handleSignOut();
+      },
+      subtitle: "End the current admin session and return to login.",
+      title: "Sign out",
+    },
+  );
+
+  const filteredCommandPaletteItems = filterCommandPaletteItems(
+    commandPaletteItems,
+    deferredCommandPaletteQuery,
+  );
+
+  useEffect(() => {
+    if (!isCommandPaletteOpen) {
+      return;
+    }
+
+    setActiveCommandPaletteIndex((currentIndex) => {
+      if (filteredCommandPaletteItems.length === 0) {
+        return 0;
+      }
+
+      if (currentIndex < filteredCommandPaletteItems.length) {
+        return currentIndex;
+      }
+
+      return filteredCommandPaletteItems.length - 1;
+    });
+  }, [filteredCommandPaletteItems.length, isCommandPaletteOpen]);
+
+  const handleMoveCommandPaletteSelection = (direction: -1 | 1) => {
+    if (filteredCommandPaletteItems.length === 0) {
+      return;
+    }
+
+    setActiveCommandPaletteIndex((currentIndex) => {
+      const nextIndex = currentIndex + direction;
+
+      if (nextIndex < 0) {
+        return filteredCommandPaletteItems.length - 1;
+      }
+
+      if (nextIndex >= filteredCommandPaletteItems.length) {
+        return 0;
+      }
+
+      return nextIndex;
+    });
+  };
+
+  const handleSelectCommandPaletteIndex = (index: number) => {
+    const selectedItem = filteredCommandPaletteItems[index];
+
+    if (!selectedItem) {
+      return;
+    }
+
+    closeCommandPalette();
+    selectedItem.onSelect();
+  };
+
+  const handleSelectActiveCommandPaletteItem = () => {
+    handleSelectCommandPaletteIndex(activeCommandPaletteIndex);
+  };
+
   return (
     <main className="admin-shell-page">
+      {isCommandPaletteOpen ? (
+        <CommandPaletteDialog
+          activeIndex={activeCommandPaletteIndex}
+          items={filteredCommandPaletteItems}
+          onClose={closeCommandPalette}
+          onMoveActive={handleMoveCommandPaletteSelection}
+          onQueryChange={setCommandPaletteQuery}
+          onSelectActive={handleSelectActiveCommandPaletteItem}
+          onSelectItem={handleSelectCommandPaletteIndex}
+          query={commandPaletteQuery}
+        />
+      ) : null}
+
       <div className="admin-shell">
         <aside className="admin-sidebar" aria-label="Admin navigation">
           <div className="admin-brand">
@@ -3175,6 +3721,14 @@ export default function AdminPage() {
             <div className="actions">
               <button
                 className="button button-secondary"
+                onClick={openCommandPalette}
+                type="button"
+              >
+                Command palette
+                <span className="button-shortcut">Cmd+K</span>
+              </button>
+              <button
+                className="button button-secondary"
                 disabled={!canAccessCollectionBuilder}
                 onClick={() => jumpToSection(collectionBuilderSectionId)}
                 type="button"
@@ -3232,8 +3786,8 @@ export default function AdminPage() {
               </h3>
               <p className="card-copy">
                 {activeCollection
-                  ? `Use the sidebar to switch between ${activeCollection.definition.label} records and schema changes without losing the collection context.`
-                  : "The sidebar now prioritizes collections first, with records nested under the active collection and admin utilities moved lower."}
+                  ? `Use the sidebar or the command palette to switch between ${activeCollection.definition.label} records, schema changes, and admin actions without losing the collection context.`
+                  : "The sidebar now prioritizes collections first, and Cmd+K gives you a fast path into collections, records, and admin actions."}
               </p>
               <div className="status-row">
                 <span className="status-pill">Authenticated</span>
@@ -3241,6 +3795,7 @@ export default function AdminPage() {
                 <span className="status-pill">D1 planning live</span>
                 <span className="status-pill">Generated record editor live</span>
                 <span className="status-pill">Collection navigation live</span>
+                <span className="status-pill">Command palette live</span>
               </div>
             </article>
 
