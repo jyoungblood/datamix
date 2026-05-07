@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { createAuth, getAuthSetupStatus } from "./auth";
 import {
   forbidMissingPermission,
+  requireAnyPermission,
   requireEveryPermission,
   requirePermission,
   requireSession,
@@ -30,6 +31,11 @@ import {
   MediaAssetError,
 } from "./media";
 import {
+  DatamixRoleError,
+  listAvailableRoleDefinitions,
+  saveCustomRoleDefinition,
+} from "./roles";
+import {
   requirePublicApiAccess,
   type PublicApiPrincipal,
 } from "./public-api-auth";
@@ -47,12 +53,24 @@ import {
   updateCollectionRecord,
 } from "./records";
 import { runWithExecutionContext } from "./request-context";
+import { DatamixUserError, listDatamixUsers, updateDatamixUserRole } from "./users";
 
 export const app = new Hono<{ Bindings: ApiBindings }>();
 
 const inviteRequestSchema = z.object({
   email: z.email(),
   name: z.string().trim().min(1).max(120).optional(),
+});
+
+const roleDefinitionRequestSchema = z.object({
+  description: z.string(),
+  id: z.string(),
+  label: z.string(),
+  permissions: z.array(z.string()),
+});
+
+const userRoleRequestSchema = z.object({
+  roleId: z.string().trim().min(1).max(64),
 });
 
 function allowAdminBrowser(origin: string) {
@@ -157,6 +175,22 @@ app.use("/session", async (c, next) => {
   });
 
   return corsMiddleware(c, next);
+});
+
+app.use("/roles", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/roles/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/users", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/users/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
 });
 
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
@@ -476,6 +510,131 @@ app.post("/invites", requirePermission("users.invite"), async (c) => {
         { error: error.message },
         typeof error.statusCode === "number" ? (error.statusCode as 400) : 400,
       );
+    }
+
+    throw error;
+  }
+});
+
+app.get(
+  "/roles",
+  requireAnyPermission([
+    "users.read",
+    "users.invite",
+    "users.update",
+    "settings.read",
+    "settings.update",
+  ]),
+  async (c) => {
+    try {
+      const roles = await listAvailableRoleDefinitions(c.env);
+
+      return c.json({
+        ...createServiceStatus("api"),
+        roles,
+      });
+    } catch (error) {
+      if (error instanceof DatamixRoleError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.put("/roles/:id", requirePermission("settings.update"), async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Role definition payload must be valid JSON." }, 400);
+  }
+
+  const parsed = roleDefinitionRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "Role definition payload is incomplete." }, 400);
+  }
+
+  if (parsed.data.id !== c.req.param("id")) {
+    return c.json({ error: "Route role id must match the role definition id." }, 400);
+  }
+
+  try {
+    const role = await saveCustomRoleDefinition(c.env, parsed.data);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      message: "Role definition saved.",
+      role,
+    });
+  } catch (error) {
+    if (error instanceof DatamixRoleError) {
+      return c.json(
+        {
+          error: error.message,
+          issues: error.issues,
+        },
+        error.statusCode as 400,
+      );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/users", requirePermission("users.read"), async (c) => {
+  try {
+    const users = await listDatamixUsers(c.env);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      users,
+    });
+  } catch (error) {
+    if (error instanceof DatamixUserError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    throw error;
+  }
+});
+
+app.put("/users/:id/role", requirePermission("users.update"), async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "User role payload must be valid JSON." }, 400);
+  }
+
+  const parsed = userRoleRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "A valid role id is required." }, 400);
+  }
+
+  try {
+    const result = await updateDatamixUserRole(c.env, c.req.param("id"), parsed.data.roleId);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      message: "User role updated.",
+      role: result.role,
+      user: result,
+    });
+  } catch (error) {
+    if (error instanceof DatamixUserError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
     }
 
     throw error;

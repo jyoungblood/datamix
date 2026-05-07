@@ -1,17 +1,19 @@
 import {
-  createDatamixAuthorizationSummary,
   createMediaObjectUrl,
-  datamixRolePresets,
   datamixFieldTypes,
+  datamixPermissionResourceDefinitions,
+  datamixRolePresets,
   getDatamixPermissionActionDefinition,
   isRecordCrudFieldDefinition,
   listDatamixPermissionGrantsForRole,
-  readDatamixRoleId,
-  resolveDatamixRolePreset,
+  listDatamixPermissionsByResource,
   type DatamixCollectionDefinition,
+  type DatamixAuthorizationSummary,
   type DatamixFieldDefinition,
   type DatamixFieldType,
   type DatamixMediaAsset,
+  type DatamixPermissionKey,
+  type DatamixRoleDefinition,
   type DatamixSchemaValidationIssue,
   type DatamixSelectOption,
 } from "@datamix/core";
@@ -31,6 +33,7 @@ import {
   MediaAssetRequestError,
   uploadMediaAsset,
 } from "../lib/media";
+import { listRoles, saveRole, RoleRequestError } from "../lib/roles";
 import {
   CollectionRecordRequestError,
   createCollectionRecord,
@@ -40,7 +43,14 @@ import {
   type StoredCollectionRecord,
 } from "../lib/records";
 import { adminPublicEnv } from "../lib/runtime";
+import { loadSessionAccess } from "../lib/session";
 import { useSetupStatus } from "../lib/setup";
+import {
+  listUsers,
+  updateUserRole,
+  UserRequestError,
+  type DatamixUserSummary,
+} from "../lib/users";
 import { TiptapRichTextEditor } from "./_components/TiptapRichTextEditor";
 
 const loginHref = "/login?next=/admin";
@@ -51,7 +61,7 @@ const adminUtilityItems = [
   {
     id: "invite",
     label: "Team access",
-    description: "Invite another admin through email",
+    description: "Invite users and assign roles without leaving the shell.",
     state: "ready",
   },
   {
@@ -63,8 +73,8 @@ const adminUtilityItems = [
   {
     id: "settings",
     label: "Settings",
-    description: "Project controls will expand later",
-    state: "soon",
+    description: "Role definitions now live here, with more project controls later.",
+    state: "ready",
   },
 ] as const;
 
@@ -76,9 +86,9 @@ const shellCapabilities = [
   "Collections and their records now drive the sidebar navigation.",
 ] as const;
 
-const rolePresetPreviewItems = datamixRolePresets.map((role) => ({
-  ...role,
-  grants: listDatamixPermissionGrantsForRole(role),
+const rolePermissionSections = datamixPermissionResourceDefinitions.map((resource) => ({
+  permissions: listDatamixPermissionsByResource(resource.id),
+  resource,
 }));
 
 const overviewSectionId = "overview";
@@ -129,6 +139,13 @@ type GeneratedRecordFormValue = boolean | string;
 type GeneratedRecordFormState = Record<string, GeneratedRecordFormValue>;
 type GeneratedRecordPayloadValue = boolean | number | string | string[] | null;
 type PrimitiveRecordPayload = Record<string, PrimitiveRecordValue>;
+
+type RoleDraft = {
+  description: string;
+  id: string;
+  label: string;
+  permissions: DatamixPermissionKey[];
+};
 
 let nextFieldKey = 0;
 
@@ -1277,6 +1294,59 @@ function jumpToSection(sectionId: string) {
   window.history.replaceState(null, "", `#${sectionId}`);
 }
 
+function createRoleIdSuggestion(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "_")
+    .replaceAll(/_+/g, "_")
+    .replaceAll(/^_+|_+$/g, "")
+    .replaceAll(/^[^a-z]+/, "");
+}
+
+function createRoleDraftFromRole(role: DatamixRoleDefinition): RoleDraft {
+  return {
+    description: role.description,
+    id: role.id,
+    label: role.label,
+    permissions: [...role.permissions],
+  };
+}
+
+function createEmptyRoleDraft(sourceRole?: DatamixRoleDefinition): RoleDraft {
+  if (!sourceRole) {
+    return {
+      description: "",
+      id: "",
+      label: "",
+      permissions: [],
+    };
+  }
+
+  const nextLabel = sourceRole.system
+    ? `${sourceRole.label} copy`
+    : sourceRole.label;
+  const suggestedId = createRoleIdSuggestion(nextLabel);
+
+  return {
+    description: sourceRole.description,
+    id: suggestedId === sourceRole.id ? `${suggestedId}_custom` : suggestedId,
+    label: nextLabel,
+    permissions: [...sourceRole.permissions],
+  };
+}
+
+function resolveRoleLabel(
+  roles: readonly DatamixRoleDefinition[],
+  roleId: string | null,
+) {
+  if (!roleId) {
+    return "Unknown role";
+  }
+
+  return roles.find((role) => role.id === roleId)?.label ?? roleId;
+}
+
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
@@ -1322,13 +1392,28 @@ export default function AdminPage() {
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
   const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const sessionUserRole = session.data ? readDatamixRoleId(session.data.user) : null;
-  const sessionRole = session.data
-    ? resolveDatamixRolePreset(sessionUserRole, "administrator")
-    : null;
-  const sessionAuthorization = session.data
-    ? createDatamixAuthorizationSummary(sessionUserRole, "administrator")
-    : null;
+  const [sessionAuthorization, setSessionAuthorization] =
+    useState<DatamixAuthorizationSummary | null>(null);
+  const [sessionAuthorizationError, setSessionAuthorizationError] = useState<string | null>(null);
+  const [isLoadingSessionAuthorization, setIsLoadingSessionAuthorization] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<DatamixRoleDefinition[]>([
+    ...datamixRolePresets,
+  ]);
+  const [rolesLoadError, setRolesLoadError] = useState<string | null>(null);
+  const [rolesMessage, setRolesMessage] = useState<string | null>(null);
+  const [roleIssues, setRoleIssues] = useState<DatamixSchemaValidationIssue[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [isSavingRole, setIsSavingRole] = useState(false);
+  const [isCreatingRole, setIsCreatingRole] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [roleDraft, setRoleDraft] = useState<RoleDraft>(createEmptyRoleDraft);
+  const [users, setUsers] = useState<DatamixUserSummary[]>([]);
+  const [usersLoadError, setUsersLoadError] = useState<string | null>(null);
+  const [usersMessage, setUsersMessage] = useState<string | null>(null);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [updatingUserRoleId, setUpdatingUserRoleId] = useState<string | null>(null);
+  const [userRoleDrafts, setUserRoleDrafts] = useState<Record<string, string>>({});
+  const sessionRole = sessionAuthorization?.role ?? null;
   const permissionMap = sessionAuthorization?.permissionMap ?? null;
   const canViewCollections = permissionMap?.["collections.read"] ?? false;
   const canCreateCollections = permissionMap?.["collections.create"] ?? false;
@@ -1352,6 +1437,74 @@ export default function AdminPage() {
   const canViewSettings = permissionMap?.["settings.read"] ?? false;
   const canUpdateSettings = permissionMap?.["settings.update"] ?? false;
   const canAccessSettingsWorkspace = canViewSettings || canUpdateSettings;
+
+  const loadSessionAuthorizationData = async () => {
+    setSessionAuthorizationError(null);
+    setIsLoadingSessionAuthorization(true);
+
+    try {
+      const nextAuthorization = await loadSessionAccess();
+
+      setSessionAuthorization(nextAuthorization);
+    } catch (error) {
+      setSessionAuthorization(null);
+      setSessionAuthorizationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the current access profile.",
+      );
+    } finally {
+      setIsLoadingSessionAuthorization(false);
+    }
+  };
+
+  const loadAvailableRoles = async (options?: { preferredRoleId?: string }) => {
+    setRolesLoadError(null);
+    setIsLoadingRoles(true);
+
+    try {
+      const nextRoles = await listRoles();
+      const preferredRoleId = options?.preferredRoleId;
+
+      setAvailableRoles(nextRoles);
+      setSelectedRoleId((currentSelectedRoleId) =>
+        preferredRoleId && nextRoles.some((role) => role.id === preferredRoleId)
+          ? preferredRoleId
+          : currentSelectedRoleId &&
+              nextRoles.some((role) => role.id === currentSelectedRoleId)
+            ? currentSelectedRoleId
+          : nextRoles[0]?.id ?? null,
+      );
+    } catch (error) {
+      setRolesLoadError(error instanceof Error ? error.message : "Unable to load roles.");
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
+
+  const loadUserList = async () => {
+    setUsersLoadError(null);
+    setIsLoadingUsers(true);
+
+    try {
+      const nextUsers = await listUsers();
+
+      setUsers(nextUsers);
+      setUserRoleDrafts((currentDrafts) => {
+        const nextDrafts: Record<string, string> = {};
+
+        nextUsers.forEach((user) => {
+          nextDrafts[user.id] = currentDrafts[user.id] ?? user.roleId ?? "";
+        });
+
+        return nextDrafts;
+      });
+    } catch (error) {
+      setUsersLoadError(error instanceof Error ? error.message : "Unable to load users.");
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
 
   const loadCollections = async (options?: { refresh?: boolean }) => {
     const requestId = collectionLoadRequestId.current + 1;
@@ -1518,6 +1671,21 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!session.data) {
+      setSessionAuthorization(null);
+      setSessionAuthorizationError(null);
+      setIsLoadingSessionAuthorization(false);
+      return;
+    }
+
+    void loadSessionAuthorizationData();
+  }, [session.data]);
+
+  useEffect(() => {
+    if (!session.data) {
+      return;
+    }
+
+    if (!sessionAuthorization) {
       return;
     }
 
@@ -1532,10 +1700,14 @@ export default function AdminPage() {
     }
 
     void loadCollections();
-  }, [canViewCollections, session.data]);
+  }, [canViewCollections, session.data, sessionAuthorization]);
 
   useEffect(() => {
     if (!session.data) {
+      return;
+    }
+
+    if (!sessionAuthorization) {
       return;
     }
 
@@ -1549,7 +1721,67 @@ export default function AdminPage() {
     }
 
     void loadMediaAssets();
-  }, [canViewMedia, session.data]);
+  }, [canViewMedia, session.data, sessionAuthorization]);
+
+  useEffect(() => {
+    if (!session.data || !sessionAuthorization) {
+      return;
+    }
+
+    if (!canAccessTeamAccess && !canAccessSettingsWorkspace) {
+      setAvailableRoles([...datamixRolePresets]);
+      setRolesLoadError(null);
+      setIsLoadingRoles(false);
+      setSelectedRoleId(null);
+      setIsCreatingRole(false);
+      return;
+    }
+
+    void loadAvailableRoles();
+  }, [
+    canAccessSettingsWorkspace,
+    canAccessTeamAccess,
+    session.data,
+    sessionAuthorization,
+  ]);
+
+  useEffect(() => {
+    if (!session.data || !sessionAuthorization) {
+      return;
+    }
+
+    if (!canViewUsers) {
+      setUsers([]);
+      setUsersLoadError(null);
+      setUsersMessage(null);
+      setIsLoadingUsers(false);
+      setUserRoleDrafts({});
+      return;
+    }
+
+    void loadUserList();
+  }, [canViewUsers, session.data, sessionAuthorization]);
+
+  useEffect(() => {
+    if (isCreatingRole) {
+      return;
+    }
+
+    const selectedRole =
+      availableRoles.find((role) => role.id === selectedRoleId) ?? availableRoles[0] ?? null;
+
+    if (!selectedRole) {
+      setSelectedRoleId(null);
+      return;
+    }
+
+    if (selectedRoleId !== selectedRole.id) {
+      setSelectedRoleId(selectedRole.id);
+      return;
+    }
+
+    setRoleDraft(createRoleDraftFromRole(selectedRole));
+  }, [availableRoles, isCreatingRole, selectedRoleId]);
 
   const activeCollection = collections.find(
     (collection) => collection.definition.name === selectedCollectionName,
@@ -1597,14 +1829,22 @@ export default function AdminPage() {
     void loadRecords(activeCollection);
   }, [activeCollection, canViewRecords]);
 
-  if (session.isPending || setupStatus.isPending) {
+  if (
+    session.isPending ||
+    setupStatus.isPending ||
+    (session.data && isLoadingSessionAuthorization)
+  ) {
     return (
       <main className="shell">
         <div className="panel stack">
           <p className="eyebrow">Admin</p>
-          <h1 className="page-title">Checking your session</h1>
+          <h1 className="page-title">
+            {session.data ? "Loading access profile" : "Checking your session"}
+          </h1>
           <p className="body">
-            Datamix is asking the API Worker whether this browser already has a valid session.
+            {session.data
+              ? "Datamix is resolving your current role and permissions from the API Worker."
+              : "Datamix is asking the API Worker whether this browser already has a valid session."}
           </p>
         </div>
       </main>
@@ -1627,7 +1867,23 @@ export default function AdminPage() {
     return null;
   }
 
+  if (sessionAuthorizationError || !sessionAuthorization) {
+    return (
+      <main className="shell">
+        <div className="panel stack">
+          <p className="eyebrow">Admin</p>
+          <h1 className="page-title">Access profile is unavailable</h1>
+          <p className="body">
+            {sessionAuthorizationError ??
+              "Datamix could not resolve the current role and permission summary."}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const userLabel = session.data.user.name || session.data.user.email;
+  const currentSessionUserId = session.data.user.id;
   const isEditingExistingCollection =
     selectedCollectionName !== null && !isCreatingCollection;
   const canSaveCurrentCollection = isEditingExistingCollection
@@ -1686,6 +1942,10 @@ export default function AdminPage() {
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
     : null;
+  const selectedRole = isCreatingRole
+    ? null
+    : availableRoles.find((role) => role.id === selectedRoleId) ?? null;
+  const rolePreviewItems = availableRoles.length > 0 ? availableRoles : datamixRolePresets;
   const generatedRecordPayload = activeCollection
     ? createGeneratedRecordPayload(activeCollection.definition, recordDraft)
     : null;
@@ -1696,6 +1956,9 @@ export default function AdminPage() {
   const recordStatusTone = recordIssues.length > 0 ? "error" : "success";
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const isInitialRecordLoad = isLoadingRecords && !hasLoadedRecords;
+  const canRefreshRoles =
+    (canAccessTeamAccess || canAccessSettingsWorkspace) && !isLoadingRoles && !isSavingRole;
+  const canRefreshUsers = canViewUsers && !isLoadingUsers && updatingUserRoleId === null;
   const canSaveCurrentRecord = selectedRecord
     ? canUpdateRecords
     : canCreateRecords;
@@ -1930,6 +2193,172 @@ export default function AdminPage() {
       setInviteError(error instanceof Error ? error.message : "Unable to send invite.");
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleRefreshRoles = () => {
+    if (!canRefreshRoles) {
+      return;
+    }
+
+    void loadAvailableRoles(
+      selectedRoleId ? { preferredRoleId: selectedRoleId } : undefined,
+    );
+  };
+
+  const handleRefreshUsers = () => {
+    if (!canRefreshUsers) {
+      return;
+    }
+
+    void loadUserList();
+  };
+
+  const handleSelectRole = (role: DatamixRoleDefinition) => {
+    setIsCreatingRole(false);
+    setSelectedRoleId(role.id);
+    setRoleDraft(createRoleDraftFromRole(role));
+    setRoleIssues([]);
+    setRolesMessage(null);
+  };
+
+  const handleStartNewRole = (sourceRole?: DatamixRoleDefinition) => {
+    if (!canUpdateSettings) {
+      return;
+    }
+
+    setIsCreatingRole(true);
+    setRoleDraft(createEmptyRoleDraft(sourceRole));
+    setRoleIssues([]);
+    setRolesMessage(null);
+  };
+
+  const handleRoleDraftFieldChange = (
+    field: "description" | "id" | "label",
+    value: string,
+  ) => {
+    setRoleDraft((currentRoleDraft) => {
+      if (field !== "label") {
+        return {
+          ...currentRoleDraft,
+          [field]: value,
+        };
+      }
+
+      const currentSuggestion = createRoleIdSuggestion(currentRoleDraft.label);
+      const nextSuggestion = createRoleIdSuggestion(value);
+      const shouldRefreshRoleId =
+        currentRoleDraft.id.trim().length === 0 || currentRoleDraft.id === currentSuggestion;
+
+      return {
+        ...currentRoleDraft,
+        id: shouldRefreshRoleId ? nextSuggestion : currentRoleDraft.id,
+        label: value,
+      };
+    });
+    setRoleIssues([]);
+    setRolesMessage(null);
+  };
+
+  const handleToggleRolePermission = (permission: DatamixPermissionKey) => {
+    setRoleDraft((currentRoleDraft) => {
+      const nextPermissions = currentRoleDraft.permissions.includes(permission)
+        ? currentRoleDraft.permissions.filter((currentPermission) => currentPermission !== permission)
+        : [...currentRoleDraft.permissions, permission];
+
+      return {
+        ...currentRoleDraft,
+        permissions: nextPermissions,
+      };
+    });
+    setRoleIssues([]);
+    setRolesMessage(null);
+  };
+
+  const handleSaveRole = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canUpdateSettings) {
+      return;
+    }
+
+    setIsSavingRole(true);
+    setRoleIssues([]);
+    setRolesMessage(null);
+
+    try {
+      const result = await saveRole({
+        description: roleDraft.description,
+        id: roleDraft.id,
+        label: roleDraft.label,
+        permissions: [...roleDraft.permissions],
+      });
+
+      setIsCreatingRole(false);
+      setSelectedRoleId(result.role.id);
+      setRoleDraft(createRoleDraftFromRole(result.role));
+      setRolesMessage(result.message);
+      await loadAvailableRoles({ preferredRoleId: result.role.id });
+
+      if (sessionRole?.id === result.role.id) {
+        await loadSessionAuthorizationData();
+      }
+    } catch (error) {
+      if (error instanceof RoleRequestError) {
+        setRoleIssues(error.issues ?? []);
+        setRolesMessage(error.message);
+      } else {
+        setRolesMessage(error instanceof Error ? error.message : "Unable to save role.");
+      }
+    } finally {
+      setIsSavingRole(false);
+    }
+  };
+
+  const handleUserRoleDraftChange = (userId: string, nextRoleId: string) => {
+    setUserRoleDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [userId]: nextRoleId,
+    }));
+    setUsersMessage(null);
+  };
+
+  const handleUpdateUserRole = async (user: DatamixUserSummary) => {
+    const nextRoleId = userRoleDrafts[user.id];
+
+    if (!canUpdateUsers || !nextRoleId || nextRoleId === user.roleId) {
+      return;
+    }
+
+    setUpdatingUserRoleId(user.id);
+    setUsersMessage(null);
+    setUsersLoadError(null);
+
+    try {
+      const result = await updateUserRole(user.id, nextRoleId);
+
+      setUsers((currentUsers) =>
+        currentUsers.map((currentUser) =>
+          currentUser.id === result.user.id ? result.user : currentUser,
+        ),
+      );
+      setUserRoleDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [result.user.id]: result.user.roleId ?? "",
+      }));
+      setUsersMessage(
+        `Updated ${result.user.name || result.user.email} to ${result.role?.label ?? result.user.roleId ?? "the selected role"}.`,
+      );
+
+      if (session.data?.user.id === result.user.id) {
+        await loadSessionAuthorizationData();
+      }
+    } catch (error) {
+      setUsersLoadError(
+        error instanceof Error ? error.message : "Unable to update the selected user role.",
+      );
+    } finally {
+      setUpdatingUserRoleId(null);
     }
   };
 
@@ -2378,26 +2807,17 @@ export default function AdminPage() {
             <p className="admin-sidebar-heading">Administration</p>
             <div className="workspace-actions">
               {adminUtilityItems.map((item) => {
-                const itemClassName =
-                  item.state === "ready" ? "admin-nav-item" : "admin-nav-item is-muted";
-
-                return item.state === "soon" ? (
-                  <div className={itemClassName} key={item.id}>
-                    <div>
-                      <p className="admin-nav-label">{item.label}</p>
-                      <p className="admin-nav-copy">{item.description}</p>
-                    </div>
-                    <span className="status-pill status-pill-muted">Soon</span>
-                  </div>
-                ) : (
+                return (
                   <button
-                    className={itemClassName}
+                    className="admin-nav-item"
                     disabled={
                       item.id === "invite"
                         ? !canAccessTeamAccess
                         : item.id === "media"
                           ? !canAccessMediaWorkspace
-                          : false
+                          : item.id === "settings"
+                            ? !canAccessSettingsWorkspace
+                            : false
                     }
                     key={item.id}
                     onClick={() => jumpToSection(item.id)}
@@ -2412,7 +2832,9 @@ export default function AdminPage() {
                         ? "Restricted"
                         : item.id === "media" && !canAccessMediaWorkspace
                           ? "Restricted"
-                          : "Ready"}
+                          : item.id === "settings" && !canAccessSettingsWorkspace
+                            ? "Restricted"
+                            : "Ready"}
                     </span>
                   </button>
                 );
@@ -3574,10 +3996,10 @@ export default function AdminPage() {
           <section className="admin-grid">
             <article className="admin-card" id="invite">
               <p className="card-eyebrow">Team access</p>
-              <h3 className="card-title">Invite a teammate</h3>
+              <h3 className="card-title">Users, invites, and assigned roles</h3>
               <p className="card-copy">
-                Datamix emails a secure invite link and routes the recipient through
-                password setup on first sign-in.
+                Keep invites and role assignment in one place so access stays understandable as
+                the instance grows.
               </p>
 
               {!canAccessTeamAccess ? (
@@ -3587,42 +4009,176 @@ export default function AdminPage() {
                   tone="warning"
                 />
               ) : (
-                <form className="auth-form" onSubmit={handleInviteSubmit}>
-                  <label className="field">
-                    <span>Name</span>
-                    <input
-                      disabled={!canInviteUsers}
-                      onChange={(event) => setInviteName(event.target.value)}
-                      placeholder="Optional display name"
-                      type="text"
-                      value={inviteName}
-                    />
-                  </label>
-
-                  <label className="field">
-                    <span>Email</span>
-                    <input
-                      disabled={!canInviteUsers}
-                      onChange={(event) => setInviteEmail(event.target.value)}
-                      required
-                      type="email"
-                      value={inviteEmail}
-                    />
-                  </label>
-
-                  {inviteError ? <p className="form-error">{inviteError}</p> : null}
-                  {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
-
-                  <div className="actions">
-                    <button
-                      className="button"
-                      disabled={isInviting || !canInviteUsers}
-                      type="submit"
-                    >
-                      {isInviting ? "Sending invite..." : "Send invite"}
-                    </button>
+                <div className="section-stack">
+                  <div className="section-row">
+                    <div>
+                      <h4 className="section-title">Current users</h4>
+                      <p className="section-copy">
+                        See who can sign in and adjust their assigned role when your access
+                        includes user management.
+                      </p>
+                    </div>
+                    {canViewUsers ? (
+                      <div className="actions actions-compact">
+                        <button
+                          className="mini-button"
+                          disabled={!canRefreshUsers}
+                          onClick={handleRefreshUsers}
+                          type="button"
+                        >
+                          {isLoadingUsers ? "Refreshing..." : "Refresh"}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                </form>
+
+                  {usersMessage ? <p className="form-success">{usersMessage}</p> : null}
+
+                  {!canViewUsers ? (
+                    <p className="helper-text">
+                      {canUpdateUsers
+                        ? "This role can update users, but it cannot browse the current user list."
+                        : "This role cannot browse the current user list yet."}
+                    </p>
+                  ) : isLoadingUsers ? (
+                    <FlowStateBox
+                      body="Loading the current Datamix user list from the protected API route."
+                      compact
+                      title="Loading users"
+                    />
+                  ) : usersLoadError && users.length === 0 ? (
+                    <FlowStateBox
+                      actionLabel="Try again"
+                      body={usersLoadError}
+                      compact
+                      onAction={handleRefreshUsers}
+                      title="User list is unavailable"
+                      tone="error"
+                    />
+                  ) : users.length === 0 ? (
+                    <FlowStateBox
+                      body="No users are available yet beyond the current session."
+                      compact
+                      title="No users found"
+                    />
+                  ) : (
+                    <div className="mini-list">
+                      {users.map((user) => (
+                        <div className="mini-list-item mini-list-item-stacked" key={user.id}>
+                          <div className="mini-list-content">
+                            <strong>{user.name || user.email}</strong>
+                            <small>{user.email}</small>
+                          </div>
+
+                          <div className="status-row status-row-compact">
+                            <span className="status-pill">
+                              {resolveRoleLabel(availableRoles, user.roleId)}
+                            </span>
+                            {currentSessionUserId === user.id ? (
+                              <span className="status-pill status-pill-muted">Current session</span>
+                            ) : null}
+                            <span className="status-pill status-pill-muted">
+                              {user.emailVerified ? "Verified" : "Pending verification"}
+                            </span>
+                          </div>
+
+                          {canUpdateUsers ? (
+                            <div className="permission-toolbar">
+                              <label className="field field-inline">
+                                <span>Assigned role</span>
+                                <select
+                                  onChange={(event) =>
+                                    handleUserRoleDraftChange(user.id, event.target.value)
+                                  }
+                                  value={userRoleDrafts[user.id] ?? user.roleId ?? ""}
+                                >
+                                  <option disabled value="">
+                                    Select role
+                                  </option>
+                                  {availableRoles.map((role) => (
+                                    <option key={role.id} value={role.id}>
+                                      {role.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <button
+                                className="mini-button"
+                                disabled={
+                                  updatingUserRoleId === user.id ||
+                                  !userRoleDrafts[user.id] ||
+                                  userRoleDrafts[user.id] === user.roleId
+                                }
+                                onClick={() => void handleUpdateUserRole(user)}
+                                type="button"
+                              >
+                                {updatingUserRoleId === user.id ? "Saving..." : "Save role"}
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {usersLoadError && users.length > 0 ? (
+                    <FlowStateBox
+                      actionLabel="Retry users"
+                      body={usersLoadError}
+                      compact
+                      onAction={handleRefreshUsers}
+                      title="User refresh did not finish"
+                      tone="warning"
+                    />
+                  ) : null}
+
+                  <div className="section-stack">
+                    <div>
+                      <h4 className="section-title">Invite a teammate</h4>
+                      <p className="section-copy">
+                        Datamix emails a secure invite link and routes the recipient through
+                        password setup on first sign-in.
+                      </p>
+                    </div>
+
+                    <form className="auth-form" onSubmit={handleInviteSubmit}>
+                      <label className="field">
+                        <span>Name</span>
+                        <input
+                          disabled={!canInviteUsers}
+                          onChange={(event) => setInviteName(event.target.value)}
+                          placeholder="Optional display name"
+                          type="text"
+                          value={inviteName}
+                        />
+                      </label>
+
+                      <label className="field">
+                        <span>Email</span>
+                        <input
+                          disabled={!canInviteUsers}
+                          onChange={(event) => setInviteEmail(event.target.value)}
+                          required
+                          type="email"
+                          value={inviteEmail}
+                        />
+                      </label>
+
+                      {inviteError ? <p className="form-error">{inviteError}</p> : null}
+                      {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
+
+                      <div className="actions">
+                        <button
+                          className="button"
+                          disabled={isInviting || !canInviteUsers}
+                          type="submit"
+                        >
+                          {isInviting ? "Sending invite..." : "Send invite"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               )}
 
               {canAccessTeamAccess && !canInviteUsers ? (
@@ -3634,16 +4190,15 @@ export default function AdminPage() {
 
               <div className="section-stack">
                 <div>
-                  <h4 className="section-title">Role presets for v0</h4>
+                  <h4 className="section-title">Available roles</h4>
                   <p className="section-copy">
-                    The shared RBAC model is now defined in core so later slices can
-                    wire API enforcement and admin guards against one readable source
-                    of truth.
+                    Built-in presets stay readable, and custom roles now flow through the
+                    same shared permission model and protected API checks.
                   </p>
                 </div>
 
                 <div className="mini-list">
-                  {rolePresetPreviewItems.map((role) => (
+                  {rolePreviewItems.map((role) => (
                     <div className="mini-list-item mini-list-item-stacked" key={role.id}>
                       <div className="mini-list-content">
                         <strong>{role.label}</strong>
@@ -3654,10 +4209,13 @@ export default function AdminPage() {
                         <span className="status-pill">
                           {role.permissions.length} permissions
                         </span>
+                        <span className="status-pill status-pill-muted">
+                          {role.system ? "Built-in" : "Custom"}
+                        </span>
                       </div>
 
                       <div className="section-stack">
-                        {role.grants.map((grant) => (
+                        {listDatamixPermissionGrantsForRole(role).map((grant) => (
                           <p className="helper-text" key={`${role.id}-${grant.resource.id}`}>
                             <strong>{grant.resource.label}:</strong>{" "}
                             {grant.actions
@@ -3674,7 +4232,7 @@ export default function AdminPage() {
 
             <article className="admin-card" id="settings">
               <p className="card-eyebrow">Session and runtime</p>
-              <h3 className="card-title">Stable foundation for the next slices</h3>
+              <h3 className="card-title">Role definitions and permission editing</h3>
               {!canAccessSettingsWorkspace ? (
                 <FlowStateBox
                   body={`Your ${sessionRole?.label ?? "current"} role cannot access settings yet.`}
@@ -3682,32 +4240,281 @@ export default function AdminPage() {
                   tone="warning"
                 />
               ) : (
-                <dl className="detail-list" id="session">
-                  <div>
-                    <dt>Signed in as</dt>
-                    <dd>{userLabel}</dd>
+                <div className="section-stack">
+                  <dl className="detail-list" id="session">
+                    <div>
+                      <dt>Signed in as</dt>
+                      <dd>{userLabel}</dd>
+                    </div>
+                    <div>
+                      <dt>Current role</dt>
+                      <dd>{sessionRole?.label ?? "Unknown role"}</dd>
+                    </div>
+                    <div>
+                      <dt>Email</dt>
+                      <dd>{session.data.user.email}</dd>
+                    </div>
+                    <div>
+                      <dt>App environment</dt>
+                      <dd>{adminPublicEnv.NEXT_PUBLIC_APP_ENV}</dd>
+                    </div>
+                    <div>
+                      <dt>API origin</dt>
+                      <dd>{adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}</dd>
+                    </div>
+                    <div>
+                      <dt>Media origin</dt>
+                      <dd>{adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN}</dd>
+                    </div>
+                    <div>
+                      <dt>Auth posture</dt>
+                      <dd>Persisted better-auth session on the API Worker origin</dd>
+                    </div>
+                  </dl>
+
+                  <div className="record-browser">
+                    <div className="record-browser-list">
+                      <div className="section-row">
+                        <div>
+                          <h4 className="section-title">Roles</h4>
+                          <p className="section-copy">
+                            Select a built-in preset to inspect it, or create a custom role with
+                            just the permissions this instance needs.
+                          </p>
+                        </div>
+                        <div className="actions actions-compact">
+                          <button
+                            className="mini-button"
+                            disabled={!canRefreshRoles}
+                            onClick={handleRefreshRoles}
+                            type="button"
+                          >
+                            {isLoadingRoles ? "Refreshing..." : "Refresh"}
+                          </button>
+                          {canUpdateSettings ? (
+                            <button
+                              className="mini-button"
+                              onClick={() => handleStartNewRole()}
+                              type="button"
+                            >
+                              New custom role
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {rolesLoadError && availableRoles.length === 0 ? (
+                        <FlowStateBox
+                          actionLabel="Try again"
+                          body={rolesLoadError}
+                          compact
+                          onAction={handleRefreshRoles}
+                          title="Role list is unavailable"
+                          tone="error"
+                        />
+                      ) : isLoadingRoles && availableRoles.length === 0 ? (
+                        <FlowStateBox
+                          body="Loading role definitions from the API Worker."
+                          compact
+                          title="Loading roles"
+                        />
+                      ) : (
+                        <div className="mini-list">
+                          {rolePreviewItems.map((role) => (
+                            <button
+                              className={
+                                !isCreatingRole && selectedRoleId === role.id
+                                  ? "mini-list-item mini-list-item-stacked is-selected"
+                                  : "mini-list-item mini-list-item-stacked"
+                              }
+                              key={role.id}
+                              onClick={() => handleSelectRole(role)}
+                              type="button"
+                            >
+                              <div className="mini-list-content">
+                                <span>{role.label}</span>
+                                <small>{role.description}</small>
+                              </div>
+                              <small>{role.system ? "Built-in" : "Custom"}</small>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {rolesLoadError && availableRoles.length > 0 ? (
+                        <FlowStateBox
+                          actionLabel="Retry roles"
+                          body={rolesLoadError}
+                          compact
+                          onAction={handleRefreshRoles}
+                          title="Role refresh did not finish"
+                          tone="warning"
+                        />
+                      ) : null}
+                    </div>
+
+                    <aside className="generated-record-preview">
+                      <p className="card-eyebrow">Role editor</p>
+                      {isCreatingRole ? (
+                        <>
+                          <h4 className="section-title">Create custom role</h4>
+                          <p className="section-copy">
+                            Start from scratch or from a built-in preset copy, then choose only
+                            the permissions this role should carry.
+                          </p>
+                        </>
+                      ) : selectedRole ? (
+                        <>
+                          <h4 className="section-title">{selectedRole.label}</h4>
+                          <p className="section-copy">{selectedRole.description}</p>
+                        </>
+                      ) : (
+                        <>
+                          <h4 className="section-title">Select a role</h4>
+                          <p className="section-copy">
+                            Choose a role from the list to inspect or edit it.
+                          </p>
+                        </>
+                      )}
+
+                      {!isCreatingRole && selectedRole?.system ? (
+                        <div className="section-stack">
+                          <FlowStateBox
+                            body="Built-in presets stay locked so Datamix keeps a stable baseline. Create a custom copy when you want to tune permissions."
+                            compact
+                            title="Built-in role"
+                          />
+                          {canUpdateSettings ? (
+                            <div className="actions">
+                              <button
+                                className="button"
+                                onClick={() => handleStartNewRole(selectedRole)}
+                                type="button"
+                              >
+                                Create custom copy
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : canUpdateSettings || (selectedRole && !selectedRole.system) ? (
+                        <form className="generated-record-form" onSubmit={handleSaveRole}>
+                          <fieldset
+                            className="form-fieldset-reset"
+                            disabled={!canUpdateSettings || isSavingRole}
+                          >
+                            <label className="field">
+                              <span>Role label</span>
+                              <input
+                                onChange={(event) =>
+                                  handleRoleDraftFieldChange("label", event.target.value)
+                                }
+                                placeholder="Content manager"
+                                type="text"
+                                value={roleDraft.label}
+                              />
+                            </label>
+
+                            <label className="field">
+                              <span>Role id</span>
+                              <input
+                                onChange={(event) =>
+                                  handleRoleDraftFieldChange("id", event.target.value)
+                                }
+                                placeholder="content_manager"
+                                type="text"
+                                value={roleDraft.id}
+                              />
+                            </label>
+
+                            <label className="field">
+                              <span>Description</span>
+                              <textarea
+                                onChange={(event) =>
+                                  handleRoleDraftFieldChange("description", event.target.value)
+                                }
+                                placeholder="Manages records and media without user administration."
+                                rows={3}
+                                value={roleDraft.description}
+                              />
+                            </label>
+
+                            <div className="permission-section-list">
+                              {rolePermissionSections.map((section) => (
+                                <div className="type-specific-box" key={section.resource.id}>
+                                  <p className="section-title">{section.resource.label}</p>
+                                  <p className="section-copy">{section.resource.description}</p>
+                                  <div className="permission-grid">
+                                    {section.permissions.map((permission) => (
+                                      <label className="permission-row" key={permission.key}>
+                                        <input
+                                          checked={roleDraft.permissions.includes(permission.key)}
+                                          onChange={() =>
+                                            handleToggleRolePermission(permission.key)
+                                          }
+                                          type="checkbox"
+                                        />
+                                        <span>
+                                          <strong>{permission.label}</strong>
+                                          <small>{permission.description}</small>
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </fieldset>
+
+                          {rolesMessage ? (
+                            <FlowStateBox
+                              body={rolesMessage}
+                              compact
+                              title={roleIssues.length > 0 ? "Role needs attention" : "Role saved"}
+                              tone={roleIssues.length > 0 ? "error" : "success"}
+                            />
+                          ) : null}
+                          {roleIssues.length > 0 ? (
+                            <ul className="issue-list">
+                              {roleIssues.map((issue) => (
+                                <li key={`${issue.path}-${issue.message}`}>
+                                  <strong>{formatIssuePath(issue.path)}</strong>: {issue.message}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+
+                          <div className="actions">
+                            <button className="button" disabled={!canUpdateSettings} type="submit">
+                              {isSavingRole ? "Saving role..." : "Save role"}
+                            </button>
+                            <button
+                              className="button button-secondary"
+                              disabled={!canUpdateSettings}
+                              onClick={() =>
+                                setRoleDraft(
+                                  isCreatingRole
+                                    ? createEmptyRoleDraft()
+                                    : selectedRole
+                                      ? createRoleDraftFromRole(selectedRole)
+                                      : createEmptyRoleDraft(),
+                                )
+                              }
+                              type="button"
+                            >
+                              Reset draft
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <FlowStateBox
+                          body="Select a role to inspect its permissions."
+                          compact
+                          title="No role selected"
+                        />
+                      )}
+                    </aside>
                   </div>
-                  <div>
-                    <dt>Email</dt>
-                    <dd>{session.data.user.email}</dd>
-                  </div>
-                  <div>
-                    <dt>App environment</dt>
-                    <dd>{adminPublicEnv.NEXT_PUBLIC_APP_ENV}</dd>
-                  </div>
-                  <div>
-                    <dt>API origin</dt>
-                    <dd>{adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}</dd>
-                  </div>
-                  <div>
-                    <dt>Media origin</dt>
-                    <dd>{adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN}</dd>
-                  </div>
-                  <div>
-                    <dt>Auth posture</dt>
-                    <dd>Persisted better-auth session on the API Worker origin</dd>
-                  </div>
-                </dl>
+                </div>
               )}
             </article>
           </section>

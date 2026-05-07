@@ -1,6 +1,8 @@
 import {
   createDatamixAuthorizationSummary,
+  createDatamixAuthorizationSummaryForRole,
   readDatamixRoleId,
+  resolveDatamixRolePreset,
   type DatamixAuthorizationSummary,
   type DatamixPermissionKey,
 } from "@datamix/core";
@@ -10,6 +12,7 @@ import type { HTTPException } from "hono/http-exception";
 
 import { createAuth, type DatamixSession } from "./auth";
 import { AuthConfigError, type ApiBindings } from "./env";
+import { getAvailableRoleDefinition } from "./roles";
 
 type AuthVariables = {
   authorization: DatamixAuthorizationSummary;
@@ -40,10 +43,11 @@ async function resolveAuthorizedSession(c: ApiAuthRequestContext) {
       };
     }
 
-    const authorization = createDatamixAuthorizationSummary(
-      readDatamixRoleId(session.user),
-      "administrator",
-    );
+    const roleId = readDatamixRoleId(session.user);
+    const role =
+      (roleId ? await getAvailableRoleDefinition(c.env, roleId) : null) ??
+      resolveDatamixRolePreset(null, "administrator");
+    const authorization = createDatamixAuthorizationSummaryForRole(role);
 
     c.set("session", session);
     c.set("authorization", authorization);

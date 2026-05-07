@@ -592,6 +592,48 @@ button.admin-nav-item:disabled {
   gap: 0.75rem;
 }
 
+.permission-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.permission-section-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.permission-grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.permission-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  color: #2c241a;
+}
+
+.permission-row input {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.22rem;
+}
+
+.permission-row span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.permission-row small {
+  color: #5e4d36;
+  line-height: 1.55;
+}
+
 .field-inline {
   min-width: 12rem;
 }

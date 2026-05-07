@@ -1,3 +1,8 @@
+import type {
+  DatamixSchemaValidationIssue,
+  DatamixValidationResult,
+} from "./collections";
+
 export const datamixPermissionResources = [
   "collections",
   "records",
@@ -99,6 +104,18 @@ export type DatamixRolePreset = DatamixRoleDefinition & {
   system: true;
 };
 
+export type DatamixCustomRoleDefinition = DatamixRoleDefinition & {
+  system: false;
+};
+
+export type DatamixRoleDefinitionInput = {
+  description: string;
+  id: string;
+  label: string;
+  permissions: readonly string[];
+  system?: boolean;
+};
+
 export type DatamixRoleAssignment = {
   roleId: string;
 };
@@ -107,8 +124,10 @@ export type DatamixAuthorizationSummary = {
   grants: DatamixResolvedRoleGrant[];
   permissionMap: DatamixPermissionMap;
   permissions: DatamixPermissionKey[];
-  role: DatamixRolePreset;
+  role: DatamixRoleDefinition;
 };
+
+export const datamixRolesTableName = "dmx_roles";
 
 export const datamixDefaultRoleAssignments = {
   fallback: "viewer",
@@ -356,10 +375,20 @@ const datamixPermissionResourceMatrixMap = new Map(
   datamixPermissionMatrix.map((resource) => [resource.id, resource] as const),
 );
 
+const datamixIdentifierPattern = /^[a-z][a-z0-9_]*$/;
+
 type DatamixRoleGrantInput = {
   resource: DatamixPermissionResource;
   actions: readonly DatamixPermissionAction[];
 };
+
+function pushRoleIssue(
+  issues: DatamixSchemaValidationIssue[],
+  path: string,
+  message: string,
+) {
+  issues.push({ path, message });
+}
 
 function normalizeDatamixRoleGrants(
   grants: readonly DatamixRoleGrantInput[],
@@ -434,6 +463,24 @@ export function createDatamixPermissionKeysForRoleGrants(
   });
 }
 
+export function createDatamixRoleDefinition(
+  input: DatamixRoleDefinitionInput,
+): DatamixRoleDefinition {
+  const permissions = normalizeDatamixPermissions(input.permissions);
+
+  return {
+    description: input.description,
+    grants: listDatamixPermissionGrantsForRole(permissions).map((grant) => ({
+      actions: [...grant.actions],
+      resource: grant.resource.id,
+    })),
+    id: input.id,
+    label: input.label,
+    permissions,
+    system: input.system === true,
+  };
+}
+
 function createRolePreset(
   id: DatamixRolePresetId,
   label: string,
@@ -441,11 +488,14 @@ function createRolePreset(
   grants: readonly DatamixRoleGrantInput[],
 ): DatamixRolePreset {
   return {
+    ...createDatamixRoleDefinition({
+      description,
+      id,
+      label,
+      permissions: createDatamixPermissionKeysForRoleGrants(grants),
+      system: true,
+    }),
     id,
-    label,
-    description,
-    grants: normalizeDatamixRoleGrants(grants),
-    permissions: createDatamixPermissionKeysForRoleGrants(grants),
     system: true,
   };
 }
@@ -539,6 +589,124 @@ export function readDatamixRoleId(
   const trimmedRoleId = input.role.trim();
 
   return trimmedRoleId.length > 0 ? trimmedRoleId : null;
+}
+
+export function validateDatamixRoleDefinition(
+  input: unknown,
+  options?: {
+    allowPresetIds?: boolean;
+  },
+): DatamixValidationResult<DatamixCustomRoleDefinition> {
+  const issues: DatamixSchemaValidationIssue[] = [];
+
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return {
+      issues: [
+        {
+          message: "Role definition must be an object.",
+          path: "role",
+        },
+      ],
+      success: false,
+    };
+  }
+
+  const record = input as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  const label = typeof record.label === "string" ? record.label.trim() : "";
+  const description =
+    typeof record.description === "string" ? record.description.trim() : "";
+  const rawPermissions = Array.isArray(record.permissions) ? record.permissions : null;
+
+  if (id.length === 0) {
+    pushRoleIssue(issues, "role.id", "Role id is required.");
+  } else {
+    if (id.length > 64) {
+      pushRoleIssue(issues, "role.id", "Role id must be 64 characters or fewer.");
+    }
+
+    if (!datamixIdentifierPattern.test(id)) {
+      pushRoleIssue(
+        issues,
+        "role.id",
+        "Use lowercase letters, numbers, and underscores, starting with a letter.",
+      );
+    }
+
+    if (!options?.allowPresetIds && isDatamixRolePresetId(id)) {
+      pushRoleIssue(
+        issues,
+        "role.id",
+        `Role id "${id}" is reserved for a built-in Datamix role.`,
+      );
+    }
+  }
+
+  if (label.length === 0) {
+    pushRoleIssue(issues, "role.label", "Role label is required.");
+  } else if (label.length > 80) {
+    pushRoleIssue(issues, "role.label", "Role label must be 80 characters or fewer.");
+  }
+
+  if (description.length === 0) {
+    pushRoleIssue(issues, "role.description", "Role description is required.");
+  } else if (description.length > 240) {
+    pushRoleIssue(
+      issues,
+      "role.description",
+      "Role description must be 240 characters or fewer.",
+    );
+  }
+
+  if (!rawPermissions) {
+    pushRoleIssue(issues, "role.permissions", "Role permissions must be an array.");
+  }
+
+  const permissions = rawPermissions
+    ? normalizeDatamixPermissions(
+        rawPermissions.filter(
+          (permission): permission is string => typeof permission === "string",
+        ),
+      )
+    : [];
+
+  if (rawPermissions) {
+    if (permissions.length === 0) {
+      pushRoleIssue(
+        issues,
+        "role.permissions",
+        "Select at least one permission for a custom role.",
+      );
+    }
+
+    rawPermissions.forEach((permission, index) => {
+      if (typeof permission !== "string" || !isDatamixPermissionKey(permission)) {
+        pushRoleIssue(
+          issues,
+          `role.permissions[${index}]`,
+          "Expected a supported permission key.",
+        );
+      }
+    });
+  }
+
+  if (issues.length > 0) {
+    return {
+      issues,
+      success: false,
+    };
+  }
+
+  return {
+    data: createDatamixRoleDefinition({
+      description,
+      id,
+      label,
+      permissions,
+      system: false,
+    }) as DatamixCustomRoleDefinition,
+    success: true,
+  };
 }
 
 export function createDatamixPermissionMap(
@@ -637,6 +805,23 @@ export function getDatamixRolePreset(roleId: DatamixRolePresetId) {
   return datamixRolePresetMap.get(roleId)!;
 }
 
+export function listDatamixRoleDefinitions(
+  customRoles: readonly DatamixRoleDefinition[] = [],
+) {
+  const customRoleMap = new Map(
+    customRoles
+      .filter((role) => !isDatamixRolePresetId(role.id))
+      .map((role) => [role.id, createDatamixRoleDefinition(role)] as const),
+  );
+
+  return [
+    ...datamixRolePresets,
+    ...[...customRoleMap.values()].sort((left, right) =>
+      left.label.localeCompare(right.label),
+    ),
+  ];
+}
+
 export function resolveDatamixRolePreset(
   roleId: string | null | undefined,
   fallbackRoleId: DatamixRolePresetId = datamixDefaultRoleAssignments.fallback,
@@ -648,18 +833,40 @@ export function resolveDatamixRolePreset(
   return getDatamixRolePreset(fallbackRoleId);
 }
 
-export function createDatamixAuthorizationSummary(
+export function resolveDatamixRoleDefinition(
   roleId: string | null | undefined,
+  roles: readonly DatamixRoleDefinition[],
   fallbackRoleId: DatamixRolePresetId = datamixDefaultRoleAssignments.fallback,
-): DatamixAuthorizationSummary {
-  const role = resolveDatamixRolePreset(roleId, fallbackRoleId);
+) {
+  if (roleId) {
+    const matchingRole = roles.find((role) => role.id === roleId);
 
+    if (matchingRole) {
+      return matchingRole;
+    }
+  }
+
+  return getDatamixRolePreset(fallbackRoleId);
+}
+
+export function createDatamixAuthorizationSummaryForRole(
+  role: DatamixRoleDefinition,
+): DatamixAuthorizationSummary {
   return {
     grants: listDatamixPermissionGrantsForRole(role),
     permissionMap: createDatamixPermissionMap(role.permissions),
     permissions: [...role.permissions],
     role,
   };
+}
+
+export function createDatamixAuthorizationSummary(
+  roleId: string | null | undefined,
+  fallbackRoleId: DatamixRolePresetId = datamixDefaultRoleAssignments.fallback,
+): DatamixAuthorizationSummary {
+  return createDatamixAuthorizationSummaryForRole(
+    resolveDatamixRolePreset(roleId, fallbackRoleId),
+  );
 }
 
 export function hasDatamixPermission(
