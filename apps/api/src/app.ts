@@ -3,6 +3,13 @@ import { APIError, z } from "better-auth";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
 
+import {
+  createDatamixApiKey,
+  DatamixApiKeyError,
+  listDatamixApiKeys,
+  revokeDatamixApiKey,
+  updateDatamixApiKey,
+} from "./api-keys";
 import { createAuth, getAuthSetupStatus } from "./auth";
 import {
   forbidMissingPermission,
@@ -20,7 +27,10 @@ import {
 } from "./collections";
 import {
   AuthConfigError,
+  PublicApiConfigError,
+  createPublicApiRuntimeSummary,
   readApiRuntime,
+  readPublicApiRuntime,
   type ApiBindings,
 } from "./env";
 import { createInvite } from "./invite";
@@ -72,6 +82,11 @@ const roleDefinitionRequestSchema = z.object({
 
 const userRoleRequestSchema = z.object({
   roleId: z.string().trim().min(1).max(64),
+});
+
+const apiKeyRequestSchema = z.object({
+  accessLevel: z.enum(["read", "write"]),
+  label: z.string().trim().min(1).max(80),
 });
 
 function allowAdminBrowser(origin: string) {
@@ -191,6 +206,14 @@ app.use("/users", async (c, next) => {
 });
 
 app.use("/users/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/api-keys", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/api-keys/*", async (c, next) => {
   return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
 });
 
@@ -636,6 +659,116 @@ app.put("/users/:id/role", requirePermission("users.update"), async (c) => {
     });
   } catch (error) {
     if (error instanceof DatamixUserError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    throw error;
+  }
+});
+
+app.get(
+  "/api-keys",
+  requireAnyPermission(["settings.read", "settings.update"]),
+  async (c) => {
+  try {
+    const runtime = readPublicApiRuntime(c.env);
+    const apiKeys = await listDatamixApiKeys(c.env);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      apiKeys,
+      runtime: createPublicApiRuntimeSummary(runtime),
+    });
+  } catch (error) {
+    if (error instanceof DatamixApiKeyError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    if (error instanceof PublicApiConfigError) {
+      return c.json({ error: error.message }, 503);
+    }
+
+    throw error;
+  }
+  },
+);
+
+app.post("/api-keys", requirePermission("settings.update"), async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "API key payload must be valid JSON." }, 400);
+  }
+
+  const parsed = apiKeyRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "API key label and access level are required." }, 400);
+  }
+
+  try {
+    const result = await createDatamixApiKey(c.env, parsed.data);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      apiKey: result.apiKey,
+      message: "API key created. Copy the secret now because it will not be shown again.",
+      secret: result.secret,
+    });
+  } catch (error) {
+    if (error instanceof DatamixApiKeyError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    throw error;
+  }
+});
+
+app.put("/api-keys/:id", requirePermission("settings.update"), async (c) => {
+  let body: unknown;
+
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "API key payload must be valid JSON." }, 400);
+  }
+
+  const parsed = apiKeyRequestSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ error: "API key label and access level are required." }, 400);
+  }
+
+  try {
+    const apiKey = await updateDatamixApiKey(c.env, c.req.param("id"), parsed.data);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      apiKey,
+      message: "API key updated.",
+    });
+  } catch (error) {
+    if (error instanceof DatamixApiKeyError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    throw error;
+  }
+});
+
+app.post("/api-keys/:id/revoke", requirePermission("settings.update"), async (c) => {
+  try {
+    const apiKey = await revokeDatamixApiKey(c.env, c.req.param("id"));
+
+    return c.json({
+      ...createServiceStatus("api"),
+      apiKey,
+      message: apiKey.revokedAt ? "API key revoked." : "API key update did not complete.",
+    });
+  } catch (error) {
+    if (error instanceof DatamixApiKeyError) {
       return c.json({ error: error.message }, error.statusCode as 400);
     }
 

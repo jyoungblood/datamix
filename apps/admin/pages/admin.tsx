@@ -1,4 +1,5 @@
 import {
+  datamixApiKeyAccessLevels,
   createMediaObjectUrl,
   datamixDefaultRoleAssignments,
   datamixFieldTypes,
@@ -10,6 +11,8 @@ import {
   listDatamixPermissionsByResource,
   type DatamixCollectionDefinition,
   type DatamixAuthorizationSummary,
+  type DatamixApiKeyAccessLevel,
+  type DatamixApiKeySummary,
   type DatamixFieldDefinition,
   type DatamixFieldType,
   type DatamixMediaAsset,
@@ -21,6 +24,13 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { authClient } from "../lib/auth-client";
+import {
+  createApiKey,
+  listApiKeys,
+  revokeApiKey,
+  updateApiKey,
+  type PublicApiRuntimeSummary,
+} from "../lib/api-keys";
 import {
   CollectionDefinitionRequestError,
   listCollectionDefinitions,
@@ -57,6 +67,7 @@ import { TiptapRichTextEditor } from "./_components/TiptapRichTextEditor";
 const loginHref = "/login?next=/admin";
 const apiHealthHref = `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/health`;
 const fieldTypeOptions = [...datamixFieldTypes];
+const apiKeyAccessLevelOptions = [...datamixApiKeyAccessLevels];
 
 const adminUtilityItems = [
   {
@@ -146,6 +157,11 @@ type RoleDraft = {
   id: string;
   label: string;
   permissions: DatamixPermissionKey[];
+};
+
+type ApiKeyDraft = {
+  accessLevel: DatamixApiKeyAccessLevel;
+  label: string;
 };
 
 let nextFieldKey = 0;
@@ -1348,6 +1364,35 @@ function resolveRoleLabel(
   return roles.find((role) => role.id === roleId)?.label ?? roleId;
 }
 
+function createApiKeyDraftFromApiKey(apiKey: DatamixApiKeySummary): ApiKeyDraft {
+  return {
+    accessLevel: apiKey.accessLevel,
+    label: apiKey.label,
+  };
+}
+
+function createEmptyApiKeyDraft(): ApiKeyDraft {
+  return {
+    accessLevel: "read",
+    label: "",
+  };
+}
+
+function formatApiKeyAccessLevel(accessLevel: DatamixApiKeyAccessLevel) {
+  return accessLevel === "write" ? "Read and write" : "Read only";
+}
+
+function formatPublicApiAccessMode(value: PublicApiRuntimeSummary["readAccess"] | PublicApiRuntimeSummary["writeAccess"]) {
+  switch (value) {
+    case "public":
+      return "Public";
+    case "api-key":
+      return "API key";
+    case "disabled":
+      return "Disabled";
+  }
+}
+
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
@@ -1411,6 +1456,18 @@ export default function AdminPage() {
   const [isCreatingRole, setIsCreatingRole] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [roleDraft, setRoleDraft] = useState<RoleDraft>(createEmptyRoleDraft);
+  const [apiKeys, setApiKeys] = useState<DatamixApiKeySummary[]>([]);
+  const [apiKeyDraft, setApiKeyDraft] = useState<ApiKeyDraft>(createEmptyApiKeyDraft);
+  const [apiKeyDrafts, setApiKeyDrafts] = useState<Record<string, ApiKeyDraft>>({});
+  const [apiKeysLoadError, setApiKeysLoadError] = useState<string | null>(null);
+  const [apiKeysMessage, setApiKeysMessage] = useState<string | null>(null);
+  const [apiKeySecret, setApiKeySecret] = useState<string | null>(null);
+  const [apiKeySecretMessage, setApiKeySecretMessage] = useState<string | null>(null);
+  const [publicApiRuntime, setPublicApiRuntime] = useState<PublicApiRuntimeSummary | null>(null);
+  const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(false);
+  const [isCreatingApiKey, setIsCreatingApiKey] = useState(false);
+  const [savingApiKeyId, setSavingApiKeyId] = useState<string | null>(null);
+  const [revokingApiKeyId, setRevokingApiKeyId] = useState<string | null>(null);
   const [users, setUsers] = useState<DatamixUserSummary[]>([]);
   const [usersLoadError, setUsersLoadError] = useState<string | null>(null);
   const [usersMessage, setUsersMessage] = useState<string | null>(null);
@@ -1483,6 +1540,33 @@ export default function AdminPage() {
       setRolesLoadError(error instanceof Error ? error.message : "Unable to load roles.");
     } finally {
       setIsLoadingRoles(false);
+    }
+  };
+
+  const loadApiKeyData = async () => {
+    setApiKeysLoadError(null);
+    setIsLoadingApiKeys(true);
+
+    try {
+      const result = await listApiKeys();
+
+      setApiKeys(result.apiKeys);
+      setPublicApiRuntime(result.runtime);
+      setApiKeyDrafts((currentDrafts) => {
+        const nextDrafts: Record<string, ApiKeyDraft> = {};
+
+        result.apiKeys.forEach((apiKey) => {
+          nextDrafts[apiKey.id] =
+            currentDrafts[apiKey.id] ?? createApiKeyDraftFromApiKey(apiKey);
+        });
+
+        return nextDrafts;
+      });
+    } catch (error) {
+      setApiKeysLoadError(error instanceof Error ? error.message : "Unable to load API keys.");
+      setPublicApiRuntime(null);
+    } finally {
+      setIsLoadingApiKeys(false);
     }
   };
 
@@ -1754,6 +1838,26 @@ export default function AdminPage() {
       return;
     }
 
+    if (!canAccessSettingsWorkspace) {
+      setApiKeys([]);
+      setApiKeyDrafts({});
+      setApiKeysLoadError(null);
+      setApiKeysMessage(null);
+      setApiKeySecret(null);
+      setApiKeySecretMessage(null);
+      setPublicApiRuntime(null);
+      setIsLoadingApiKeys(false);
+      return;
+    }
+
+    void loadApiKeyData();
+  }, [canAccessSettingsWorkspace, session.data, sessionAuthorization]);
+
+  useEffect(() => {
+    if (!session.data || !sessionAuthorization) {
+      return;
+    }
+
     if (!canViewUsers) {
       setUsers([]);
       setUsersLoadError(null);
@@ -1974,6 +2078,12 @@ export default function AdminPage() {
   const recordStatusTone = recordIssues.length > 0 ? "error" : "success";
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const isInitialRecordLoad = isLoadingRecords && !hasLoadedRecords;
+  const canRefreshApiKeys =
+    canAccessSettingsWorkspace &&
+    !isLoadingApiKeys &&
+    !isCreatingApiKey &&
+    savingApiKeyId === null &&
+    revokingApiKeyId === null;
   const canRefreshRoles =
     (canAccessTeamAccess || canAccessSettingsWorkspace) && !isLoadingRoles && !isSavingRole;
   const canRefreshUsers = canViewUsers && !isLoadingUsers && updatingUserRoleId === null;
@@ -2225,6 +2335,14 @@ export default function AdminPage() {
     );
   };
 
+  const handleRefreshApiKeys = () => {
+    if (!canRefreshApiKeys) {
+      return;
+    }
+
+    void loadApiKeyData();
+  };
+
   const handleRefreshUsers = () => {
     if (!canRefreshUsers) {
       return;
@@ -2239,6 +2357,40 @@ export default function AdminPage() {
     setRoleDraft(createRoleDraftFromRole(role));
     setRoleIssues([]);
     setRolesMessage(null);
+  };
+
+  const handleApiKeyDraftFieldChange = (
+    apiKeyId: string,
+    field: keyof ApiKeyDraft,
+    value: string,
+  ) => {
+    setApiKeyDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [apiKeyId]: {
+        accessLevel:
+          field === "accessLevel"
+            ? (value as DatamixApiKeyAccessLevel)
+            : currentDrafts[apiKeyId]?.accessLevel ?? "read",
+        label:
+          field === "label"
+            ? value
+            : currentDrafts[apiKeyId]?.label ?? "",
+      },
+    }));
+    setApiKeysMessage(null);
+  };
+
+  const handleCreateApiKeyDraftFieldChange = (
+    field: keyof ApiKeyDraft,
+    value: string,
+  ) => {
+    setApiKeyDraft((currentDraft) => ({
+      ...currentDraft,
+      [field]: field === "accessLevel" ? (value as DatamixApiKeyAccessLevel) : value,
+    }));
+    setApiKeysMessage(null);
+    setApiKeySecret(null);
+    setApiKeySecretMessage(null);
   };
 
   const handleStartNewRole = (sourceRole?: DatamixRoleDefinition) => {
@@ -2331,6 +2483,130 @@ export default function AdminPage() {
       }
     } finally {
       setIsSavingRole(false);
+    }
+  };
+
+  const handleCreateApiKey = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canUpdateSettings) {
+      return;
+    }
+
+    setIsCreatingApiKey(true);
+    setApiKeysLoadError(null);
+    setApiKeysMessage(null);
+    setApiKeySecret(null);
+    setApiKeySecretMessage(null);
+
+    try {
+      const result = await createApiKey(apiKeyDraft);
+
+      setApiKeys((currentApiKeys) => [result.apiKey, ...currentApiKeys]);
+      setApiKeyDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [result.apiKey.id]: createApiKeyDraftFromApiKey(result.apiKey),
+      }));
+      setApiKeyDraft(createEmptyApiKeyDraft());
+      setApiKeysMessage(result.message);
+      setApiKeySecret(result.secret);
+    } catch (error) {
+      setApiKeysLoadError(
+        error instanceof Error ? error.message : "Unable to create API key.",
+      );
+    } finally {
+      setIsCreatingApiKey(false);
+    }
+  };
+
+  const handleUpdateApiKey = async (apiKey: DatamixApiKeySummary) => {
+    const nextDraft = apiKeyDrafts[apiKey.id];
+
+    if (
+      !canUpdateSettings ||
+      !nextDraft ||
+      apiKey.revokedAt ||
+      (nextDraft.label === apiKey.label && nextDraft.accessLevel === apiKey.accessLevel)
+    ) {
+      return;
+    }
+
+    setSavingApiKeyId(apiKey.id);
+    setApiKeysLoadError(null);
+    setApiKeysMessage(null);
+
+    try {
+      const result = await updateApiKey(apiKey.id, nextDraft);
+
+      setApiKeys((currentApiKeys) =>
+        currentApiKeys.map((currentApiKey) =>
+          currentApiKey.id === result.apiKey.id ? result.apiKey : currentApiKey,
+        ),
+      );
+      setApiKeyDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [result.apiKey.id]: createApiKeyDraftFromApiKey(result.apiKey),
+      }));
+      setApiKeysMessage(result.message);
+    } catch (error) {
+      setApiKeysLoadError(
+        error instanceof Error ? error.message : "Unable to update API key.",
+      );
+    } finally {
+      setSavingApiKeyId(null);
+    }
+  };
+
+  const handleRevokeApiKey = async (apiKey: DatamixApiKeySummary) => {
+    if (!canUpdateSettings || apiKey.revokedAt) {
+      return;
+    }
+
+    setRevokingApiKeyId(apiKey.id);
+    setApiKeysLoadError(null);
+    setApiKeysMessage(null);
+
+    try {
+      const result = await revokeApiKey(apiKey.id);
+
+      setApiKeys((currentApiKeys) =>
+        currentApiKeys.map((currentApiKey) =>
+          currentApiKey.id === result.apiKey.id ? result.apiKey : currentApiKey,
+        ),
+      );
+      setApiKeyDrafts((currentDrafts) => ({
+        ...currentDrafts,
+        [result.apiKey.id]: createApiKeyDraftFromApiKey(result.apiKey),
+      }));
+      setApiKeysMessage(result.message);
+    } catch (error) {
+      setApiKeysLoadError(
+        error instanceof Error ? error.message : "Unable to revoke API key.",
+      );
+    } finally {
+      setRevokingApiKeyId(null);
+    }
+  };
+
+  const handleCopyApiKeySecret = async () => {
+    if (!apiKeySecret) {
+      return;
+    }
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      setApiKeySecretMessage("Clipboard access is unavailable in this browser.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(apiKeySecret);
+      setApiKeySecretMessage("API key secret copied. This is the only time Datamix will show it.");
+    } catch {
+      setApiKeySecretMessage("Clipboard access failed. Copy the API key secret manually.");
     }
   };
 
@@ -4265,8 +4541,8 @@ export default function AdminPage() {
             </article>
 
             <article className="admin-card" id="settings">
-              <p className="card-eyebrow">Session and runtime</p>
-              <h3 className="card-title">Role definitions and permission editing</h3>
+              <p className="card-eyebrow">Session, API, and roles</p>
+              <h3 className="card-title">Runtime posture, API keys, and role permissions</h3>
               {!canAccessSettingsWorkspace ? (
                 <FlowStateBox
                   body={`Your ${sessionRole?.label ?? "current"} role cannot access settings yet.`}
@@ -4305,6 +4581,233 @@ export default function AdminPage() {
                       <dd>Persisted better-auth session on the API Worker origin</dd>
                     </div>
                   </dl>
+
+                  <div className="section-stack">
+                    <div className="section-row">
+                      <div>
+                        <h4 className="section-title">Public API keys</h4>
+                        <p className="section-copy">
+                          Create read-only or write-capable keys for the generated JSON API.
+                          Datamix shows each secret once, then stores only a hashed form.
+                        </p>
+                      </div>
+                      <div className="actions actions-compact">
+                        <button
+                          className="mini-button"
+                          disabled={!canRefreshApiKeys}
+                          onClick={handleRefreshApiKeys}
+                          type="button"
+                        >
+                          {isLoadingApiKeys ? "Refreshing..." : "Refresh"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {publicApiRuntime ? (
+                      <dl className="detail-list">
+                        <div>
+                          <dt>Public read access</dt>
+                          <dd>{formatPublicApiAccessMode(publicApiRuntime.readAccess)}</dd>
+                        </div>
+                        <div>
+                          <dt>Public write access</dt>
+                          <dd>{formatPublicApiAccessMode(publicApiRuntime.writeAccess)}</dd>
+                        </div>
+                        <div>
+                          <dt>Configured env read key</dt>
+                          <dd>{publicApiRuntime.hasConfiguredReadKey ? "Present" : "Not set"}</dd>
+                        </div>
+                        <div>
+                          <dt>Configured env write key</dt>
+                          <dd>{publicApiRuntime.hasConfiguredWriteKey ? "Present" : "Not set"}</dd>
+                        </div>
+                      </dl>
+                    ) : null}
+
+                    {apiKeysMessage ? <p className="form-success">{apiKeysMessage}</p> : null}
+                    {apiKeysLoadError ? <p className="form-error">{apiKeysLoadError}</p> : null}
+
+                    {apiKeySecret ? (
+                      <div className="type-specific-box">
+                        <p className="section-title">Copy this secret now</p>
+                        <p className="section-copy">
+                          Datamix will not show this raw API key again after you leave this state.
+                        </p>
+                        <code className="record-json-preview">{apiKeySecret}</code>
+                        {apiKeySecretMessage ? (
+                          <p className="helper-text">{apiKeySecretMessage}</p>
+                        ) : null}
+                        <div className="actions">
+                          <button
+                            className="mini-button"
+                            onClick={() => void handleCopyApiKeySecret()}
+                            type="button"
+                          >
+                            Copy secret
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {canUpdateSettings ? (
+                      <form className="auth-form" onSubmit={handleCreateApiKey}>
+                        <label className="field">
+                          <span>Key label</span>
+                          <input
+                            disabled={isCreatingApiKey}
+                            onChange={(event) =>
+                              handleCreateApiKeyDraftFieldChange("label", event.target.value)
+                            }
+                            placeholder="Production website"
+                            type="text"
+                            value={apiKeyDraft.label}
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Access level</span>
+                          <select
+                            disabled={isCreatingApiKey}
+                            onChange={(event) =>
+                              handleCreateApiKeyDraftFieldChange("accessLevel", event.target.value)
+                            }
+                            value={apiKeyDraft.accessLevel}
+                          >
+                            {apiKeyAccessLevelOptions.map((accessLevel) => (
+                              <option key={accessLevel} value={accessLevel}>
+                                {formatApiKeyAccessLevel(accessLevel)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <div className="actions">
+                          <button className="button" disabled={isCreatingApiKey} type="submit">
+                            {isCreatingApiKey ? "Creating key..." : "Create API key"}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <p className="helper-text">
+                        Your {sessionRole?.label ?? "current"} role can inspect API keys, but it
+                        cannot create or revoke them.
+                      </p>
+                    )}
+
+                    {isLoadingApiKeys && apiKeys.length === 0 ? (
+                      <FlowStateBox
+                        body="Loading managed API keys from the API Worker."
+                        compact
+                        title="Loading API keys"
+                      />
+                    ) : apiKeys.length === 0 ? (
+                      <FlowStateBox
+                        body="No managed API keys have been created yet. Env keys can still be active if they are configured on the Worker."
+                        compact
+                        title="No managed keys"
+                      />
+                    ) : (
+                      <div className="mini-list">
+                        {apiKeys.map((apiKey) => {
+                          const draft = apiKeyDrafts[apiKey.id] ?? createApiKeyDraftFromApiKey(apiKey);
+                          const isSavingThisKey = savingApiKeyId === apiKey.id;
+                          const isRevokingThisKey = revokingApiKeyId === apiKey.id;
+
+                          return (
+                            <div className="mini-list-item mini-list-item-stacked" key={apiKey.id}>
+                              <div className="mini-list-content">
+                                <strong>{apiKey.label}</strong>
+                                <small>{apiKey.secretPreview}</small>
+                              </div>
+
+                              <div className="status-row status-row-compact">
+                                <span className="status-pill">
+                                  {formatApiKeyAccessLevel(apiKey.accessLevel)}
+                                </span>
+                                <span className="status-pill status-pill-muted">
+                                  {apiKey.revokedAt ? "Revoked" : "Active"}
+                                </span>
+                                <span className="status-pill status-pill-muted">
+                                  {apiKey.lastUsedAt
+                                    ? `Last used ${formatRecordTimestamp(apiKey.lastUsedAt)}`
+                                    : "Never used"}
+                                </span>
+                              </div>
+
+                              <p className="helper-text">
+                                Created {formatRecordTimestamp(apiKey.createdAt)}
+                                {apiKey.revokedAt
+                                  ? ` · Revoked ${formatRecordTimestamp(apiKey.revokedAt)}`
+                                  : ""}
+                              </p>
+
+                              {canUpdateSettings ? (
+                                <div className="permission-toolbar">
+                                  <label className="field field-inline">
+                                    <span>Label</span>
+                                    <input
+                                      disabled={Boolean(apiKey.revokedAt) || isSavingThisKey || isRevokingThisKey}
+                                      onChange={(event) =>
+                                        handleApiKeyDraftFieldChange(
+                                          apiKey.id,
+                                          "label",
+                                          event.target.value,
+                                        )
+                                      }
+                                      type="text"
+                                      value={draft.label}
+                                    />
+                                  </label>
+                                  <label className="field field-inline">
+                                    <span>Access</span>
+                                    <select
+                                      disabled={Boolean(apiKey.revokedAt) || isSavingThisKey || isRevokingThisKey}
+                                      onChange={(event) =>
+                                        handleApiKeyDraftFieldChange(
+                                          apiKey.id,
+                                          "accessLevel",
+                                          event.target.value,
+                                        )
+                                      }
+                                      value={draft.accessLevel}
+                                    >
+                                      {apiKeyAccessLevelOptions.map((accessLevel) => (
+                                        <option key={accessLevel} value={accessLevel}>
+                                          {formatApiKeyAccessLevel(accessLevel)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                  <button
+                                    className="mini-button"
+                                    disabled={
+                                      Boolean(apiKey.revokedAt) ||
+                                      isSavingThisKey ||
+                                      isRevokingThisKey ||
+                                      (draft.label === apiKey.label &&
+                                        draft.accessLevel === apiKey.accessLevel)
+                                    }
+                                    onClick={() => void handleUpdateApiKey(apiKey)}
+                                    type="button"
+                                  >
+                                    {isSavingThisKey ? "Saving..." : "Save"}
+                                  </button>
+                                  <button
+                                    className="mini-button"
+                                    disabled={Boolean(apiKey.revokedAt) || isSavingThisKey || isRevokingThisKey}
+                                    onClick={() => void handleRevokeApiKey(apiKey)}
+                                    type="button"
+                                  >
+                                    {isRevokingThisKey ? "Revoking..." : "Revoke"}
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="record-browser">
                     <div className="record-browser-list">

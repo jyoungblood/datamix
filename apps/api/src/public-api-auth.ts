@@ -1,5 +1,6 @@
 import { createMiddleware } from "hono/factory";
 
+import { authorizeManagedPublicApiKey } from "./api-keys";
 import {
   PublicApiConfigError,
   readPublicApiRuntime,
@@ -31,6 +32,7 @@ export type PublicApiContext = {
 
 export type PublicApiKeyAuthHookInput = {
   apiKey: string;
+  env: ApiBindings;
   permission: PublicApiPermission;
   runtime: PublicApiRuntimeEnv;
 };
@@ -87,6 +89,18 @@ export function createConfiguredPublicApiKeyAuthHook(): PublicApiKeyAuthHook {
   return authorizeConfiguredApiKey;
 }
 
+async function authorizePublicApiKey(
+  input: PublicApiKeyAuthHookInput,
+): Promise<PublicApiPrincipal | null> {
+  const configuredPrincipal = await authorizeConfiguredApiKey(input);
+
+  if (configuredPrincipal) {
+    return configuredPrincipal;
+  }
+
+  return authorizeManagedPublicApiKey(input);
+}
+
 export function requirePublicApiAccess(
   permission: PublicApiPermission,
   options?: {
@@ -127,11 +141,10 @@ export function requirePublicApiAccess(
         return c.json({ error: "API key is required." }, 401);
       }
 
-      // This hook is the future seam for managed API keys in M5.
-      const keyAuthHook =
-        options?.keyAuthHook ?? createConfiguredPublicApiKeyAuthHook();
+      const keyAuthHook = options?.keyAuthHook ?? authorizePublicApiKey;
       const principal = await keyAuthHook({
         apiKey,
+        env: c.env,
         permission,
         runtime,
       });

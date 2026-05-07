@@ -47,6 +47,13 @@ export type PublicApiRuntimeEnv = {
   writeKey: string | null;
 };
 
+export type PublicApiRuntimeSummary = {
+  hasConfiguredReadKey: boolean;
+  hasConfiguredWriteKey: boolean;
+  readAccess: PublicApiReadAccessMode;
+  writeAccess: PublicApiWriteAccessMode;
+};
+
 export class AuthConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -145,22 +152,21 @@ export function readPublicApiRuntime(env: ApiBindings): PublicApiRuntimeEnv {
   const readKey = readOptionalSecret(env.PUBLIC_API_READ_KEY);
   const writeKey = readOptionalSecret(env.PUBLIC_API_WRITE_KEY);
 
-  if (readAccess === "api-key" && !readKey && !writeKey) {
-    throw new PublicApiConfigError(
-      "PUBLIC_API_READ_ACCESS is set to api-key, but no PUBLIC_API_READ_KEY or PUBLIC_API_WRITE_KEY is configured.",
-    );
-  }
-
-  if (writeAccess === "api-key" && !writeKey) {
-    throw new PublicApiConfigError(
-      "PUBLIC_API_WRITE_ACCESS is set to api-key, but PUBLIC_API_WRITE_KEY is missing.",
-    );
-  }
-
   return {
     readAccess,
     readKey,
     writeAccess,
     writeKey,
+  };
+}
+
+export function createPublicApiRuntimeSummary(
+  runtime: PublicApiRuntimeEnv,
+): PublicApiRuntimeSummary {
+  return {
+    hasConfiguredReadKey: Boolean(runtime.readKey),
+    hasConfiguredWriteKey: Boolean(runtime.writeKey),
+    readAccess: runtime.readAccess,
+    writeAccess: runtime.writeAccess,
   };
 }
