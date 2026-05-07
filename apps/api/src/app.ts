@@ -20,6 +20,7 @@ import {
 import { createInvite } from "./invite";
 import {
   createMediaAsset,
+  getMediaObject,
   listMediaAssets,
   MediaAssetError,
 } from "./media";
@@ -63,6 +64,13 @@ function allowPublicJsonApi() {
     origin: "*",
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+  });
+}
+
+function allowPublicMedia() {
+  return cors({
+    origin: "*",
+    allowMethods: ["GET", "OPTIONS"],
   });
 }
 
@@ -129,6 +137,10 @@ app.use("/media/assets", async (c, next) => {
 
 app.use("/media/assets/*", async (c, next) => {
   return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/media/object/*", async (c, next) => {
+  return allowPublicMedia()(c, next);
 });
 
 app.use("/session", async (c, next) => {
@@ -504,6 +516,39 @@ app.post("/media/assets", requireSession, async (c) => {
       ...createServiceStatus("api"),
       asset: result.asset,
       message: "Media asset uploaded.",
+    });
+  } catch (error) {
+    if (error instanceof MediaAssetError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    throw error;
+  }
+});
+
+app.get("/media/object/*", async (c) => {
+  try {
+    const storageKey = c.req.param("*");
+
+    if (!storageKey) {
+      return c.json({ error: "Media storage key is required." }, 400);
+    }
+
+    const mediaObject = await getMediaObject(c.env, storageKey, new URL(c.req.url));
+    const headers = new Headers();
+
+    headers.set("Cache-Control", mediaObject.cacheControl);
+    headers.set("Content-Length", String(mediaObject.contentLength));
+    headers.set("Content-Type", mediaObject.contentType);
+    headers.set("X-Content-Type-Options", "nosniff");
+
+    if (mediaObject.etag) {
+      headers.set("ETag", mediaObject.etag);
+    }
+
+    return new Response(mediaObject.body, {
+      headers,
+      status: 200,
     });
   } catch (error) {
     if (error instanceof MediaAssetError) {

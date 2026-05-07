@@ -1,8 +1,14 @@
 import {
   createMediaAssetStorageKey,
+  datamixMediaResizeFits,
+  datamixMediaTransformFormats,
   datamixMediaAssetsTableName,
   type DatamixMediaAsset,
+  type DatamixMediaResizeFit,
+  type DatamixMediaTransformFormat,
+  type DatamixMediaTransformRequest,
 } from "@datamix/core";
+import sharp from "sharp";
 
 import type { DatamixSession } from "./auth";
 import type { ApiBindings } from "./env";
@@ -23,6 +29,14 @@ type D1StatementRunner =
   | Pick<D1Database, "batch" | "prepare">
   | Pick<D1DatabaseSession, "batch" | "prepare">;
 
+type MediaObjectResult = {
+  body: Blob | ReadableStream;
+  cacheControl: string;
+  contentLength: number;
+  contentType: string;
+  etag?: string;
+};
+
 export class MediaAssetError extends Error {
   readonly statusCode: number;
 
@@ -35,6 +49,269 @@ export class MediaAssetError extends Error {
 
 function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function createMediaObjectCacheControl() {
+  return "public, max-age=31536000, immutable";
+}
+
+function normalizeMediaStorageKey(storageKey: string) {
+  const normalized = storageKey
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0)
+    .join("/");
+
+  if (
+    normalized.length === 0 ||
+    normalized.includes("..") ||
+    normalized.startsWith("/")
+  ) {
+    throw new MediaAssetError("Media storage key is invalid.");
+  }
+
+  return normalized;
+}
+
+function readPositiveInteger(
+  value: string | null,
+  fieldName: string,
+  options?: { max?: number; min?: number },
+) {
+  if (value === null) {
+    return undefined;
+  }
+
+  const parsedValue = Number(value);
+
+  if (!Number.isInteger(parsedValue)) {
+    throw new MediaAssetError(`${fieldName} must be a whole number.`);
+  }
+
+  const min = options?.min ?? 1;
+  const max = options?.max;
+
+  if (parsedValue < min) {
+    throw new MediaAssetError(`${fieldName} must be at least ${min}.`);
+  }
+
+  if (typeof max === "number" && parsedValue > max) {
+    throw new MediaAssetError(`${fieldName} must be ${max} or less.`);
+  }
+
+  return parsedValue;
+}
+
+function readResizeFit(value: string | null) {
+  if (value === null) {
+    return undefined;
+  }
+
+  if (!datamixMediaResizeFits.includes(value as DatamixMediaResizeFit)) {
+    throw new MediaAssetError(
+      `fit must be one of: ${datamixMediaResizeFits.join(", ")}.`,
+    );
+  }
+
+  return value as DatamixMediaResizeFit;
+}
+
+function readTransformFormat(value: string | null) {
+  if (value === null) {
+    return undefined;
+  }
+
+  if (!datamixMediaTransformFormats.includes(value as DatamixMediaTransformFormat)) {
+    throw new MediaAssetError(
+      `format must be one of: ${datamixMediaTransformFormats.join(", ")}.`,
+    );
+  }
+
+  return value as DatamixMediaTransformFormat;
+}
+
+function parseMediaTransformRequest(requestUrl: URL): DatamixMediaTransformRequest {
+  const width = readPositiveInteger(requestUrl.searchParams.get("width"), "width", {
+    max: 4096,
+  });
+  const height = readPositiveInteger(requestUrl.searchParams.get("height"), "height", {
+    max: 4096,
+  });
+  const fit = readResizeFit(requestUrl.searchParams.get("fit"));
+  const quality = readPositiveInteger(
+    requestUrl.searchParams.get("quality"),
+    "quality",
+    {
+      max: 100,
+    },
+  );
+  const format = readTransformFormat(requestUrl.searchParams.get("format"));
+  const cropLeft = readPositiveInteger(
+    requestUrl.searchParams.get("cropLeft"),
+    "cropLeft",
+    {
+      min: 0,
+      max: 8192,
+    },
+  );
+  const cropTop = readPositiveInteger(requestUrl.searchParams.get("cropTop"), "cropTop", {
+    min: 0,
+    max: 8192,
+  });
+  const cropWidth = readPositiveInteger(
+    requestUrl.searchParams.get("cropWidth"),
+    "cropWidth",
+    {
+      max: 8192,
+    },
+  );
+  const cropHeight = readPositiveInteger(
+    requestUrl.searchParams.get("cropHeight"),
+    "cropHeight",
+    {
+      max: 8192,
+    },
+  );
+
+  const cropValues = [cropLeft, cropTop, cropWidth, cropHeight];
+  const hasAnyCropValue = cropValues.some((value) => typeof value === "number");
+
+  if (hasAnyCropValue && cropValues.some((value) => typeof value !== "number")) {
+    throw new MediaAssetError(
+      "cropLeft, cropTop, cropWidth, and cropHeight must all be provided together.",
+    );
+  }
+
+  return {
+    ...(typeof width === "number" ? { width } : {}),
+    ...(typeof height === "number" ? { height } : {}),
+    ...(fit ? { fit } : {}),
+    ...(typeof quality === "number" ? { quality } : {}),
+    ...(format ? { format } : {}),
+    ...(hasAnyCropValue
+      ? {
+          crop: {
+            height: cropHeight as number,
+            left: cropLeft as number,
+            top: cropTop as number,
+            width: cropWidth as number,
+          },
+        }
+      : {}),
+  };
+}
+
+function hasMediaTransformRequest(transform: DatamixMediaTransformRequest) {
+  return (
+    typeof transform.width === "number" ||
+    typeof transform.height === "number" ||
+    typeof transform.quality === "number" ||
+    Boolean(transform.fit) ||
+    Boolean(transform.format) ||
+    Boolean(transform.crop)
+  );
+}
+
+function isTransformableImageContentType(contentType: string) {
+  return contentType.startsWith("image/");
+}
+
+function resolveOutputFormat(
+  sourceContentType: string,
+  explicitFormat?: DatamixMediaTransformFormat,
+) {
+  if (explicitFormat) {
+    return explicitFormat;
+  }
+
+  switch (sourceContentType) {
+    case "image/jpeg":
+      return "jpeg";
+    case "image/png":
+      return "png";
+    case "image/avif":
+      return "avif";
+    default:
+      return "webp";
+  }
+}
+
+function mapFormatToContentType(format: DatamixMediaTransformFormat) {
+  switch (format) {
+    case "avif":
+      return "image/avif";
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+  }
+}
+
+async function createTransformedMediaObject(
+  object: R2ObjectBody,
+  transform: DatamixMediaTransformRequest,
+  sourceContentType: string,
+) {
+  if (!isTransformableImageContentType(sourceContentType)) {
+    throw new MediaAssetError(
+      "Transforms are only available for image assets in the current media slice.",
+    );
+  }
+
+  const inputBuffer = Buffer.from(await object.arrayBuffer());
+  let pipeline = sharp(inputBuffer, { animated: true }).rotate();
+
+  if (transform.crop) {
+    pipeline = pipeline.extract(transform.crop);
+  }
+
+  if (typeof transform.width === "number" || typeof transform.height === "number") {
+    pipeline = pipeline.resize({
+      fit: transform.fit ?? "cover",
+      height: transform.height,
+      width: transform.width,
+      withoutEnlargement: true,
+    });
+  }
+
+  const outputFormat = resolveOutputFormat(sourceContentType, transform.format);
+  const quality = transform.quality ?? 80;
+
+  switch (outputFormat) {
+    case "avif":
+      pipeline = pipeline.avif({ quality });
+      break;
+    case "jpeg":
+      pipeline = pipeline.flatten({ background: "#ffffff" }).jpeg({
+        mozjpeg: true,
+        quality,
+      });
+      break;
+    case "png":
+      pipeline = pipeline.png({
+        compressionLevel: 9,
+        progressive: true,
+        quality,
+      });
+      break;
+    case "webp":
+      pipeline = pipeline.webp({ quality });
+      break;
+  }
+
+  const output = await pipeline.toBuffer();
+  const outputBytes = Uint8Array.from(output);
+
+  return {
+    body: new Blob([outputBytes], {
+      type: mapFormatToContentType(outputFormat),
+    }),
+    cacheControl: createMediaObjectCacheControl(),
+    contentLength: output.byteLength,
+    contentType: mapFormatToContentType(outputFormat),
+  } satisfies MediaObjectResult;
 }
 
 function mapStoredAsset(row: MediaAssetRow): DatamixMediaAsset {
@@ -192,4 +469,37 @@ export async function createMediaAsset(
       uploadedByUserId: session.user.id,
     } satisfies DatamixMediaAsset,
   };
+}
+
+export async function getMediaObject(
+  env: ApiBindings,
+  storageKey: string,
+  requestUrl: URL,
+): Promise<MediaObjectResult> {
+  const normalizedStorageKey = normalizeMediaStorageKey(storageKey);
+  const object = await env.MEDIA_BUCKET.get(normalizedStorageKey);
+
+  if (!object) {
+    throw new MediaAssetError("Media asset not found.", 404);
+  }
+
+  const contentType =
+    object.httpMetadata?.contentType || "application/octet-stream";
+  const transform = parseMediaTransformRequest(requestUrl);
+
+  if (hasMediaTransformRequest(transform)) {
+    return createTransformedMediaObject(object, transform, contentType);
+  }
+
+  if (!object.body) {
+    throw new MediaAssetError("Media asset body is unavailable.", 500);
+  }
+
+  return {
+    body: object.body,
+    cacheControl: createMediaObjectCacheControl(),
+    contentLength: object.size,
+    contentType,
+    etag: object.httpEtag,
+  } satisfies MediaObjectResult;
 }

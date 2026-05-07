@@ -1,4 +1,5 @@
 import {
+  createMediaObjectUrl,
   datamixFieldTypes,
   isRecordCrudFieldDefinition,
   type DatamixCollectionDefinition,
@@ -1592,6 +1593,25 @@ export default function AdminPage() {
     : null;
   const selectedFilteredMediaAsset = selectedMediaAsset
     ? filteredMediaAssets.find((asset) => asset.id === selectedMediaAsset.id) ?? null
+    : null;
+  const selectedMediaOriginalUrl = selectedFilteredMediaAsset
+    ? createMediaObjectUrl(
+        adminPublicEnv.NEXT_PUBLIC_API_ORIGIN,
+        selectedFilteredMediaAsset.storageKey,
+      )
+    : null;
+  const selectedMediaTransformUrl = selectedFilteredMediaAsset
+    ? createMediaObjectUrl(
+        adminPublicEnv.NEXT_PUBLIC_API_ORIGIN,
+        selectedFilteredMediaAsset.storageKey,
+        {
+          fit: "cover",
+          format: "webp",
+          height: 720,
+          quality: 80,
+          width: 1280,
+        },
+      )
     : null;
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
@@ -3247,8 +3267,9 @@ export default function AdminPage() {
                     <>
                       <h4 className="section-title">{selectedFilteredMediaAsset.fileName}</h4>
                       <p className="section-copy">
-                        Stored metadata for the selected asset. Reuse the storage key in
-                        current `image` fields until picker integration lands.
+                        Stored metadata and delivery URLs for the selected asset. The
+                        Worker route serves originals directly from R2 and can apply
+                        resize, crop, format, and compression parameters on demand.
                       </p>
                       <dl className="detail-list">
                         <div>
@@ -3279,6 +3300,25 @@ export default function AdminPage() {
                         <div>
                           <dt>Asset id</dt>
                           <dd className="detail-list-code">{selectedFilteredMediaAsset.id}</dd>
+                        </div>
+                        {selectedMediaOriginalUrl ? (
+                          <div>
+                            <dt>Original URL</dt>
+                            <dd className="detail-list-code">{selectedMediaOriginalUrl}</dd>
+                          </div>
+                        ) : null}
+                        {selectedMediaTransformUrl ? (
+                          <div>
+                            <dt>Transform URL example</dt>
+                            <dd className="detail-list-code">{selectedMediaTransformUrl}</dd>
+                          </div>
+                        ) : null}
+                        <div>
+                          <dt>Transform query contract</dt>
+                          <dd>
+                            `width`, `height`, `fit`, `quality`, `format`, `cropLeft`,
+                            `cropTop`, `cropWidth`, `cropHeight`
+                          </dd>
                         </div>
                       </dl>
                       {mediaClipboardMessage ? (
