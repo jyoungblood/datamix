@@ -414,10 +414,11 @@ export async function createMediaAsset(
   const now = new Date().toISOString();
   const assetId = crypto.randomUUID();
   const storageKey = createMediaAssetStorageKey(assetId, file.name);
+  const fileBytes = await file.arrayBuffer();
 
   await env.MEDIA_BUCKET.put(
     storageKey,
-    file.stream(),
+    fileBytes,
     createBucketMetadata(file, session, assetId),
   );
 

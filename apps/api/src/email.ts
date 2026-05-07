@@ -3,7 +3,6 @@ import {
   type AuthEmailProvider,
   type AuthEmailTemplate,
 } from "@datamix/core";
-import { connect } from "cloudflare:sockets";
 
 import { AuthConfigError, type ApiBindings } from "./env";
 
@@ -84,6 +83,18 @@ function parsePort(rawPort: string | undefined, fallback: number) {
   }
 
   return port;
+}
+
+let cloudflareConnectPromise:
+  | Promise<typeof import("cloudflare:sockets").connect>
+  | undefined;
+
+async function loadCloudflareConnect() {
+  cloudflareConnectPromise ??= import("cloudflare:sockets").then(
+    (module) => module.connect,
+  );
+
+  return cloudflareConnectPromise;
 }
 
 function resolveAuthEmailRuntime(env: ApiBindings): AuthEmailRuntime {
@@ -406,6 +417,7 @@ async function sendViaSmtp(runtime: AuthEmailRuntime, input: SendEmailInput) {
     throw new AuthConfigError("SMTP provider was selected without SMTP configuration.");
   }
 
+  const connect = await loadCloudflareConnect();
   const socket = connect(
     { hostname: runtime.smtp.host, port: runtime.smtp.port },
     {

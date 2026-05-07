@@ -1,5 +1,5 @@
 import { createServiceStatus } from "@datamix/core";
-import { APIError, z } from "better-auth";
+import { APIError } from "better-auth";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
 
@@ -67,27 +67,141 @@ import { DatamixUserError, listDatamixUsers, updateDatamixUserRole } from "./use
 
 export const app = new Hono<{ Bindings: ApiBindings }>();
 
-const inviteRequestSchema = z.object({
-  email: z.email(),
-  name: z.string().trim().min(1).max(120).optional(),
-  roleId: z.string().trim().min(1).max(64).optional(),
-});
+type InviteRequest = {
+  email: string;
+  name?: string;
+  roleId?: string;
+};
 
-const roleDefinitionRequestSchema = z.object({
-  description: z.string(),
-  id: z.string(),
-  label: z.string(),
-  permissions: z.array(z.string()),
-});
+type RoleDefinitionRequest = {
+  description: string;
+  id: string;
+  label: string;
+  permissions: string[];
+};
 
-const userRoleRequestSchema = z.object({
-  roleId: z.string().trim().min(1).max(64),
-});
+type UserRoleRequest = {
+  roleId: string;
+};
 
-const apiKeyRequestSchema = z.object({
-  accessLevel: z.enum(["read", "write"]),
-  label: z.string().trim().min(1).max(80),
-});
+type ApiKeyRequest = {
+  accessLevel: "read" | "write";
+  label: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function readOptionalTrimmedString(
+  input: Record<string, unknown>,
+  key: string,
+  options?: {
+    maxLength?: number;
+  },
+) {
+  const value = input[key];
+
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+
+  if (options?.maxLength && trimmed.length > options.maxLength) {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
+function parseInviteRequest(input: unknown): InviteRequest | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const email = readOptionalTrimmedString(input, "email");
+
+  if (!email || !isValidEmail(email)) {
+    return null;
+  }
+
+  const name = readOptionalTrimmedString(input, "name", { maxLength: 120 });
+  const roleId = readOptionalTrimmedString(input, "roleId", { maxLength: 64 });
+
+  return {
+    email,
+    ...(name ? { name } : {}),
+    ...(roleId ? { roleId } : {}),
+  };
+}
+
+function parseRoleDefinitionRequest(input: unknown): RoleDefinitionRequest | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const { description, id, label, permissions } = input;
+
+  if (
+    typeof description !== "string" ||
+    typeof id !== "string" ||
+    typeof label !== "string" ||
+    !Array.isArray(permissions) ||
+    permissions.some((permission) => typeof permission !== "string")
+  ) {
+    return null;
+  }
+
+  return {
+    description,
+    id,
+    label,
+    permissions,
+  };
+}
+
+function parseUserRoleRequest(input: unknown): UserRoleRequest | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const roleId = readOptionalTrimmedString(input, "roleId", { maxLength: 64 });
+
+  if (!roleId) {
+    return null;
+  }
+
+  return {
+    roleId,
+  };
+}
+
+function parseApiKeyRequest(input: unknown): ApiKeyRequest | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const accessLevel = input.accessLevel;
+  const label = readOptionalTrimmedString(input, "label", { maxLength: 80 });
+
+  if ((accessLevel !== "read" && accessLevel !== "write") || !label) {
+    return null;
+  }
+
+  return {
+    accessLevel,
+    label,
+  };
+}
 
 function allowAdminBrowser(origin: string) {
   return cors({
@@ -506,19 +620,19 @@ app.get("/session", requireSession, (c) => {
 
 app.post("/invites", requirePermission("users.invite"), async (c) => {
   const body = await c.req.json();
-  const parsed = inviteRequestSchema.safeParse(body);
+  const parsed = parseInviteRequest(body);
 
-  if (!parsed.success) {
+  if (!parsed) {
     return c.json({ error: "A valid invite email is required." }, 400);
   }
 
   try {
     const invite = await runWithExecutionContext(c.executionCtx, () =>
       createInvite(c.env, {
-        email: parsed.data.email,
-        ...(parsed.data.name ? { inviteeName: parsed.data.name } : {}),
+        email: parsed.email,
+        ...(parsed.name ? { inviteeName: parsed.name } : {}),
         inviterName: c.get("session").user.name || c.get("session").user.email,
-        ...(parsed.data.roleId ? { roleId: parsed.data.roleId } : {}),
+        ...(parsed.roleId ? { roleId: parsed.roleId } : {}),
       }),
     );
 
@@ -585,18 +699,18 @@ app.put("/roles/:id", requirePermission("settings.update"), async (c) => {
     return c.json({ error: "Role definition payload must be valid JSON." }, 400);
   }
 
-  const parsed = roleDefinitionRequestSchema.safeParse(body);
+  const parsed = parseRoleDefinitionRequest(body);
 
-  if (!parsed.success) {
+  if (!parsed) {
     return c.json({ error: "Role definition payload is incomplete." }, 400);
   }
 
-  if (parsed.data.id !== c.req.param("id")) {
+  if (parsed.id !== c.req.param("id")) {
     return c.json({ error: "Route role id must match the role definition id." }, 400);
   }
 
   try {
-    const role = await saveCustomRoleDefinition(c.env, parsed.data);
+    const role = await saveCustomRoleDefinition(c.env, parsed);
 
     return c.json({
       ...createServiceStatus("api"),
@@ -644,14 +758,14 @@ app.put("/users/:id/role", requirePermission("users.update"), async (c) => {
     return c.json({ error: "User role payload must be valid JSON." }, 400);
   }
 
-  const parsed = userRoleRequestSchema.safeParse(body);
+  const parsed = parseUserRoleRequest(body);
 
-  if (!parsed.success) {
+  if (!parsed) {
     return c.json({ error: "A valid role id is required." }, 400);
   }
 
   try {
-    const result = await updateDatamixUserRole(c.env, c.req.param("id"), parsed.data.roleId);
+    const result = await updateDatamixUserRole(c.env, c.req.param("id"), parsed.roleId);
 
     return c.json({
       ...createServiceStatus("api"),
@@ -704,14 +818,14 @@ app.post("/api-keys", requirePermission("settings.update"), async (c) => {
     return c.json({ error: "API key payload must be valid JSON." }, 400);
   }
 
-  const parsed = apiKeyRequestSchema.safeParse(body);
+  const parsed = parseApiKeyRequest(body);
 
-  if (!parsed.success) {
+  if (!parsed) {
     return c.json({ error: "API key label and access level are required." }, 400);
   }
 
   try {
-    const result = await createDatamixApiKey(c.env, parsed.data);
+    const result = await createDatamixApiKey(c.env, parsed);
 
     return c.json({
       ...createServiceStatus("api"),
@@ -737,14 +851,14 @@ app.put("/api-keys/:id", requirePermission("settings.update"), async (c) => {
     return c.json({ error: "API key payload must be valid JSON." }, 400);
   }
 
-  const parsed = apiKeyRequestSchema.safeParse(body);
+  const parsed = parseApiKeyRequest(body);
 
-  if (!parsed.success) {
+  if (!parsed) {
     return c.json({ error: "API key label and access level are required." }, 400);
   }
 
   try {
-    const apiKey = await updateDatamixApiKey(c.env, c.req.param("id"), parsed.data);
+    const apiKey = await updateDatamixApiKey(c.env, c.req.param("id"), parsed);
 
     return c.json({
       ...createServiceStatus("api"),
