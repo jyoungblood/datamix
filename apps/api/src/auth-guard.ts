@@ -151,3 +151,34 @@ export function requireAnyPermission(permissions: readonly DatamixPermissionKey[
     await next();
   });
 }
+
+export function requireEveryPermission(permissions: readonly DatamixPermissionKey[]) {
+  return createMiddleware<ApiAuthContext>(async (c, next) => {
+    const resolvedSession = await resolveAuthorizedSession(c);
+
+    if (!resolvedSession.success) {
+      return resolvedSession.response;
+    }
+
+    const missingPermissions = permissions.filter(
+      (permission) => !resolvedSession.authorization.permissionMap[permission],
+    );
+
+    if (missingPermissions.length > 0) {
+      return c.json(
+        {
+          error: `Missing required permissions: ${missingPermissions.join(", ")}.`,
+          missingPermissions,
+          permissions,
+          role: {
+            id: resolvedSession.authorization.role.id,
+            label: resolvedSession.authorization.role.label,
+          },
+        },
+        403,
+      );
+    }
+
+    await next();
+  });
+}

@@ -1338,9 +1338,20 @@ export default function AdminPage() {
   const canViewRecords = permissionMap?.["records.read"] ?? false;
   const canCreateRecords = permissionMap?.["records.create"] ?? false;
   const canUpdateRecords = permissionMap?.["records.update"] ?? false;
+  const canAccessRecordsWorkspace =
+    canViewRecords || canCreateRecords || canUpdateRecords;
   const canViewMedia = permissionMap?.["media.read"] ?? false;
   const canUploadMedia = permissionMap?.["media.upload"] ?? false;
+  const canAccessMediaWorkspace = canViewMedia || canUploadMedia;
+  const canViewUsers = permissionMap?.["users.read"] ?? false;
   const canInviteUsers = permissionMap?.["users.invite"] ?? false;
+  const canUpdateUsers = permissionMap?.["users.update"] ?? false;
+  const canDeleteUsers = permissionMap?.["users.delete"] ?? false;
+  const canAccessTeamAccess =
+    canViewUsers || canInviteUsers || canUpdateUsers || canDeleteUsers;
+  const canViewSettings = permissionMap?.["settings.read"] ?? false;
+  const canUpdateSettings = permissionMap?.["settings.update"] ?? false;
+  const canAccessSettingsWorkspace = canViewSettings || canUpdateSettings;
 
   const loadCollections = async (options?: { refresh?: boolean }) => {
     const requestId = collectionLoadRequestId.current + 1;
@@ -2226,12 +2237,12 @@ export default function AdminPage() {
                   <span className="status-pill">Model</span>
                 </button>
 
-	                <button
-	                  className="admin-nav-item"
-	                  disabled={!canViewRecords}
-	                  onClick={() => jumpToSection(recordEditorSectionId)}
-	                  type="button"
-	                >
+                <button
+                  className="admin-nav-item"
+                  disabled={!canAccessRecordsWorkspace}
+                  onClick={() => jumpToSection(recordEditorSectionId)}
+                  type="button"
+                >
                   <div>
                     <p className="admin-nav-label">Records</p>
                     <p className="admin-nav-copy">
@@ -2282,6 +2293,23 @@ export default function AdminPage() {
                   body="Records appear here once a collection is selected."
                   compact
                   title="No collection selected"
+                />
+              ) : !canViewRecords ? (
+                <FlowStateBox
+                  actionLabel={canAccessRecordsWorkspace ? "Open editor" : undefined}
+                  body={
+                    canCreateRecords
+                      ? "This role can create records, but it cannot browse the saved record list."
+                      : `Your ${sessionRole?.label ?? "current"} role cannot browse saved records.`
+                  }
+                  compact
+                  onAction={
+                    canAccessRecordsWorkspace
+                      ? () => jumpToSection(recordEditorSectionId)
+                      : undefined
+                  }
+                  title="Record list is restricted"
+                  tone="warning"
                 />
               ) : isInitialRecordLoad ? (
                 <FlowStateBox
@@ -2364,6 +2392,13 @@ export default function AdminPage() {
                 ) : (
                   <button
                     className={itemClassName}
+                    disabled={
+                      item.id === "invite"
+                        ? !canAccessTeamAccess
+                        : item.id === "media"
+                          ? !canAccessMediaWorkspace
+                          : false
+                    }
                     key={item.id}
                     onClick={() => jumpToSection(item.id)}
                     type="button"
@@ -2372,7 +2407,13 @@ export default function AdminPage() {
                       <p className="admin-nav-label">{item.label}</p>
                       <p className="admin-nav-copy">{item.description}</p>
                     </div>
-                    <span className="status-pill">Ready</span>
+                    <span className="status-pill">
+                      {item.id === "invite" && !canAccessTeamAccess
+                        ? "Restricted"
+                        : item.id === "media" && !canAccessMediaWorkspace
+                          ? "Restricted"
+                          : "Ready"}
+                    </span>
                   </button>
                 );
               })}
@@ -2413,7 +2454,7 @@ export default function AdminPage() {
               </button>
               <button
                 className="button button-secondary"
-                disabled={!activeCollection || !canViewRecords}
+                disabled={!activeCollection || !canAccessRecordsWorkspace}
                 onClick={() => jumpToSection(recordEditorSectionId)}
                 type="button"
               >
@@ -2502,7 +2543,7 @@ export default function AdminPage() {
                 {activeCollection ? (
                   <button
                     className="button button-secondary"
-                    disabled={!canViewRecords}
+                    disabled={!canAccessRecordsWorkspace}
                     onClick={() => jumpToSection(recordEditorSectionId)}
                     type="button"
                   >
@@ -2511,6 +2552,7 @@ export default function AdminPage() {
                 ) : (
                   <button
                     className="button button-secondary"
+                    disabled={!canAccessTeamAccess}
                     onClick={() => jumpToSection("invite")}
                     type="button"
                   >
@@ -3022,9 +3064,9 @@ export default function AdminPage() {
               ) : null}
             </div>
 
-            {!canViewRecords ? (
+            {!canAccessRecordsWorkspace ? (
               <FlowStateBox
-                body={`Your ${sessionRole?.label ?? "current"} role cannot view generated records.`}
+                body={`Your ${sessionRole?.label ?? "current"} role cannot access generated records.`}
                 title="Record access is restricted"
                 tone="warning"
               />
@@ -3037,6 +3079,15 @@ export default function AdminPage() {
               />
             ) : (
               <>
+                {!canViewRecords && canCreateRecords ? (
+                  <FlowStateBox
+                    body="This role can create new records, but it cannot load the saved record list. New entries still save through the protected API route."
+                    compact
+                    title="Record list is hidden for this role"
+                    tone="warning"
+                  />
+                ) : null}
+
                 {hasUnsavedSchemaChanges ? (
                   <div className="generated-record-notice">
                     <p className="list-title">Saved schema is driving this editor</p>
@@ -3529,44 +3580,52 @@ export default function AdminPage() {
                 password setup on first sign-in.
               </p>
 
-              <form className="auth-form" onSubmit={handleInviteSubmit}>
-                <label className="field">
-                  <span>Name</span>
-                  <input
-                    disabled={!canInviteUsers}
-                    onChange={(event) => setInviteName(event.target.value)}
-                    placeholder="Optional display name"
-                    type="text"
-                    value={inviteName}
-                  />
-                </label>
+              {!canAccessTeamAccess ? (
+                <FlowStateBox
+                  body={`Your ${sessionRole?.label ?? "current"} role cannot access user administration yet.`}
+                  title="Team access is restricted"
+                  tone="warning"
+                />
+              ) : (
+                <form className="auth-form" onSubmit={handleInviteSubmit}>
+                  <label className="field">
+                    <span>Name</span>
+                    <input
+                      disabled={!canInviteUsers}
+                      onChange={(event) => setInviteName(event.target.value)}
+                      placeholder="Optional display name"
+                      type="text"
+                      value={inviteName}
+                    />
+                  </label>
 
-                <label className="field">
-                  <span>Email</span>
-                  <input
-                    disabled={!canInviteUsers}
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                    required
-                    type="email"
-                    value={inviteEmail}
-                  />
-                </label>
+                  <label className="field">
+                    <span>Email</span>
+                    <input
+                      disabled={!canInviteUsers}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      required
+                      type="email"
+                      value={inviteEmail}
+                    />
+                  </label>
 
-                {inviteError ? <p className="form-error">{inviteError}</p> : null}
-                {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
+                  {inviteError ? <p className="form-error">{inviteError}</p> : null}
+                  {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
 
-                <div className="actions">
-                  <button
-                    className="button"
-                    disabled={isInviting || !canInviteUsers}
-                    type="submit"
-                  >
-                    {isInviting ? "Sending invite..." : "Send invite"}
-                  </button>
-                </div>
-              </form>
+                  <div className="actions">
+                    <button
+                      className="button"
+                      disabled={isInviting || !canInviteUsers}
+                      type="submit"
+                    >
+                      {isInviting ? "Sending invite..." : "Send invite"}
+                    </button>
+                  </div>
+                </form>
+              )}
 
-              {!canInviteUsers ? (
+              {canAccessTeamAccess && !canInviteUsers ? (
                 <p className="helper-text">
                   Your {sessionRole?.label ?? "current"} role can sign in, but it cannot send
                   team invites.
@@ -3616,32 +3675,40 @@ export default function AdminPage() {
             <article className="admin-card" id="settings">
               <p className="card-eyebrow">Session and runtime</p>
               <h3 className="card-title">Stable foundation for the next slices</h3>
-              <dl className="detail-list" id="session">
-                <div>
-                  <dt>Signed in as</dt>
-                  <dd>{userLabel}</dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{session.data.user.email}</dd>
-                </div>
-                <div>
-                  <dt>App environment</dt>
-                  <dd>{adminPublicEnv.NEXT_PUBLIC_APP_ENV}</dd>
-                </div>
-                <div>
-                  <dt>API origin</dt>
-                  <dd>{adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}</dd>
-                </div>
-                <div>
-                  <dt>Media origin</dt>
-                  <dd>{adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN}</dd>
-                </div>
-                <div>
-                  <dt>Auth posture</dt>
-                  <dd>Persisted better-auth session on the API Worker origin</dd>
-                </div>
-              </dl>
+              {!canAccessSettingsWorkspace ? (
+                <FlowStateBox
+                  body={`Your ${sessionRole?.label ?? "current"} role cannot access settings yet.`}
+                  title="Settings are restricted"
+                  tone="warning"
+                />
+              ) : (
+                <dl className="detail-list" id="session">
+                  <div>
+                    <dt>Signed in as</dt>
+                    <dd>{userLabel}</dd>
+                  </div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{session.data.user.email}</dd>
+                  </div>
+                  <div>
+                    <dt>App environment</dt>
+                    <dd>{adminPublicEnv.NEXT_PUBLIC_APP_ENV}</dd>
+                  </div>
+                  <div>
+                    <dt>API origin</dt>
+                    <dd>{adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}</dd>
+                  </div>
+                  <div>
+                    <dt>Media origin</dt>
+                    <dd>{adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN}</dd>
+                  </div>
+                  <div>
+                    <dt>Auth posture</dt>
+                    <dd>Persisted better-auth session on the API Worker origin</dd>
+                  </div>
+                </dl>
+              )}
             </article>
           </section>
         </div>

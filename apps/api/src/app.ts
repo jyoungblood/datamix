@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { createAuth, getAuthSetupStatus } from "./auth";
 import {
   forbidMissingPermission,
+  requireEveryPermission,
   requirePermission,
   requireSession,
 } from "./auth-guard";
@@ -738,297 +739,333 @@ app.get("/collections/:name", requirePermission("collections.read"), async (c) =
   }
 });
 
-app.get("/collections/:name/records", requirePermission("records.read"), async (c) => {
-  try {
-    const result = await listCollectionRecords(c.env, c.req.param("name"));
+app.get(
+  "/collections/:name/records",
+  requireEveryPermission(["collections.read", "records.read"]),
+  async (c) => {
+    try {
+      const result = await listCollectionRecords(c.env, c.req.param("name"));
 
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      records: result.records,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
         },
-        error.statusCode as 400,
-      );
+        records: result.records,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.post(
+  "/collections/:name/records",
+  requireEveryPermission(["collections.read", "records.create"]),
+  async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Record payload must be valid JSON." }, 400);
     }
 
-    throw error;
-  }
-});
+    try {
+      const result = await createCollectionRecord(c.env, c.req.param("name"), body);
 
-app.post("/collections/:name/records", requirePermission("records.create"), async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Record payload must be valid JSON." }, 400);
-  }
-
-  try {
-    const result = await createCollectionRecord(c.env, c.req.param("name"), body);
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      message: "Record created.",
-      record: result.record,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
         },
-        error.statusCode as 400,
-      );
+        message: "Record created.",
+        record: result.record,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.get(
+  "/collections/:name/records/:id",
+  requireEveryPermission(["collections.read", "records.read"]),
+  async (c) => {
+    try {
+      const result = await getCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
+
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
+        },
+        record: result.record,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.put(
+  "/collections/:name/records/:id",
+  requireEveryPermission(["collections.read", "records.update"]),
+  async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Record payload must be valid JSON." }, 400);
     }
 
-    throw error;
-  }
-});
-
-app.get("/collections/:name/records/:id", requirePermission("records.read"), async (c) => {
-  try {
-    const result = await getCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      record: result.record,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
-        },
-        error.statusCode as 400,
+    try {
+      const result = await updateCollectionRecord(
+        c.env,
+        c.req.param("name"),
+        c.req.param("id"),
+        body,
       );
+
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
+        },
+        message: "Record updated.",
+        record: result.record,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.delete(
+  "/collections/:name/records/:id",
+  requireEveryPermission(["collections.read", "records.delete"]),
+  async (c) => {
+    try {
+      const result = await deleteCollectionRecord(
+        c.env,
+        c.req.param("name"),
+        c.req.param("id"),
+      );
+
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
+        },
+        deletedRecordId: result.deletedRecordId,
+        message: "Record deleted.",
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.get(
+  "/records/:name",
+  requireEveryPermission(["collections.read", "records.read"]),
+  async (c) => {
+    try {
+      const result = await listCollectionRecords(c.env, c.req.param("name"));
+
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
+        },
+        records: result.records,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.post(
+  "/records/:name",
+  requireEveryPermission(["collections.read", "records.create"]),
+  async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Record payload must be valid JSON." }, 400);
     }
 
-    throw error;
-  }
-});
+    try {
+      const result = await createCollectionRecord(c.env, c.req.param("name"), body);
 
-app.put("/collections/:name/records/:id", requirePermission("records.update"), async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Record payload must be valid JSON." }, 400);
-  }
-
-  try {
-    const result = await updateCollectionRecord(
-      c.env,
-      c.req.param("name"),
-      c.req.param("id"),
-      body,
-    );
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      message: "Record updated.",
-      record: result.record,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
         },
-        error.statusCode as 400,
-      );
+        message: "Record created.",
+        record: result.record,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.put(
+  "/records/:name/:id",
+  requireEveryPermission(["collections.read", "records.update"]),
+  async (c) => {
+    let body: unknown;
+
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "Record payload must be valid JSON." }, 400);
     }
 
-    throw error;
-  }
-});
-
-app.delete("/collections/:name/records/:id", requirePermission("records.delete"), async (c) => {
-  try {
-    const result = await deleteCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        routes: createGeneratedCollectionCrudRoute(result.collection.definition.name),
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      deletedRecordId: result.deletedRecordId,
-      message: "Record deleted.",
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
-        },
-        error.statusCode as 400,
+    try {
+      const result = await updateCollectionRecord(
+        c.env,
+        c.req.param("name"),
+        c.req.param("id"),
+        body,
       );
-    }
 
-    throw error;
-  }
-});
-
-app.get("/records/:name", requirePermission("records.read"), async (c) => {
-  try {
-    const result = await listCollectionRecords(c.env, c.req.param("name"));
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      records: result.records,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
+      return c.json({
+        ...createServiceStatus("api"),
+        collection: {
+          createdAt: result.collection.createdAt,
+          definition: result.collection.definition,
+          tableName: result.collection.tableName,
+          updatedAt: result.collection.updatedAt,
         },
-        error.statusCode as 400,
-      );
+        message: "Record updated.",
+        record: result.record,
+        supportedFieldNames: result.supportedFieldNames,
+      });
+    } catch (error) {
+      if (error instanceof CollectionRecordError) {
+        return c.json(
+          {
+            error: error.message,
+            issues: error.issues,
+          },
+          error.statusCode as 400,
+        );
+      }
+
+      throw error;
     }
-
-    throw error;
-  }
-});
-
-app.post("/records/:name", requirePermission("records.create"), async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Record payload must be valid JSON." }, 400);
-  }
-
-  try {
-    const result = await createCollectionRecord(c.env, c.req.param("name"), body);
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      message: "Record created.",
-      record: result.record,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
-        },
-        error.statusCode as 400,
-      );
-    }
-
-    throw error;
-  }
-});
-
-app.put("/records/:name/:id", requirePermission("records.update"), async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Record payload must be valid JSON." }, 400);
-  }
-
-  try {
-    const result = await updateCollectionRecord(
-      c.env,
-      c.req.param("name"),
-      c.req.param("id"),
-      body,
-    );
-
-    return c.json({
-      ...createServiceStatus("api"),
-      collection: {
-        createdAt: result.collection.createdAt,
-        definition: result.collection.definition,
-        tableName: result.collection.tableName,
-        updatedAt: result.collection.updatedAt,
-      },
-      message: "Record updated.",
-      record: result.record,
-      supportedFieldNames: result.supportedFieldNames,
-    });
-  } catch (error) {
-    if (error instanceof CollectionRecordError) {
-      return c.json(
-        {
-          error: error.message,
-          issues: error.issues,
-        },
-        error.statusCode as 400,
-      );
-    }
-
-    throw error;
-  }
-});
+  },
+);
 
 app.get("/health", (c) => {
   const runtime = readApiRuntime(c.env);
