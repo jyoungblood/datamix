@@ -17,6 +17,7 @@ export type DatamixPrimitiveRecordFieldType =
   (typeof datamixPrimitiveRecordFieldTypes)[number];
 export const datamixRecordCrudFieldTypes = [
   ...datamixPrimitiveRecordFieldTypes,
+  "richText",
   "markdown",
 ] as const;
 export type DatamixRecordCrudFieldType =
@@ -72,6 +73,7 @@ export type DatamixPrimitiveRecordFieldDefinition =
 
 export type DatamixRecordCrudFieldDefinition =
   | DatamixPrimitiveRecordFieldDefinition
+  | DatamixRichTextFieldDefinition
   | DatamixMarkdownFieldDefinition;
 
 export type DatamixCollectionDefinition = {

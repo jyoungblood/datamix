@@ -28,6 +28,7 @@ import {
 } from "../lib/records";
 import { adminPublicEnv } from "../lib/runtime";
 import { useSetupStatus } from "../lib/setup";
+import { TiptapRichTextEditor } from "./_components/TiptapRichTextEditor";
 
 const loginHref = "/login?next=/admin";
 const apiHealthHref = `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/health`;
@@ -287,6 +288,7 @@ function createGeneratedRecordFormStateFromRecord(
 
     switch (field.type) {
       case "text":
+      case "richText":
       case "markdown":
         defaultState[field.name] = typeof recordValue === "string" ? recordValue : "";
         break;
@@ -364,6 +366,7 @@ function createPersistedRecordPayload(
 
     switch (field.type) {
       case "text":
+      case "richText":
       case "markdown":
         payload[field.name] =
           typeof rawValue === "string" && rawValue.length > 0 ? rawValue : null;
@@ -457,7 +460,7 @@ function createGeneratedFieldHint(field: DatamixFieldDefinition) {
         ? `Enter one ${field.targetCollection || "target"} record id per line.`
         : `Enter one ${field.targetCollection || "target"} record id.`;
     case "richText":
-      return "First-pass rich text editing uses a plain multiline field.";
+      return "Tiptap stores normalized rich text as HTML and accepts pasted markdown.";
     case "markdown":
       return "Raw markdown is stored as text and previewed live beside the editor.";
     case "image":
@@ -766,7 +769,21 @@ function GeneratedRecordFieldInput({
     );
   }
 
-  if (field.type === "richText" || field.type === "imageGallery" || (field.type === "relationship" && field.multiple)) {
+  if (field.type === "richText") {
+    return (
+      <TiptapRichTextEditor
+        disabled={disabled}
+        hint={hint}
+        label={label}
+        onChange={(nextValue) => onChange(nextValue)}
+        placeholder={createGeneratedFieldPlaceholder(field)}
+        required={field.required}
+        value={typeof value === "string" ? value : ""}
+      />
+    );
+  }
+
+  if (field.type === "imageGallery" || (field.type === "relationship" && field.multiple)) {
     return (
       <label className="field">
         <span>{label}</span>
@@ -2155,10 +2172,10 @@ export default function AdminPage() {
                 <div className="section-row">
                   <div>
                     <p className="section-title">Current persistence support</p>
-                    <p className="section-copy">
-                      This slice persists `text`, `number`, `boolean`, and `markdown`
-                      fields. Other schema fields stay visible here but remain read-only
-                      until later milestones.
+                  <p className="section-copy">
+                      This slice persists `text`, `number`, `boolean`, `richText`, and
+                      `markdown` fields. Other schema fields stay visible here but remain
+                      read-only until later milestones.
                     </p>
                   </div>
                   <div className="actions">
@@ -2211,8 +2228,8 @@ export default function AdminPage() {
                     </p>
                     {persistedRecordFields.length === 0 ? (
                       <p className="section-copy">
-                        Add at least one `text`, `number`, `boolean`, or `markdown`
-                        field to create records in this slice.
+                        Add at least one `text`, `number`, `boolean`, `richText`, or
+                        `markdown` field to create records in this slice.
                       </p>
                     ) : null}
                     {unsupportedRecordFields.length > 0 ? (
@@ -2333,9 +2350,9 @@ export default function AdminPage() {
               <p className="card-eyebrow">Coming online later</p>
               <h3 className="card-title">Media and richer editors still stay in later slices</h3>
               <p className="card-copy">
-                Markdown editing and preview are now live, while rich text ergonomics,
-                media picking, relationships, selects, and date-specific editing still
-                stay decoupled until later milestones.
+                Markdown and rich text editing are now live, while media picking,
+                relationships, selects, and date-specific editing still stay decoupled
+                until later milestones.
               </p>
             </article>
           </section>

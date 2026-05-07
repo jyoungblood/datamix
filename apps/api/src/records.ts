@@ -91,7 +91,7 @@ function assertPersistedCrudFields(
 ) {
   if (fields.length === 0) {
     throw new CollectionRecordError(
-      "This collection has no text, number, boolean, or markdown fields to persist in the current CRUD slice.",
+      "This collection has no text, number, boolean, richText, or markdown fields to persist in the current CRUD slice.",
       { statusCode: 409 },
     );
   }
@@ -164,6 +164,7 @@ function normalizePersistedRecordValues(
 
     switch (field.type) {
       case "text":
+      case "richText":
       case "markdown": {
         if (rawValue === undefined || rawValue === null || rawValue === "") {
           if (field.required) {
@@ -297,6 +298,7 @@ function mapStoredRecord(
 
       switch (field.type) {
         case "text":
+        case "richText":
         case "markdown":
           return [field.name, typeof rawValue === "string" ? rawValue : null];
         case "number":

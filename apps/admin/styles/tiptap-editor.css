@@ -1,0 +1,197 @@
+.tiptap-wrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(73, 54, 24, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+}
+
+.tiptap-wrapper.is-disabled {
+  opacity: 0.72;
+}
+
+.tiptap-wrapper:focus-within {
+  outline: 2px solid rgba(160, 111, 33, 0.22);
+  outline-offset: 2px;
+}
+
+.tiptap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid rgba(73, 54, 24, 0.12);
+  background: rgba(246, 237, 216, 0.72);
+}
+
+.tiptap-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-right: 0.5rem;
+  margin-right: 0.15rem;
+  border-right: 1px solid rgba(73, 54, 24, 0.12);
+}
+
+.tiptap-toolbar-group:last-child {
+  padding-right: 0;
+  margin-right: 0;
+  border-right: 0;
+}
+
+.tiptap-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #4b3a24;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tiptap-toolbar-button:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.tiptap-toolbar-button.is-active,
+.tiptap-toolbar-button[aria-pressed="true"] {
+  background: #36240f;
+  border-color: #36240f;
+  color: #fffaf0;
+}
+
+.tiptap-toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tiptap-editor-surface {
+  min-height: 180px;
+  cursor: text;
+}
+
+.tiptap-editor-content {
+  min-height: 180px;
+  padding: 1rem;
+  color: #1d1a14;
+  line-height: 1.65;
+}
+
+.tiptap-editor-content:focus {
+  outline: none;
+}
+
+.tiptap-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #8b7656;
+  pointer-events: none;
+  height: 0;
+}
+
+.tiptap-editor-content p,
+.tiptap-content p {
+  margin: 0.5em 0;
+}
+
+.tiptap-editor-content p:first-child,
+.tiptap-content p:first-child {
+  margin-top: 0;
+}
+
+.tiptap-editor-content p:last-child,
+.tiptap-content p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor-content h1,
+.tiptap-content h1 {
+  margin: 0.8em 0 0.45em;
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.tiptap-editor-content h2,
+.tiptap-content h2 {
+  margin: 0.8em 0 0.45em;
+  font-size: 1.45rem;
+  line-height: 1.3;
+}
+
+.tiptap-editor-content h3,
+.tiptap-content h3 {
+  margin: 0.8em 0 0.45em;
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol,
+.tiptap-content ul,
+.tiptap-content ol {
+  margin: 0.75em 0;
+  padding-left: 1.45rem;
+}
+
+.tiptap-editor-content li,
+.tiptap-content li {
+  margin: 0.2em 0;
+}
+
+.tiptap-editor-content blockquote,
+.tiptap-content blockquote {
+  margin: 1em 0;
+  padding: 0.6em 0.95em;
+  border-left: 4px solid rgba(160, 111, 33, 0.5);
+  border-radius: 0 10px 10px 0;
+  background: rgba(246, 237, 216, 0.56);
+  color: #5c4a31;
+  font-style: italic;
+}
+
+.tiptap-editor-content code,
+.tiptap-content code {
+  padding: 0.15em 0.35em;
+  border-radius: 6px;
+  background: rgba(54, 36, 15, 0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.tiptap-editor-content pre,
+.tiptap-content pre {
+  margin: 1em 0;
+  padding: 1rem;
+  border-radius: 14px;
+  background: #2c241a;
+  color: #fffaf0;
+  overflow-x: auto;
+}
+
+.tiptap-editor-content pre code,
+.tiptap-content pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.tiptap-editor-content a,
+.tiptap-content a {
+  color: #8f5e1f;
+  text-decoration: underline;
+}
+
+.tiptap-editor-content hr,
+.tiptap-content hr {
+  margin: 1.35em 0;
+  border: 0;
+  border-top: 2px solid rgba(73, 54, 24, 0.14);
+}
