@@ -7,7 +7,7 @@ import {
   type DatamixSchemaValidationIssue,
   type DatamixSelectOption,
 } from "@datamix/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { authClient } from "../lib/auth-client";
 import {
@@ -525,6 +525,57 @@ type GeneratedRecordFieldInputProps = {
   onChange: (nextValue: GeneratedRecordFormValue) => void;
 };
 
+type FlowStateBoxProps = {
+  actionLabel?: string | undefined;
+  body: string;
+  compact?: boolean | undefined;
+  onAction?: (() => void) | undefined;
+  secondaryActionLabel?: string | undefined;
+  onSecondaryAction?: (() => void) | undefined;
+  tone?: "error" | "neutral" | "success" | "warning" | undefined;
+  title: string;
+};
+
+function FlowStateBox({
+  actionLabel,
+  body,
+  compact = false,
+  onAction,
+  onSecondaryAction,
+  secondaryActionLabel,
+  tone = "neutral",
+  title,
+}: FlowStateBoxProps) {
+  const className = compact
+    ? `empty-state-box state-box state-box-${tone} compact-box`
+    : `empty-state-box state-box state-box-${tone}`;
+
+  return (
+    <div className={className} role={tone === "error" ? "alert" : "status"}>
+      <p className="list-title">{title}</p>
+      <p className="list-copy">{body}</p>
+      {actionLabel || secondaryActionLabel ? (
+        <div className="actions actions-compact state-box-actions">
+          {actionLabel ? (
+            <button className="mini-button" onClick={onAction} type="button">
+              {actionLabel}
+            </button>
+          ) : null}
+          {secondaryActionLabel ? (
+            <button
+              className="mini-button"
+              onClick={onSecondaryAction}
+              type="button"
+            >
+              {secondaryActionLabel}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function createInlineMarkdownPreview(
   value: string,
   keyPrefix: string,
@@ -925,6 +976,8 @@ function jumpToSection(sectionId: string) {
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const collectionLoadRequestId = useRef(0);
+  const recordLoadRequestId = useRef(0);
   const [collections, setCollections] = useState<StoredCollectionDefinition[]>([]);
   const [draft, setDraft] = useState<CollectionDraft>(createEmptyCollectionDraft);
   const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null);
@@ -932,7 +985,9 @@ export default function AdminPage() {
   const [collectionIssues, setCollectionIssues] = useState<DatamixSchemaValidationIssue[]>([]);
   const [collectionMessage, setCollectionMessage] = useState<string | null>(null);
   const [collectionLoadError, setCollectionLoadError] = useState<string | null>(null);
+  const [hasLoadedCollections, setHasLoadedCollections] = useState(false);
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
+  const [isRefreshingCollections, setIsRefreshingCollections] = useState(false);
   const [isSavingCollection, setIsSavingCollection] = useState(false);
   const [newFieldType, setNewFieldType] = useState<DatamixFieldType>("text");
   const [records, setRecords] = useState<StoredCollectionRecord[]>([]);
@@ -942,13 +997,123 @@ export default function AdminPage() {
   const [recordLoadError, setRecordLoadError] = useState<string | null>(null);
   const [recordMessage, setRecordMessage] = useState<string | null>(null);
   const [recordSupportedFieldNames, setRecordSupportedFieldNames] = useState("none");
+  const [hasLoadedRecords, setHasLoadedRecords] = useState(false);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
+  const [isRefreshingRecords, setIsRefreshingRecords] = useState(false);
   const [isSavingRecord, setIsSavingRecord] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [isInviting, setIsInviting] = useState(false);
+
+  const loadCollections = async (options?: { refresh?: boolean }) => {
+    const requestId = collectionLoadRequestId.current + 1;
+    const isRefresh = options?.refresh === true && hasLoadedCollections;
+
+    collectionLoadRequestId.current = requestId;
+    setCollectionLoadError(null);
+
+    if (isRefresh) {
+      setIsRefreshingCollections(true);
+    } else {
+      setIsLoadingCollections(true);
+    }
+
+    try {
+      const nextCollections = await listCollectionDefinitions();
+
+      if (collectionLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      setCollections(nextCollections);
+      setHasLoadedCollections(true);
+
+      if (
+        selectedCollectionName &&
+        !nextCollections.some(
+          (collection) => collection.definition.name === selectedCollectionName,
+        )
+      ) {
+        setSelectedCollectionName(null);
+        setSelectedRecordId(null);
+      }
+    } catch (error) {
+      if (collectionLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      setCollectionLoadError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load collection definitions.",
+      );
+    } finally {
+      if (collectionLoadRequestId.current === requestId) {
+        setIsLoadingCollections(false);
+        setIsRefreshingCollections(false);
+      }
+    }
+  };
+
+  const loadRecords = async (
+    collection: StoredCollectionDefinition,
+    options?: { refresh?: boolean },
+  ) => {
+    const requestId = recordLoadRequestId.current + 1;
+    const isRefresh = options?.refresh === true && hasLoadedRecords;
+
+    recordLoadRequestId.current = requestId;
+    setRecordIssues([]);
+    setRecordLoadError(null);
+
+    if (isRefresh) {
+      setIsRefreshingRecords(true);
+    } else {
+      setHasLoadedRecords(false);
+      setIsLoadingRecords(true);
+      setRecordMessage(null);
+      setRecords([]);
+      setSelectedRecordId(null);
+      setRecordSupportedFieldNames("none");
+    }
+
+    try {
+      const result = await listCollectionRecords(collection.definition.name);
+
+      if (recordLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      setRecords(result.records);
+      setRecordSupportedFieldNames(result.supportedFieldNames);
+      setHasLoadedRecords(true);
+      setSelectedRecordId((currentSelectedRecordId) =>
+        currentSelectedRecordId &&
+        result.records.some((record) => record.id === currentSelectedRecordId)
+          ? currentSelectedRecordId
+          : null,
+      );
+    } catch (error) {
+      if (recordLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      if (!isRefresh) {
+        setRecords([]);
+        setRecordSupportedFieldNames("none");
+      }
+      setRecordLoadError(
+        error instanceof Error ? error.message : "Unable to load collection records.",
+      );
+    } finally {
+      if (recordLoadRequestId.current === requestId) {
+        setIsLoadingRecords(false);
+        setIsRefreshingRecords(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (session.isPending || setupStatus.isPending || session.data) {
@@ -968,42 +1133,7 @@ export default function AdminPage() {
       return;
     }
 
-    let cancelled = false;
-
-    async function loadCollections() {
-      setIsLoadingCollections(true);
-      setCollectionLoadError(null);
-
-      try {
-        const nextCollections = await listCollectionDefinitions();
-
-        if (cancelled) {
-          return;
-        }
-
-        setCollections(nextCollections);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setCollectionLoadError(
-          error instanceof Error
-            ? error.message
-            : "Unable to load collection definitions.",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingCollections(false);
-        }
-      }
-    }
-
     void loadCollections();
-
-    return () => {
-      cancelled = true;
-    };
   }, [session.data]);
 
   const activeCollection = collections.find(
@@ -1031,6 +1161,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!activeCollection) {
+      recordLoadRequestId.current += 1;
       setRecords([]);
       setSelectedRecordId(null);
       setRecordDraft({});
@@ -1038,54 +1169,17 @@ export default function AdminPage() {
       setRecordLoadError(null);
       setRecordMessage(null);
       setRecordSupportedFieldNames("none");
+      setHasLoadedRecords(false);
+      setIsLoadingRecords(false);
+      setIsRefreshingRecords(false);
       return;
     }
 
     const activeDefinition = activeCollection.definition;
-    const activeCollectionName = activeDefinition.name;
 
     setRecordDraft(createGeneratedRecordFormState(activeDefinition));
 
-    let cancelled = false;
-
-    async function loadRecords() {
-      setIsLoadingRecords(true);
-      setRecordIssues([]);
-      setRecordLoadError(null);
-      setRecordMessage(null);
-      setSelectedRecordId(null);
-
-      try {
-        const result = await listCollectionRecords(activeCollectionName);
-
-        if (cancelled) {
-          return;
-        }
-
-        setRecords(result.records);
-        setRecordSupportedFieldNames(result.supportedFieldNames);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setRecords([]);
-        setRecordSupportedFieldNames("none");
-        setRecordLoadError(
-          error instanceof Error ? error.message : "Unable to load collection records.",
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingRecords(false);
-        }
-      }
-    }
-
-    void loadRecords();
-
-    return () => {
-      cancelled = true;
-    };
+    void loadRecords(activeCollection);
   }, [activeCollection]);
 
   if (session.isPending || setupStatus.isPending) {
@@ -1130,6 +1224,10 @@ export default function AdminPage() {
   const unsupportedRecordFields = activeCollection
     ? activeCollection.definition.fields.filter((field) => !isRecordCrudFieldDefinition(field))
     : [];
+  const canRefreshCollections =
+    Boolean(session.data) && !isLoadingCollections && !isRefreshingCollections;
+  const canRefreshRecords =
+    activeCollection !== undefined && !isLoadingRecords && !isRefreshingRecords;
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
     : null;
@@ -1139,6 +1237,16 @@ export default function AdminPage() {
   const persistedRecordPayload = activeCollection
     ? createPersistedRecordPayload(activeCollection.definition, recordDraft)
     : null;
+  const collectionStatusTone = collectionIssues.length > 0 ? "error" : "success";
+  const recordStatusTone = recordIssues.length > 0 ? "error" : "success";
+  const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
+  const isInitialRecordLoad = isLoadingRecords && !hasLoadedRecords;
+  const recordStatusTitle =
+    recordIssues.length > 0
+      ? "Record needs attention"
+      : recordMessage?.startsWith("Record created")
+        ? "Record created"
+        : "Record saved";
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -1160,6 +1268,22 @@ export default function AdminPage() {
     setDraft(createDraftFromDefinition(collection.definition));
     setCollectionIssues([]);
     setCollectionMessage(null);
+  };
+
+  const handleRefreshCollections = () => {
+    if (!canRefreshCollections) {
+      return;
+    }
+
+    void loadCollections({ refresh: true });
+  };
+
+  const handleRefreshRecords = () => {
+    if (!activeCollection || !canRefreshRecords) {
+      return;
+    }
+
+    void loadRecords(activeCollection, { refresh: true });
   };
 
   const updateDraft = (partial: Partial<CollectionDraft>) => {
@@ -1259,6 +1383,7 @@ export default function AdminPage() {
       setSelectedCollectionName(nextStoredCollection.definition.name);
       setDraft(createDraftFromDefinition(nextStoredCollection.definition));
       setCollectionMessage(`${result.message} ${formatPlanSummary(result.plan)}`);
+      setCollectionLoadError(null);
     } catch (error) {
       if (error instanceof CollectionDefinitionRequestError) {
         setCollectionIssues(error.issues ?? []);
@@ -1384,6 +1509,7 @@ export default function AdminPage() {
         createGeneratedRecordFormStateFromRecord(activeCollection.definition, result.record),
       );
       setRecordMessage(result.message);
+      setRecordLoadError(null);
     } catch (error) {
       if (error instanceof CollectionRecordRequestError) {
         setRecordIssues(error.issues ?? []);
@@ -1425,44 +1551,85 @@ export default function AdminPage() {
           <section className="admin-sidebar-card">
             <div className="section-row">
               <p className="admin-sidebar-heading">Collection list</p>
-              <button className="mini-button" onClick={handleStartNewCollection} type="button">
-                New
-              </button>
+              <div className="actions actions-compact">
+                <button
+                  className="mini-button"
+                  disabled={!canRefreshCollections}
+                  onClick={handleRefreshCollections}
+                  type="button"
+                >
+                  {isRefreshingCollections ? "Refreshing..." : "Refresh"}
+                </button>
+                <button className="mini-button" onClick={handleStartNewCollection} type="button">
+                  New
+                </button>
+              </div>
             </div>
             <div className="mini-list">
-              {isLoadingCollections ? (
-                <p className="admin-sidebar-copy">Loading collection definitions...</p>
+              {isInitialCollectionLoad ? (
+                <FlowStateBox
+                  body="Datamix is loading your saved collection definitions from the API Worker."
+                  compact
+                  title="Loading collections"
+                />
+              ) : collectionLoadError && collections.length === 0 ? (
+                <FlowStateBox
+                  actionLabel="Try again"
+                  body={collectionLoadError}
+                  compact
+                  onAction={handleRefreshCollections}
+                  title="Collection list is unavailable"
+                  tone="error"
+                />
               ) : collections.length === 0 ? (
-                <p className="admin-sidebar-copy">
-                  No saved collections yet. Start with a simple model and add fields in the
-                  builder.
-                </p>
+                <FlowStateBox
+                  actionLabel="Start a collection"
+                  body="No saved collections yet. Start with a small model and add fields as the shape becomes clearer."
+                  compact
+                  onAction={handleStartNewCollection}
+                  title="No collections saved yet"
+                />
               ) : (
-                collections.map((collection) => (
-                  <button
-                    className={
-                      collection.definition.name === selectedCollectionName
-                        ? "mini-list-item is-selected mini-list-item-stacked"
-                        : "mini-list-item mini-list-item-stacked"
-                    }
-                    key={collection.definition.name}
-                    onClick={() => handleEditCollection(collection)}
-                    type="button"
-                  >
-                    <div className="mini-list-content">
-                      <span>{collection.definition.label}</span>
-                      <small>
-                        {formatCollectionSummary(
-                          collection,
-                          collection.definition.name === selectedCollectionName
-                            ? { recordCount: records.length }
-                            : undefined,
-                        )}
-                      </small>
-                    </div>
-                    <small>{collection.definition.name}</small>
-                  </button>
-                ))
+                <>
+                  {collections.map((collection) => (
+                    <button
+                      className={
+                        collection.definition.name === selectedCollectionName
+                          ? "mini-list-item is-selected mini-list-item-stacked"
+                          : "mini-list-item mini-list-item-stacked"
+                      }
+                      key={collection.definition.name}
+                      onClick={() => handleEditCollection(collection)}
+                      type="button"
+                    >
+                      <div className="mini-list-content">
+                        <span>{collection.definition.label}</span>
+                        <small>
+                          {formatCollectionSummary(
+                            collection,
+                            collection.definition.name === selectedCollectionName
+                              ? { recordCount: records.length }
+                              : undefined,
+                          )}
+                        </small>
+                      </div>
+                      <small>{collection.definition.name}</small>
+                    </button>
+                  ))}
+                  {isRefreshingCollections ? (
+                    <p className="helper-text">Refreshing the saved collection list...</p>
+                  ) : null}
+                  {collectionLoadError ? (
+                    <FlowStateBox
+                      actionLabel="Retry refresh"
+                      body={`${collectionLoadError} Showing the last collection list that loaded successfully.`}
+                      compact
+                      onAction={handleRefreshCollections}
+                      title="Collection refresh did not finish"
+                      tone="error"
+                    />
+                  ) : null}
+                </>
               )}
             </div>
           </section>
@@ -1478,7 +1645,12 @@ export default function AdminPage() {
                 </p>
               </div>
               {activeCollection ? (
-                <span className="status-pill">{records.length} records</span>
+                <div className="status-row status-row-compact">
+                  <span className="status-pill">{records.length} records</span>
+                  {isRefreshingRecords ? (
+                    <span className="status-pill status-pill-muted">Refreshing</span>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 
@@ -1513,12 +1685,13 @@ export default function AdminPage() {
                 </button>
               </div>
             ) : (
-              <div className="empty-state-box compact-box">
-                <p className="list-title">No collection selected</p>
-                <p className="list-copy">
-                  Pick a collection from the list above or start a new one.
-                </p>
-              </div>
+              <FlowStateBox
+                actionLabel="Start a collection"
+                body="Pick a collection from the list above or start a new one."
+                compact
+                onAction={handleStartNewCollection}
+                title="No collection selected"
+              />
             )}
           </section>
 
@@ -1526,42 +1699,87 @@ export default function AdminPage() {
             <div className="section-row">
               <p className="admin-sidebar-heading">Saved records</p>
               {activeCollection ? (
-                <button className="mini-button" onClick={handleStartNewRecord} type="button">
-                  New
-                </button>
+                <div className="actions actions-compact">
+                  <button
+                    className="mini-button"
+                    disabled={!canRefreshRecords}
+                    onClick={handleRefreshRecords}
+                    type="button"
+                  >
+                    {isRefreshingRecords ? "Refreshing..." : "Refresh"}
+                  </button>
+                  <button className="mini-button" onClick={handleStartNewRecord} type="button">
+                    New
+                  </button>
+                </div>
               ) : null}
             </div>
             <div className="mini-list">
               {!activeCollection ? (
-                <p className="admin-sidebar-copy">
-                  Records appear here once a collection is selected.
-                </p>
-              ) : isLoadingRecords ? (
-                <p className="admin-sidebar-copy">Loading saved records...</p>
+                <FlowStateBox
+                  body="Records appear here once a collection is selected."
+                  compact
+                  title="No collection selected"
+                />
+              ) : isInitialRecordLoad ? (
+                <FlowStateBox
+                  body={`Loading saved ${activeCollection.definition.label.toLowerCase()} records from the protected API route.`}
+                  compact
+                  title="Loading records"
+                />
+              ) : recordLoadError && records.length === 0 ? (
+                <FlowStateBox
+                  actionLabel="Try again"
+                  body={recordLoadError}
+                  compact
+                  onAction={handleRefreshRecords}
+                  title="Record list is unavailable"
+                  tone="error"
+                />
               ) : records.length === 0 ? (
-                <p className="admin-sidebar-copy">
-                  No records yet for {activeCollection.definition.label}. Start with a new
-                  one.
-                </p>
+                <FlowStateBox
+                  actionLabel="Create first record"
+                  body={`No records yet for ${activeCollection.definition.label}. Start with a first entry to exercise the generated editor end to end.`}
+                  compact
+                  onAction={handleStartNewRecord}
+                  title="No records saved yet"
+                />
               ) : (
-                records.map((record) => (
-                  <button
-                    className={
-                      record.id === selectedRecordId
-                        ? "mini-list-item is-selected mini-list-item-stacked"
-                        : "mini-list-item mini-list-item-stacked"
-                    }
-                    key={record.id}
-                    onClick={() => handleEditRecord(record)}
-                    type="button"
-                  >
-                    <div className="mini-list-content">
-                      <span>{summarizeRecord(activeCollection.definition, record)}</span>
-                      <small>{formatRecordTimestamp(record.updatedAt)}</small>
-                    </div>
-                    <small>{record.id.slice(0, 8)}</small>
-                  </button>
-                ))
+                <>
+                  {records.map((record) => (
+                    <button
+                      className={
+                        record.id === selectedRecordId
+                          ? "mini-list-item is-selected mini-list-item-stacked"
+                          : "mini-list-item mini-list-item-stacked"
+                      }
+                      key={record.id}
+                      onClick={() => handleEditRecord(record)}
+                      type="button"
+                    >
+                      <div className="mini-list-content">
+                        <span>{summarizeRecord(activeCollection.definition, record)}</span>
+                        <small>{formatRecordTimestamp(record.updatedAt)}</small>
+                      </div>
+                      <small>{record.id.slice(0, 8)}</small>
+                    </button>
+                  ))}
+                  {isRefreshingRecords ? (
+                    <p className="helper-text">
+                      Refreshing {activeCollection.definition.label.toLowerCase()} records...
+                    </p>
+                  ) : null}
+                  {recordLoadError ? (
+                    <FlowStateBox
+                      actionLabel="Retry refresh"
+                      body={`${recordLoadError} Showing the last record list that loaded successfully.`}
+                      compact
+                      onAction={handleRefreshRecords}
+                      title="Record refresh did not finish"
+                      tone="error"
+                    />
+                  ) : null}
+                </>
               )}
             </div>
           </section>
@@ -1626,17 +1844,27 @@ export default function AdminPage() {
               </button>
               <button
                 className="button button-secondary"
+                disabled={!activeCollection}
                 onClick={() => jumpToSection(recordEditorSectionId)}
                 type="button"
               >
                 Open records
               </button>
               {activeCollection ? (
-                <button className="button button-secondary" onClick={handleStartNewRecord} type="button">
+                <button
+                  className="button button-secondary"
+                  disabled={isInitialRecordLoad}
+                  onClick={handleStartNewRecord}
+                  type="button"
+                >
                   New record
                 </button>
               ) : (
-                <button className="button button-secondary" onClick={handleStartNewCollection} type="button">
+                <button
+                  className="button button-secondary"
+                  onClick={handleStartNewCollection}
+                  type="button"
+                >
                   New collection
                 </button>
               )}
@@ -2107,15 +2335,37 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {collectionLoadError ? <p className="form-error">{collectionLoadError}</p> : null}
               {collectionMessage ? (
-                <p
-                  className={
-                    collectionIssues.length > 0 ? "form-error form-message-block" : "form-success form-message-block"
+                <FlowStateBox
+                  actionLabel={
+                    collectionIssues.length === 0 && activeCollection ? "Open records" : undefined
                   }
-                >
-                  {collectionMessage}
-                </p>
+                  body={
+                    collectionIssues.length > 0
+                      ? collectionMessage
+                      : `${collectionMessage} The generated record editor is ready to use for the saved schema.`
+                  }
+                  onAction={
+                    collectionIssues.length === 0 && activeCollection
+                      ? () => jumpToSection(recordEditorSectionId)
+                      : undefined
+                  }
+                  title={
+                    collectionIssues.length > 0
+                      ? "Collection definition needs attention"
+                      : "Collection definition saved"
+                  }
+                  tone={collectionStatusTone}
+                />
+              ) : null}
+              {collectionLoadError && collections.length > 0 ? (
+                <FlowStateBox
+                  actionLabel="Retry collections"
+                  body={`${collectionLoadError} You can keep editing the current draft while Datamix retries the saved collection list.`}
+                  onAction={handleRefreshCollections}
+                  title="Saved collection list is out of date"
+                  tone="warning"
+                />
               ) : null}
               {collectionIssues.length > 0 ? (
                 <ul className="issue-list">
@@ -2167,18 +2417,20 @@ export default function AdminPage() {
                   <span className="status-pill status-pill-muted">
                     {activeCollection.tableName}
                   </span>
+                  {isRefreshingRecords ? (
+                    <span className="status-pill status-pill-muted">Refreshing records</span>
+                  ) : null}
                 </div>
               ) : null}
             </div>
 
             {!activeCollection ? (
-              <div className="empty-state-box">
-                <p className="list-title">No saved collection selected</p>
-                <p className="list-copy">
-                  Save a collection from the builder, or choose one from the sidebar, to
-                  see its generated record editor.
-                </p>
-              </div>
+              <FlowStateBox
+                actionLabel="Create collection"
+                body="Save a collection from the builder, or choose one from the sidebar, to see its generated record editor."
+                onAction={handleStartNewCollection}
+                title="No saved collection selected"
+              />
             ) : (
               <>
                 {hasUnsavedSchemaChanges ? (
@@ -2194,13 +2446,21 @@ export default function AdminPage() {
                 <div className="section-row">
                   <div>
                     <p className="section-title">Current persistence support</p>
-                  <p className="section-copy">
+                    <p className="section-copy">
                       This slice persists `text`, `number`, `boolean`, `date`, `select`,
                       `relationship`, `richText`, and `markdown` fields. Other schema
                       fields stay visible here but remain read-only until later milestones.
                     </p>
                   </div>
                   <div className="actions">
+                    <button
+                      className="button button-secondary"
+                      disabled={!canRefreshRecords}
+                      onClick={handleRefreshRecords}
+                      type="button"
+                    >
+                      {isRefreshingRecords ? "Refreshing..." : "Refresh records"}
+                    </button>
                     <button
                       className="button button-secondary"
                       onClick={handleStartNewRecord}
@@ -2213,32 +2473,62 @@ export default function AdminPage() {
 
                 <div className="record-browser">
                   <div className="record-browser-list">
-                    {isLoadingRecords ? (
-                      <p className="admin-sidebar-copy">Loading saved records...</p>
+                    {isInitialRecordLoad ? (
+                      <FlowStateBox
+                        body={`Loading ${activeCollection.definition.label.toLowerCase()} records and persistence support details.`}
+                        title="Loading records"
+                      />
+                    ) : recordLoadError && records.length === 0 ? (
+                      <FlowStateBox
+                        actionLabel="Try again"
+                        body={recordLoadError}
+                        onAction={handleRefreshRecords}
+                        title="Record list is unavailable"
+                        tone="error"
+                      />
                     ) : records.length === 0 ? (
-                      <div className="empty-state-box">
-                        <p className="list-title">No saved records yet</p>
-                        <p className="list-copy">
-                          Start with a new record to exercise the generated editor end to
-                          end.
-                        </p>
-                      </div>
+                      <FlowStateBox
+                        actionLabel="Create first record"
+                        body="Start with a new record to exercise the generated editor end to end."
+                        onAction={handleStartNewRecord}
+                        title="No saved records yet"
+                      />
                     ) : (
-                      records.map((record) => (
-                        <button
-                          className={
-                            record.id === selectedRecordId
-                              ? "mini-list-item is-selected"
-                              : "mini-list-item"
-                          }
-                          key={record.id}
-                          onClick={() => handleEditRecord(record)}
-                          type="button"
-                        >
-                          <span>{summarizeRecord(activeCollection.definition, record)}</span>
-                          <small>{formatRecordTimestamp(record.updatedAt)}</small>
-                        </button>
-                      ))
+                      <>
+                        {records.map((record) => (
+                          <button
+                            className={
+                              record.id === selectedRecordId
+                                ? "mini-list-item is-selected"
+                                : "mini-list-item"
+                            }
+                            key={record.id}
+                            onClick={() => handleEditRecord(record)}
+                            type="button"
+                          >
+                            <span>{summarizeRecord(activeCollection.definition, record)}</span>
+                            <small>{formatRecordTimestamp(record.updatedAt)}</small>
+                          </button>
+                        ))}
+                        {!selectedRecord ? (
+                          <FlowStateBox
+                            body="Choose a saved record to edit it, or keep the form in create mode to add a fresh entry."
+                            compact
+                            title="Create mode is active"
+                            tone="warning"
+                          />
+                        ) : null}
+                        {recordLoadError ? (
+                          <FlowStateBox
+                            actionLabel="Retry refresh"
+                            body={`${recordLoadError} Showing the last record list that loaded successfully.`}
+                            compact
+                            onAction={handleRefreshRecords}
+                            title="Record refresh did not finish"
+                            tone="error"
+                          />
+                        ) : null}
+                      </>
                     )}
                   </div>
 
@@ -2249,11 +2539,12 @@ export default function AdminPage() {
                       API-backed in this slice: <strong>{recordSupportedFieldNames}</strong>
                     </p>
                     {persistedRecordFields.length === 0 ? (
-                      <p className="section-copy">
-                        Add at least one `text`, `number`, `boolean`, `date`, `select`,
-                        `relationship`, `richText`, or `markdown` field to create records
-                        in this slice.
-                      </p>
+                      <FlowStateBox
+                        body="Add at least one `text`, `number`, `boolean`, `date`, `select`, `relationship`, `richText`, or `markdown` field to create records in this slice."
+                        compact
+                        title="No persisted fields yet"
+                        tone="warning"
+                      />
                     ) : null}
                     {unsupportedRecordFields.length > 0 ? (
                       <p className="section-copy">
@@ -2269,12 +2560,13 @@ export default function AdminPage() {
                 <div className="generated-record-layout">
                   <form className="generated-record-form" onSubmit={handleGeneratedRecordSubmit}>
                     {activeCollection.definition.fields.length === 0 ? (
-                      <div className="empty-state-box">
-                        <p className="list-title">This collection has no fields yet</p>
-                        <p className="list-copy">
-                          Add fields in the builder and save them to generate the editor.
-                        </p>
-                      </div>
+                      <FlowStateBox
+                        actionLabel="Open schema"
+                        body="Add fields in the builder and save them to generate the editor."
+                        onAction={() => jumpToSection(collectionBuilderSectionId)}
+                        title="This collection has no fields yet"
+                        tone="warning"
+                      />
                     ) : (
                       activeCollection.definition.fields.map((field) => (
                         <GeneratedRecordFieldInput
@@ -2290,17 +2582,25 @@ export default function AdminPage() {
                     )}
 
                     {recordMessage ? (
-                      <p
-                        className={
+                      <FlowStateBox
+                        body={
                           recordIssues.length > 0
-                            ? "form-error form-message-block"
-                            : "form-success form-message-block"
+                            ? recordMessage
+                            : `${recordMessage} This record is now part of the saved ${activeCollection.definition.label.toLowerCase()} flow.`
                         }
-                      >
-                        {recordMessage}
-                      </p>
+                        title={recordStatusTitle}
+                        tone={recordStatusTone}
+                      />
                     ) : null}
-                    {recordLoadError ? <p className="form-error">{recordLoadError}</p> : null}
+                    {recordLoadError && records.length > 0 ? (
+                      <FlowStateBox
+                        actionLabel="Retry records"
+                        body={`${recordLoadError} You can keep editing the current form while Datamix retries the latest record list.`}
+                        onAction={handleRefreshRecords}
+                        title="Saved records may be out of date"
+                        tone="warning"
+                      />
+                    ) : null}
                     {recordIssues.length > 0 ? (
                       <ul className="issue-list">
                         {recordIssues.map((issue) => (

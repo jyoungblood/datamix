@@ -218,6 +218,34 @@ textarea {
   color: #315b2a;
 }
 
+.state-box {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.state-box-neutral {
+  border-color: rgba(73, 54, 24, 0.08);
+}
+
+.state-box-success {
+  border-color: rgba(76, 122, 61, 0.22);
+  background: rgba(241, 248, 237, 0.92);
+}
+
+.state-box-warning {
+  border-color: rgba(160, 111, 33, 0.22);
+  background: rgba(252, 246, 231, 0.96);
+}
+
+.state-box-error {
+  border-color: rgba(178, 48, 45, 0.22);
+  background: rgba(253, 242, 241, 0.96);
+}
+
+.state-box-actions {
+  margin-top: 0.1rem;
+}
+
 .inline-link-row {
   margin: 0;
   color: #5e4d36;
@@ -419,6 +447,10 @@ button.admin-nav-item {
   flex-wrap: wrap;
   gap: 0.55rem;
   margin-top: 1rem;
+}
+
+.status-row-compact {
+  margin-top: 0;
 }
 
 .status-pill {
