@@ -107,6 +107,22 @@ const rolePermissionSections = datamixPermissionResourceDefinitions.map((resourc
 const overviewSectionId = "overview";
 const collectionBuilderSectionId = "collections-builder";
 const recordEditorSectionId = "record-editor";
+const mediaSectionId = "media";
+const inviteSectionId = "invite";
+const settingsSectionId = "settings";
+const navigableSectionIds = [
+  overviewSectionId,
+  collectionBuilderSectionId,
+  recordEditorSectionId,
+  mediaSectionId,
+  inviteSectionId,
+  settingsSectionId,
+] as const;
+
+type NavigableSectionId = (typeof navigableSectionIds)[number];
+type CollectionWorkspaceSectionId =
+  | typeof collectionBuilderSectionId
+  | typeof recordEditorSectionId;
 
 type BaseFieldDraft<TType extends DatamixFieldType> = {
   key: string;
@@ -1490,6 +1506,10 @@ function jumpToSection(sectionId: string) {
   window.history.replaceState(null, "", `#${sectionId}`);
 }
 
+function isNavigableSectionId(value: string): value is NavigableSectionId {
+  return navigableSectionIds.includes(value as NavigableSectionId);
+}
+
 function createRoleIdSuggestion(value: string) {
   return value
     .trim()
@@ -1590,6 +1610,7 @@ export default function AdminPage() {
   const mediaAssetsLoadRequestId = useRef(0);
   const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const recordLoadRequestId = useRef(0);
+  const hasAppliedInitialSectionRef = useRef(false);
   const [collections, setCollections] = useState<StoredCollectionDefinition[]>([]);
   const [draft, setDraft] = useState<CollectionDraft>(createEmptyCollectionDraft);
   const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null);
@@ -1631,6 +1652,10 @@ export default function AdminPage() {
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
   const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [activeSectionId, setActiveSectionId] =
+    useState<NavigableSectionId>(overviewSectionId);
+  const [preferredCollectionSectionId, setPreferredCollectionSectionId] =
+    useState<CollectionWorkspaceSectionId>(collectionBuilderSectionId);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
   const [activeCommandPaletteIndex, setActiveCommandPaletteIndex] = useState(0);
@@ -2145,6 +2170,112 @@ export default function AdminPage() {
   }, [activeCollection, canViewRecords]);
 
   useEffect(() => {
+    if (
+      hasAppliedInitialSectionRef.current ||
+      !session.data ||
+      !sessionAuthorization ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    hasAppliedInitialSectionRef.current = true;
+
+    const hash = window.location.hash.replace(/^#/, "").trim();
+
+    if (!hash || !isNavigableSectionId(hash)) {
+      return;
+    }
+
+    setActiveSectionId(hash);
+
+    if (hash === collectionBuilderSectionId || hash === recordEditorSectionId) {
+      setPreferredCollectionSectionId(hash);
+    }
+
+    const element = document.getElementById(hash);
+
+    if (element) {
+      element.scrollIntoView({ behavior: "auto", block: "start" });
+    }
+  }, [session.data, sessionAuthorization]);
+
+  useEffect(() => {
+    if (!session.data || !sessionAuthorization || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const observedElements = navigableSectionIds
+      .map((sectionId) => ({
+        element: document.getElementById(sectionId),
+        sectionId,
+      }))
+      .filter(
+        (
+          entry,
+        ): entry is {
+          element: HTMLElement;
+          sectionId: NavigableSectionId;
+        } => entry.element instanceof HTMLElement,
+      );
+
+    if (observedElements.length === 0) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => right.intersectionRatio - left.intersectionRatio);
+
+        const nextVisibleEntry = visibleEntries[0];
+
+        if (!nextVisibleEntry) {
+          return;
+        }
+
+        const nextSectionId = nextVisibleEntry.target.id;
+
+        if (!isNavigableSectionId(nextSectionId)) {
+          return;
+        }
+
+        setActiveSectionId(nextSectionId);
+
+        if (
+          nextSectionId === collectionBuilderSectionId ||
+          nextSectionId === recordEditorSectionId
+        ) {
+          setPreferredCollectionSectionId(nextSectionId);
+        }
+      },
+      {
+        rootMargin: "-18% 0px -55% 0px",
+        threshold: [0.2, 0.35, 0.55],
+      },
+    );
+
+    observedElements.forEach(({ element }) => {
+      observer.observe(element);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [session.data, sessionAuthorization]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (window.location.hash !== `#${activeSectionId}`) {
+      window.history.replaceState(null, "", `#${activeSectionId}`);
+    }
+  }, [activeSectionId]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -2311,6 +2442,18 @@ export default function AdminPage() {
   const canSaveCurrentRecord = selectedRecord
     ? canUpdateRecords
     : canCreateRecords;
+  const activeSectionLabel =
+    activeSectionId === collectionBuilderSectionId
+      ? "Schema"
+      : activeSectionId === recordEditorSectionId
+        ? "Records"
+        : activeSectionId === mediaSectionId
+          ? "Media"
+          : activeSectionId === inviteSectionId
+            ? "Team access"
+            : activeSectionId === settingsSectionId
+              ? "Settings"
+              : "Overview";
   const recordStatusTitle =
     recordIssues.length > 0
       ? "Record needs attention"
@@ -2321,6 +2464,25 @@ export default function AdminPage() {
   const handleSignOut = async () => {
     await authClient.signOut();
     window.location.replace("/login");
+  };
+
+  const openSection = (sectionId: NavigableSectionId) => {
+    setActiveSectionId(sectionId);
+
+    if (
+      sectionId === collectionBuilderSectionId ||
+      sectionId === recordEditorSectionId
+    ) {
+      setPreferredCollectionSectionId(sectionId);
+    }
+
+    jumpToSection(sectionId);
+  };
+
+  const handleOpenCollectionWorkspaceSection = (
+    sectionId: CollectionWorkspaceSectionId,
+  ) => {
+    openSection(sectionId);
   };
 
   const openCommandPalette = () => {
@@ -2346,6 +2508,7 @@ export default function AdminPage() {
     setCollectionIssues([]);
     setCollectionMessage(null);
     setSelectedRecordId(null);
+    handleOpenCollectionWorkspaceSection(collectionBuilderSectionId);
   };
 
   const handleEditCollection = (collection: StoredCollectionDefinition) => {
@@ -2354,6 +2517,27 @@ export default function AdminPage() {
     setDraft(createDraftFromDefinition(collection.definition));
     setCollectionIssues([]);
     setCollectionMessage(null);
+  };
+
+  const handleOpenCollectionWorkspace = (
+    collection: StoredCollectionDefinition,
+    options?: {
+      sectionId?: CollectionWorkspaceSectionId;
+    },
+  ) => {
+    handleEditCollection(collection);
+
+    const preferredSectionId = options?.sectionId ?? preferredCollectionSectionId;
+
+    if (
+      preferredSectionId === recordEditorSectionId &&
+      canAccessRecordsWorkspace
+    ) {
+      handleOpenCollectionWorkspaceSection(recordEditorSectionId);
+      return;
+    }
+
+    handleOpenCollectionWorkspaceSection(collectionBuilderSectionId);
   };
 
   const handleRefreshCollections = () => {
@@ -2978,7 +3162,7 @@ export default function AdminPage() {
     setRecordDraft(createGeneratedRecordFormStateFromRecord(collection.definition, record));
     setRecordIssues([]);
     setRecordMessage(null);
-    jumpToSection(recordEditorSectionId);
+    handleOpenCollectionWorkspaceSection(recordEditorSectionId);
   };
 
   const handleStartNewRecord = () => {
@@ -2990,7 +3174,7 @@ export default function AdminPage() {
     setRecordDraft(createGeneratedRecordFormState(activeCollection.definition));
     setRecordIssues([]);
     setRecordMessage(null);
-    jumpToSection(recordEditorSectionId);
+    handleOpenCollectionWorkspaceSection(recordEditorSectionId);
   };
 
   const handleEditRecord = (record: StoredCollectionRecord) => {
@@ -3050,7 +3234,7 @@ export default function AdminPage() {
       id: "admin-overview",
       keywords: ["dashboard", "home", "overview"],
       onSelect: () => {
-        jumpToSection(overviewSectionId);
+        openSection(overviewSectionId);
       },
       subtitle: "Jump back to the admin overview cards.",
       title: "Open overview",
@@ -3060,7 +3244,7 @@ export default function AdminPage() {
       id: "admin-schema",
       keywords: ["schema", "builder", "fields", "model"],
       onSelect: () => {
-        jumpToSection(collectionBuilderSectionId);
+        handleOpenCollectionWorkspaceSection(collectionBuilderSectionId);
       },
       subtitle: activeCollection
         ? `Open the ${activeCollection.definition.label} schema builder.`
@@ -3092,8 +3276,9 @@ export default function AdminPage() {
           "collection",
         ],
         onSelect: () => {
-          handleEditCollection(collection);
-          jumpToSection(collectionBuilderSectionId);
+          handleOpenCollectionWorkspace(collection, {
+            sectionId: collectionBuilderSectionId,
+          });
         },
         subtitle: `${collection.definition.fields.length} field${
           collection.definition.fields.length === 1 ? "" : "s"
@@ -3107,8 +3292,9 @@ export default function AdminPage() {
           id: `collection-records-${collection.definition.name}`,
           keywords: [collection.definition.name, "records", "entries", "content"],
           onSelect: () => {
-            handleEditCollection(collection);
-            jumpToSection(recordEditorSectionId);
+            handleOpenCollectionWorkspace(collection, {
+              sectionId: recordEditorSectionId,
+            });
           },
           subtitle: `Open the ${collection.definition.label} records workspace.`,
           title: `Open ${collection.definition.label} records`,
@@ -3123,7 +3309,7 @@ export default function AdminPage() {
       id: "records-open",
       keywords: [activeCollection.definition.name, "records", "entries", "editor"],
       onSelect: () => {
-        jumpToSection(recordEditorSectionId);
+        handleOpenCollectionWorkspaceSection(recordEditorSectionId);
       },
       subtitle: `Open the generated record editor for ${activeCollection.definition.label}.`,
       title: `Open ${activeCollection.definition.label} records`,
@@ -3186,7 +3372,7 @@ export default function AdminPage() {
       id: "admin-team-access",
       keywords: ["invite", "users", "roles", "team"],
       onSelect: () => {
-        jumpToSection("invite");
+        openSection(inviteSectionId);
       },
       subtitle: "Jump to user invites, user roles, and role previews.",
       title: "Open team access",
@@ -3199,7 +3385,7 @@ export default function AdminPage() {
       id: "admin-media",
       keywords: ["media", "assets", "upload", "library"],
       onSelect: () => {
-        jumpToSection("media");
+        openSection(mediaSectionId);
       },
       subtitle: "Open the shared media upload and library workspace.",
       title: "Open media library",
@@ -3212,7 +3398,7 @@ export default function AdminPage() {
       id: "admin-settings",
       keywords: ["settings", "api keys", "permissions", "oauth"],
       onSelect: () => {
-        jumpToSection("settings");
+        openSection(settingsSectionId);
       },
       subtitle: "Jump to runtime posture, OAuth status, API keys, and permissions.",
       title: "Open settings",
@@ -3447,7 +3633,7 @@ export default function AdminPage() {
                           : "mini-list-item mini-list-item-stacked"
                       }
                       key={collection.definition.name}
-                      onClick={() => handleEditCollection(collection)}
+                      onClick={() => handleOpenCollectionWorkspace(collection)}
                       type="button"
                     >
                       <div className="mini-list-content">
@@ -3488,7 +3674,7 @@ export default function AdminPage() {
                 <p className="admin-sidebar-heading">Collection workspace</p>
                 <p className="admin-sidebar-copy">
                   {activeCollection
-                    ? activeCollection.definition.label
+                    ? `${activeCollection.definition.label} • staying in ${preferredCollectionSectionId === recordEditorSectionId ? "records" : "schema"} mode`
                     : "Select a collection to center the workspace on its schema and records."}
                 </p>
               </div>
@@ -3504,25 +3690,37 @@ export default function AdminPage() {
 
             {activeCollection ? (
               <div className="workspace-actions">
-	                <button
-	                  className="admin-nav-item"
-	                  disabled={!canAccessCollectionBuilder}
-	                  onClick={() => jumpToSection(collectionBuilderSectionId)}
-	                  type="button"
-	                >
+                <button
+                  className={
+                    activeSectionId === collectionBuilderSectionId
+                      ? "admin-nav-item is-current"
+                      : "admin-nav-item"
+                  }
+                  disabled={!canAccessCollectionBuilder}
+                  onClick={() =>
+                    handleOpenCollectionWorkspaceSection(collectionBuilderSectionId)
+                  }
+                  type="button"
+                >
                   <div>
                     <p className="admin-nav-label">Schema</p>
                     <p className="admin-nav-copy">
                       Edit fields, order, and collection details.
                     </p>
                   </div>
-                  <span className="status-pill">Model</span>
+                  <span className="status-pill">
+                    {activeSectionId === collectionBuilderSectionId ? "Current" : "Model"}
+                  </span>
                 </button>
 
                 <button
-                  className="admin-nav-item"
+                  className={
+                    activeSectionId === recordEditorSectionId
+                      ? "admin-nav-item is-current"
+                      : "admin-nav-item"
+                  }
                   disabled={!canAccessRecordsWorkspace}
-                  onClick={() => jumpToSection(recordEditorSectionId)}
+                  onClick={() => handleOpenCollectionWorkspaceSection(recordEditorSectionId)}
                   type="button"
                 >
                   <div>
@@ -3531,7 +3729,9 @@ export default function AdminPage() {
                       Create and edit records from the saved schema.
                     </p>
                   </div>
-                  <span className="status-pill">Content</span>
+                  <span className="status-pill">
+                    {activeSectionId === recordEditorSectionId ? "Current" : "Content"}
+                  </span>
                 </button>
               </div>
             ) : (
@@ -3587,7 +3787,7 @@ export default function AdminPage() {
                   compact
                   onAction={
                     canAccessRecordsWorkspace
-                      ? () => jumpToSection(recordEditorSectionId)
+                      ? () => handleOpenCollectionWorkspaceSection(recordEditorSectionId)
                       : undefined
                   }
                   title="Record list is restricted"
@@ -3662,7 +3862,11 @@ export default function AdminPage() {
               {adminUtilityItems.map((item) => {
                 return (
                   <button
-                    className="admin-nav-item"
+                    className={
+                      activeSectionId === item.id
+                        ? "admin-nav-item is-current"
+                        : "admin-nav-item"
+                    }
                     disabled={
                       item.id === "invite"
                         ? !canAccessTeamAccess
@@ -3673,7 +3877,7 @@ export default function AdminPage() {
                             : false
                     }
                     key={item.id}
-                    onClick={() => jumpToSection(item.id)}
+                    onClick={() => openSection(item.id as NavigableSectionId)}
                     type="button"
                   >
                     <div>
@@ -3681,7 +3885,9 @@ export default function AdminPage() {
                       <p className="admin-nav-copy">{item.description}</p>
                     </div>
                     <span className="status-pill">
-                      {item.id === "invite" && !canAccessTeamAccess
+                      {activeSectionId === item.id
+                        ? "Current"
+                        : item.id === "invite" && !canAccessTeamAccess
                         ? "Restricted"
                         : item.id === "media" && !canAccessMediaWorkspace
                           ? "Restricted"
@@ -3713,7 +3919,9 @@ export default function AdminPage() {
               {sessionRole ? (
                 <p className="helper-text">
                   Signed in as <strong>{sessionRole.label}</strong>. API middleware and the
-                  admin shell now read from the same shared permission model.
+                  admin shell now read from the same shared permission model. Current focus:
+                  {" "}
+                  <strong>{activeSectionLabel}</strong>.
                 </p>
               ) : null}
             </div>
@@ -3730,7 +3938,9 @@ export default function AdminPage() {
               <button
                 className="button button-secondary"
                 disabled={!canAccessCollectionBuilder}
-                onClick={() => jumpToSection(collectionBuilderSectionId)}
+                onClick={() =>
+                  handleOpenCollectionWorkspaceSection(collectionBuilderSectionId)
+                }
                 type="button"
               >
                 Open schema
@@ -3738,7 +3948,9 @@ export default function AdminPage() {
               <button
                 className="button button-secondary"
                 disabled={!activeCollection || !canAccessRecordsWorkspace}
-                onClick={() => jumpToSection(recordEditorSectionId)}
+                onClick={() =>
+                  handleOpenCollectionWorkspaceSection(recordEditorSectionId)
+                }
                 type="button"
               >
                 Open records
@@ -3828,7 +4040,9 @@ export default function AdminPage() {
                   <button
                     className="button button-secondary"
                     disabled={!canAccessRecordsWorkspace}
-                    onClick={() => jumpToSection(recordEditorSectionId)}
+                    onClick={() =>
+                      handleOpenCollectionWorkspaceSection(recordEditorSectionId)
+                    }
                     type="button"
                   >
                     Open records
@@ -3837,7 +4051,7 @@ export default function AdminPage() {
                   <button
                     className="button button-secondary"
                     disabled={!canAccessTeamAccess}
-                    onClick={() => jumpToSection("invite")}
+                    onClick={() => openSection(inviteSectionId)}
                     type="button"
                   >
                     Invite teammate
@@ -4266,7 +4480,8 @@ export default function AdminPage() {
                   }
                   onAction={
                     collectionIssues.length === 0 && activeCollection
-                      ? () => jumpToSection(recordEditorSectionId)
+                      ? () =>
+                          handleOpenCollectionWorkspaceSection(recordEditorSectionId)
                       : undefined
                   }
                   title={
@@ -4496,7 +4711,11 @@ export default function AdminPage() {
                       <FlowStateBox
                         actionLabel="Open schema"
                         body="Add fields in the builder and save them to generate the editor."
-                        onAction={() => jumpToSection(collectionBuilderSectionId)}
+                        onAction={() =>
+                          handleOpenCollectionWorkspaceSection(
+                            collectionBuilderSectionId,
+                          )
+                        }
                         title="This collection has no fields yet"
                         tone="warning"
                       />
@@ -4512,7 +4731,7 @@ export default function AdminPage() {
                           onChange={(nextValue) =>
                             handleRecordFieldChange(field.name, nextValue)
                           }
-                          onOpenMediaLibrary={() => jumpToSection("media")}
+                          onOpenMediaLibrary={() => openSection(mediaSectionId)}
                           value={recordDraft[field.name] ?? ""}
                         />
                       ))
