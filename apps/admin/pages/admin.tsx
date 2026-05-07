@@ -436,6 +436,17 @@ function formatByteSize(value: number) {
   return `${(kilobytes / 1024).toFixed(1)} MB`;
 }
 
+function createMediaAssetSearchText(asset: DatamixMediaAsset) {
+  return [
+    asset.fileName,
+    asset.mimeType,
+    asset.storageKey,
+    asset.uploadedByUserEmail ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
 function summarizeRecord(
   definition: DatamixCollectionDefinition,
   record: StoredCollectionRecord,
@@ -1031,6 +1042,9 @@ export default function AdminPage() {
   const [mediaAssets, setMediaAssets] = useState<DatamixMediaAsset[]>([]);
   const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
   const [mediaMessage, setMediaMessage] = useState<string | null>(null);
+  const [mediaClipboardMessage, setMediaClipboardMessage] = useState<string | null>(null);
+  const [mediaSearchQuery, setMediaSearchQuery] = useState("");
+  const [selectedMediaAssetId, setSelectedMediaAssetId] = useState<string | null>(null);
   const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
   const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
@@ -1165,6 +1179,11 @@ export default function AdminPage() {
       }
 
       setMediaAssets(assets);
+      setSelectedMediaAssetId((currentSelectedAssetId) =>
+        currentSelectedAssetId && assets.some((asset) => asset.id === currentSelectedAssetId)
+          ? currentSelectedAssetId
+          : assets[0]?.id ?? null,
+      );
     } catch (error) {
       if (mediaAssetsLoadRequestId.current !== requestId) {
         return;
@@ -1303,7 +1322,19 @@ export default function AdminPage() {
   const canRefreshRecords =
     activeCollection !== undefined && !isLoadingRecords && !isRefreshingRecords;
   const canRefreshMediaAssets = !isLoadingMediaAssets && !isRefreshingMediaAssets;
-  const recentMediaAssets = mediaAssets.slice(0, 5);
+  const normalizedMediaSearchQuery = mediaSearchQuery.trim().toLowerCase();
+  const filteredMediaAssets =
+    normalizedMediaSearchQuery.length === 0
+      ? mediaAssets
+      : mediaAssets.filter((asset) =>
+          createMediaAssetSearchText(asset).includes(normalizedMediaSearchQuery),
+        );
+  const selectedMediaAsset = selectedMediaAssetId
+    ? mediaAssets.find((asset) => asset.id === selectedMediaAssetId) ?? null
+    : null;
+  const selectedFilteredMediaAsset = selectedMediaAsset
+    ? filteredMediaAssets.find((asset) => asset.id === selectedMediaAsset.id) ?? null
+    : null;
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
     : null;
@@ -1368,6 +1399,33 @@ export default function AdminPage() {
     }
 
     void loadMediaAssets({ refresh: true });
+  };
+
+  const handleSelectMediaAsset = (assetId: string) => {
+    setSelectedMediaAssetId(assetId);
+    setMediaClipboardMessage(null);
+  };
+
+  const handleCopyMediaStorageKey = async () => {
+    if (!selectedMediaAsset) {
+      return;
+    }
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      setMediaClipboardMessage("Clipboard access is unavailable in this browser.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(selectedMediaAsset.storageKey);
+      setMediaClipboardMessage("Storage key copied for reuse in image fields.");
+    } catch {
+      setMediaClipboardMessage("Clipboard access failed. Copy the storage key manually.");
+    }
   };
 
   const updateDraft = (partial: Partial<CollectionDraft>) => {
@@ -1527,9 +1585,11 @@ export default function AdminPage() {
       const result = await uploadMediaAsset(selectedMediaFile);
 
       setMediaAssets((currentAssets) => [result.asset, ...currentAssets]);
+      setSelectedMediaAssetId(result.asset.id);
       setMediaMessage(
         `${result.message} Saved ${result.asset.fileName} to ${result.asset.storageKey}.`,
       );
+      setMediaClipboardMessage(null);
       setSelectedMediaFile(null);
 
       if (mediaFileInputRef.current) {
@@ -2794,12 +2854,12 @@ export default function AdminPage() {
             </article>
 
             <article className="admin-card" id="media">
-              <p className="card-eyebrow">Media upload seam</p>
-              <h3 className="card-title">Upload original assets into R2</h3>
+              <p className="card-eyebrow">Media library</p>
+              <h3 className="card-title">Upload, browse, and inspect stored assets</h3>
               <p className="card-copy">
-                `M4-S1` stores uploaded files in the configured R2 bucket and writes lean
-                asset metadata to D1. Library screens and field pickers still land in the
-                next media slices.
+                `M4-S2` turns the upload seam into a central library view. Originals still
+                land in R2, metadata still lands in D1, and image-field picker wiring stays
+                for the next slice.
               </p>
 
               <form className="auth-form" onSubmit={handleMediaUploadSubmit}>
@@ -2866,11 +2926,21 @@ export default function AdminPage() {
               <div className="record-browser">
                 <div className="record-browser-list">
                   <div>
-                    <p className="section-title">Recent uploads</p>
+                    <p className="section-title">Library</p>
                     <p className="section-copy">
-                      Showing the latest stored asset metadata from D1.
+                      Browse the current media index. Search can stay lightweight in v0.
                     </p>
                   </div>
+
+                  <label className="field">
+                    <span>Filter assets</span>
+                    <input
+                      onChange={(event) => setMediaSearchQuery(event.target.value)}
+                      placeholder="Search by filename, mime type, uploader, or storage key"
+                      type="text"
+                      value={mediaSearchQuery}
+                    />
+                  </label>
 
                   {isLoadingMediaAssets ? (
                     <FlowStateBox
@@ -2878,15 +2948,33 @@ export default function AdminPage() {
                       compact
                       title="Loading uploads"
                     />
-                  ) : recentMediaAssets.length === 0 ? (
+                  ) : mediaAssets.length === 0 ? (
                     <FlowStateBox
                       body="No media assets uploaded yet. Use the form above to create the first asset row and R2 object."
                       compact
                       title="No uploads yet"
                     />
+                  ) : filteredMediaAssets.length === 0 ? (
+                    <FlowStateBox
+                      actionLabel="Clear filter"
+                      body={`No assets matched "${mediaSearchQuery}".`}
+                      compact
+                      onAction={() => setMediaSearchQuery("")}
+                      title="No matching assets"
+                      tone="warning"
+                    />
                   ) : (
-                    recentMediaAssets.map((asset) => (
-                      <div className="mini-list-item mini-list-item-stacked" key={asset.id}>
+                    filteredMediaAssets.map((asset) => (
+                      <button
+                        className={
+                          asset.id === selectedMediaAssetId
+                            ? "mini-list-item mini-list-item-stacked is-selected"
+                            : "mini-list-item mini-list-item-stacked"
+                        }
+                        key={asset.id}
+                        onClick={() => handleSelectMediaAsset(asset.id)}
+                        type="button"
+                      >
                         <div className="mini-list-content">
                           <span>{asset.fileName}</span>
                           <small>
@@ -2895,19 +2983,78 @@ export default function AdminPage() {
                           <small>{asset.storageKey}</small>
                         </div>
                         <small>{formatRecordTimestamp(asset.createdAt)}</small>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>
 
                 <aside className="generated-record-preview">
-                  <p className="card-eyebrow">Current scope</p>
-                  <h4 className="section-title">What this slice includes</h4>
-                  <ul className="feature-list">
-                    <li>Authenticated upload route at `/media/assets`.</li>
-                    <li>Original binary saved to the configured Cloudflare R2 bucket.</li>
-                    <li>Asset metadata row saved to D1 for later library and picker flows.</li>
-                  </ul>
+                  <p className="card-eyebrow">Asset detail</p>
+                  {selectedFilteredMediaAsset ? (
+                    <>
+                      <h4 className="section-title">{selectedFilteredMediaAsset.fileName}</h4>
+                      <p className="section-copy">
+                        Stored metadata for the selected asset. Reuse the storage key in
+                        current `image` fields until picker integration lands.
+                      </p>
+                      <dl className="detail-list">
+                        <div>
+                          <dt>Storage key</dt>
+                          <dd className="detail-list-code">
+                            {selectedFilteredMediaAsset.storageKey}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>MIME type</dt>
+                          <dd>{selectedFilteredMediaAsset.mimeType}</dd>
+                        </div>
+                        <div>
+                          <dt>Size</dt>
+                          <dd>{formatByteSize(selectedFilteredMediaAsset.byteSize)}</dd>
+                        </div>
+                        <div>
+                          <dt>Uploaded</dt>
+                          <dd>{formatRecordTimestamp(selectedFilteredMediaAsset.createdAt)}</dd>
+                        </div>
+                        <div>
+                          <dt>Uploader</dt>
+                          <dd>
+                            {selectedFilteredMediaAsset.uploadedByUserEmail ??
+                              "Unknown uploader"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Asset id</dt>
+                          <dd className="detail-list-code">{selectedFilteredMediaAsset.id}</dd>
+                        </div>
+                      </dl>
+                      {mediaClipboardMessage ? (
+                        <p className="helper-text">{mediaClipboardMessage}</p>
+                      ) : null}
+                      <div className="actions">
+                        <button
+                          className="button button-secondary"
+                          onClick={handleCopyMediaStorageKey}
+                          type="button"
+                        >
+                          Copy storage key
+                        </button>
+                      </div>
+                    </>
+                  ) : selectedMediaAsset ? (
+                    <FlowStateBox
+                      actionLabel="Clear filter"
+                      body="The selected asset is hidden by the current filter. Clear the filter or pick a different visible asset."
+                      onAction={() => setMediaSearchQuery("")}
+                      title="Selected asset is filtered out"
+                      tone="warning"
+                    />
+                  ) : (
+                    <FlowStateBox
+                      body="Choose an asset from the library to inspect its metadata."
+                      title="No asset selected"
+                    />
+                  )}
                 </aside>
               </div>
             </article>

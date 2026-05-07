@@ -792,6 +792,18 @@ button.admin-nav-item {
   line-height: 1.5;
 }
 
+.detail-list-code {
+  font-family:
+    "SFMono-Regular",
+    "SF Mono",
+    "Cascadia Code",
+    "JetBrains Mono",
+    Consolas,
+    monospace;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 640px) {
   .shell {
     padding: 1rem;
