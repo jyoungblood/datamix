@@ -25,6 +25,7 @@ export type ApiBindings = Pick<
   | "AUTH_SMTP_USERNAME"
   | "AUTH_SMTP_PASSWORD"
   | "AUTH_SMTP_TLS"
+  | "MEDIA_BUCKET"
 >;
 
 export type ApiAuthRuntimeEnv = {

@@ -1,5 +1,6 @@
 export * from "./collections";
 export * from "./collection-storage";
+export * from "./media";
 
 export const datamixProduct = {
   name: "Datamix",

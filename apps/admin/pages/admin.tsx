@@ -4,6 +4,7 @@ import {
   type DatamixCollectionDefinition,
   type DatamixFieldDefinition,
   type DatamixFieldType,
+  type DatamixMediaAsset,
   type DatamixSchemaValidationIssue,
   type DatamixSelectOption,
 } from "@datamix/core";
@@ -18,6 +19,11 @@ import {
   type StoredCollectionDefinition,
 } from "../lib/collection-definitions";
 import { sendInvite } from "../lib/invite";
+import {
+  listMediaAssets,
+  MediaAssetRequestError,
+  uploadMediaAsset,
+} from "../lib/media";
 import {
   CollectionRecordRequestError,
   createCollectionRecord,
@@ -43,9 +49,9 @@ const adminUtilityItems = [
   },
   {
     id: "media",
-    label: "Media library",
-    description: "Shared asset flows arrive in M4",
-    state: "soon",
+    label: "Media upload",
+    description: "Upload originals to R2. Library views expand next.",
+    state: "ready",
   },
   {
     id: "settings",
@@ -414,6 +420,20 @@ function createPersistedRecordPayload(
 
 function formatRecordTimestamp(value: string) {
   return new Date(value).toLocaleString();
+}
+
+function formatByteSize(value: number) {
+  if (value < 1024) {
+    return `${value} B`;
+  }
+
+  const kilobytes = value / 1024;
+
+  if (kilobytes < 1024) {
+    return `${kilobytes.toFixed(1)} KB`;
+  }
+
+  return `${(kilobytes / 1024).toFixed(1)} MB`;
 }
 
 function summarizeRecord(
@@ -977,6 +997,8 @@ export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
   const collectionLoadRequestId = useRef(0);
+  const mediaAssetsLoadRequestId = useRef(0);
+  const mediaFileInputRef = useRef<HTMLInputElement | null>(null);
   const recordLoadRequestId = useRef(0);
   const [collections, setCollections] = useState<StoredCollectionDefinition[]>([]);
   const [draft, setDraft] = useState<CollectionDraft>(createEmptyCollectionDraft);
@@ -1006,6 +1028,13 @@ export default function AdminPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [isInviting, setIsInviting] = useState(false);
+  const [mediaAssets, setMediaAssets] = useState<DatamixMediaAsset[]>([]);
+  const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
+  const [mediaMessage, setMediaMessage] = useState<string | null>(null);
+  const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
+  const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
+  const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const loadCollections = async (options?: { refresh?: boolean }) => {
     const requestId = collectionLoadRequestId.current + 1;
@@ -1115,6 +1144,43 @@ export default function AdminPage() {
     }
   };
 
+  const loadMediaAssets = async (options?: { refresh?: boolean }) => {
+    const requestId = mediaAssetsLoadRequestId.current + 1;
+    const isRefresh = options?.refresh === true && mediaAssets.length > 0;
+
+    mediaAssetsLoadRequestId.current = requestId;
+    setMediaLoadError(null);
+
+    if (isRefresh) {
+      setIsRefreshingMediaAssets(true);
+    } else {
+      setIsLoadingMediaAssets(true);
+    }
+
+    try {
+      const assets = await listMediaAssets();
+
+      if (mediaAssetsLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      setMediaAssets(assets);
+    } catch (error) {
+      if (mediaAssetsLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      setMediaLoadError(
+        error instanceof Error ? error.message : "Unable to load media assets.",
+      );
+    } finally {
+      if (mediaAssetsLoadRequestId.current === requestId) {
+        setIsLoadingMediaAssets(false);
+        setIsRefreshingMediaAssets(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (session.isPending || setupStatus.isPending || session.data) {
       return;
@@ -1134,6 +1200,14 @@ export default function AdminPage() {
     }
 
     void loadCollections();
+  }, [session.data]);
+
+  useEffect(() => {
+    if (!session.data) {
+      return;
+    }
+
+    void loadMediaAssets();
   }, [session.data]);
 
   const activeCollection = collections.find(
@@ -1228,6 +1302,8 @@ export default function AdminPage() {
     Boolean(session.data) && !isLoadingCollections && !isRefreshingCollections;
   const canRefreshRecords =
     activeCollection !== undefined && !isLoadingRecords && !isRefreshingRecords;
+  const canRefreshMediaAssets = !isLoadingMediaAssets && !isRefreshingMediaAssets;
+  const recentMediaAssets = mediaAssets.slice(0, 5);
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
     : null;
@@ -1284,6 +1360,14 @@ export default function AdminPage() {
     }
 
     void loadRecords(activeCollection, { refresh: true });
+  };
+
+  const handleRefreshMediaAssets = () => {
+    if (!canRefreshMediaAssets) {
+      return;
+    }
+
+    void loadMediaAssets({ refresh: true });
   };
 
   const updateDraft = (partial: Partial<CollectionDraft>) => {
@@ -1423,6 +1507,46 @@ export default function AdminPage() {
       setInviteError(error instanceof Error ? error.message : "Unable to send invite.");
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleMediaUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedMediaFile) {
+      setMediaLoadError("Choose a file before uploading.");
+      setMediaMessage(null);
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    setMediaLoadError(null);
+    setMediaMessage(null);
+
+    try {
+      const result = await uploadMediaAsset(selectedMediaFile);
+
+      setMediaAssets((currentAssets) => [result.asset, ...currentAssets]);
+      setMediaMessage(
+        `${result.message} Saved ${result.asset.fileName} to ${result.asset.storageKey}.`,
+      );
+      setSelectedMediaFile(null);
+
+      if (mediaFileInputRef.current) {
+        mediaFileInputRef.current.value = "";
+      }
+
+      void loadMediaAssets({ refresh: true });
+    } catch (error) {
+      setMediaLoadError(
+        error instanceof MediaAssetRequestError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Unable to upload media asset.",
+      );
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
@@ -2670,13 +2794,122 @@ export default function AdminPage() {
             </article>
 
             <article className="admin-card" id="media">
-              <p className="card-eyebrow">Coming online later</p>
-              <h3 className="card-title">Media and richer editors still stay in later slices</h3>
+              <p className="card-eyebrow">Media upload seam</p>
+              <h3 className="card-title">Upload original assets into R2</h3>
               <p className="card-copy">
-                Structured record editing is now live for dates, selects, and simple
-                relationships, while media picking and image-specific editing still stay
-                decoupled until later milestones.
+                `M4-S1` stores uploaded files in the configured R2 bucket and writes lean
+                asset metadata to D1. Library screens and field pickers still land in the
+                next media slices.
               </p>
+
+              <form className="auth-form" onSubmit={handleMediaUploadSubmit}>
+                <label className="field">
+                  <span>Upload file</span>
+                  <input
+                    ref={mediaFileInputRef}
+                    accept="*/*"
+                    onChange={(event) =>
+                      setSelectedMediaFile(event.target.files?.[0] ?? null)
+                    }
+                    type="file"
+                  />
+                </label>
+
+                {selectedMediaFile ? (
+                  <div className="type-specific-box">
+                    <p className="section-title">{selectedMediaFile.name}</p>
+                    <p className="section-copy">
+                      {selectedMediaFile.type || "application/octet-stream"} •{" "}
+                      {formatByteSize(selectedMediaFile.size)}
+                    </p>
+                  </div>
+                ) : (
+                  <FlowStateBox
+                    body="Choose any file to upload the original into R2. The returned storage key can be used in image fields until picker flows arrive."
+                    compact
+                    title="No file selected"
+                  />
+                )}
+
+                {mediaMessage ? (
+                  <FlowStateBox
+                    body={mediaMessage}
+                    title="Media asset uploaded"
+                    tone="success"
+                  />
+                ) : null}
+                {mediaLoadError ? (
+                  <FlowStateBox
+                    actionLabel="Refresh uploads"
+                    body={mediaLoadError}
+                    onAction={handleRefreshMediaAssets}
+                    title="Media upload flow needs attention"
+                    tone="error"
+                  />
+                ) : null}
+
+                <div className="actions">
+                  <button className="button" disabled={isUploadingMedia} type="submit">
+                    {isUploadingMedia ? "Uploading asset..." : "Upload asset"}
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    disabled={!canRefreshMediaAssets}
+                    onClick={handleRefreshMediaAssets}
+                    type="button"
+                  >
+                    {isRefreshingMediaAssets ? "Refreshing..." : "Refresh uploads"}
+                  </button>
+                </div>
+              </form>
+
+              <div className="record-browser">
+                <div className="record-browser-list">
+                  <div>
+                    <p className="section-title">Recent uploads</p>
+                    <p className="section-copy">
+                      Showing the latest stored asset metadata from D1.
+                    </p>
+                  </div>
+
+                  {isLoadingMediaAssets ? (
+                    <FlowStateBox
+                      body="Loading recent media asset metadata from the API Worker."
+                      compact
+                      title="Loading uploads"
+                    />
+                  ) : recentMediaAssets.length === 0 ? (
+                    <FlowStateBox
+                      body="No media assets uploaded yet. Use the form above to create the first asset row and R2 object."
+                      compact
+                      title="No uploads yet"
+                    />
+                  ) : (
+                    recentMediaAssets.map((asset) => (
+                      <div className="mini-list-item mini-list-item-stacked" key={asset.id}>
+                        <div className="mini-list-content">
+                          <span>{asset.fileName}</span>
+                          <small>
+                            {asset.mimeType} • {formatByteSize(asset.byteSize)}
+                          </small>
+                          <small>{asset.storageKey}</small>
+                        </div>
+                        <small>{formatRecordTimestamp(asset.createdAt)}</small>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <aside className="generated-record-preview">
+                  <p className="card-eyebrow">Current scope</p>
+                  <h4 className="section-title">What this slice includes</h4>
+                  <ul className="feature-list">
+                    <li>Authenticated upload route at `/media/assets`.</li>
+                    <li>Original binary saved to the configured Cloudflare R2 bucket.</li>
+                    <li>Asset metadata row saved to D1 for later library and picker flows.</li>
+                  </ul>
+                </aside>
+              </div>
             </article>
           </section>
 

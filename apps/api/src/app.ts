@@ -19,6 +19,11 @@ import {
 } from "./env";
 import { createInvite } from "./invite";
 import {
+  createMediaAsset,
+  listMediaAssets,
+  MediaAssetError,
+} from "./media";
+import {
   requirePublicApiAccess,
   type PublicApiPrincipal,
 } from "./public-api-auth";
@@ -115,6 +120,14 @@ app.use("/records", async (c, next) => {
 });
 
 app.use("/records/*", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/media/assets", async (c, next) => {
+  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+});
+
+app.use("/media/assets/*", async (c, next) => {
   return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
 });
 
@@ -445,6 +458,56 @@ app.post("/invites", requireSession, async (c) => {
         { error: error.message },
         typeof error.statusCode === "number" ? (error.statusCode as 400) : 400,
       );
+    }
+
+    throw error;
+  }
+});
+
+app.get("/media/assets", requireSession, async (c) => {
+  try {
+    const assets = await listMediaAssets(c.env);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      assets,
+      message: "Media asset metadata is available.",
+    });
+  } catch (error) {
+    if (error instanceof MediaAssetError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
+    }
+
+    throw error;
+  }
+});
+
+app.post("/media/assets", requireSession, async (c) => {
+  const contentType = c.req.header("content-type") ?? "";
+
+  if (!contentType.toLowerCase().includes("multipart/form-data")) {
+    return c.json({ error: "Media upload payload must be multipart/form-data." }, 400);
+  }
+
+  let formData: FormData;
+
+  try {
+    formData = await c.req.formData();
+  } catch {
+    return c.json({ error: "Media upload payload could not be read." }, 400);
+  }
+
+  try {
+    const result = await createMediaAsset(c.env, c.get("session"), formData);
+
+    return c.json({
+      ...createServiceStatus("api"),
+      asset: result.asset,
+      message: "Media asset uploaded.",
+    });
+  } catch (error) {
+    if (error instanceof MediaAssetError) {
+      return c.json({ error: error.message }, error.statusCode as 400);
     }
 
     throw error;
