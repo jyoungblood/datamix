@@ -6,6 +6,10 @@ import { useSetupStatus } from "../lib/setup";
 export default function SetupPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const setupStatusHeading =
+    setupStatus.statusCode === 503
+      ? "Auth config is incomplete"
+      : "Datamix is temporarily unavailable";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,11 +82,26 @@ export default function SetupPage() {
       <main className="shell">
         <div className="panel stack">
           <p className="eyebrow">Setup</p>
-          <h1 className="page-title">Auth config is incomplete</h1>
+          <h1 className="page-title">{setupStatusHeading}</h1>
           <p className="body">{setupStatus.errorMessage}</p>
-          <p className="body">
-            Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
-          </p>
+          {setupStatus.statusCode === 503 ? (
+            <p className="body">
+              Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
+            </p>
+          ) : (
+            <p className="body">
+              Datamix could not confirm first-run setup status just now. Retry once the API
+              Worker is reachable again.
+            </p>
+          )}
+          <div className="actions">
+            <a className="button button-secondary" href="/">
+              Back home
+            </a>
+            <button className="button" onClick={setupStatus.reload} type="button">
+              Retry status
+            </button>
+          </div>
         </div>
       </main>
     );

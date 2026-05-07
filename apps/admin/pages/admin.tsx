@@ -55,7 +55,7 @@ import {
   type StoredCollectionRecord,
 } from "../lib/records";
 import { adminPublicEnv } from "../lib/runtime";
-import { loadSessionAccess } from "../lib/session";
+import { loadSessionAccess, SessionAccessError } from "../lib/session";
 import { useSetupStatus } from "../lib/setup";
 import {
   listUsers,
@@ -1662,6 +1662,8 @@ export default function AdminPage() {
   const [sessionAuthorization, setSessionAuthorization] =
     useState<DatamixAuthorizationSummary | null>(null);
   const [sessionAuthorizationError, setSessionAuthorizationError] = useState<string | null>(null);
+  const [sessionAuthorizationStatusCode, setSessionAuthorizationStatusCode] =
+    useState<number | null>(null);
   const [isLoadingSessionAuthorization, setIsLoadingSessionAuthorization] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<DatamixRoleDefinition[]>([
     ...datamixRolePresets,
@@ -1719,6 +1721,7 @@ export default function AdminPage() {
 
   const loadSessionAuthorizationData = async () => {
     setSessionAuthorizationError(null);
+    setSessionAuthorizationStatusCode(null);
     setIsLoadingSessionAuthorization(true);
 
     try {
@@ -1726,11 +1729,19 @@ export default function AdminPage() {
 
       setSessionAuthorization(nextAuthorization);
     } catch (error) {
+      if (error instanceof SessionAccessError && error.statusCode === 401) {
+        window.location.replace(loginHref);
+        return;
+      }
+
       setSessionAuthorization(null);
       setSessionAuthorizationError(
         error instanceof Error
           ? error.message
           : "Unable to load the current access profile.",
+      );
+      setSessionAuthorizationStatusCode(
+        error instanceof SessionAccessError ? error.statusCode : null,
       );
     } finally {
       setIsLoadingSessionAuthorization(false);
@@ -1979,12 +1990,37 @@ export default function AdminPage() {
     if (!session.data) {
       setSessionAuthorization(null);
       setSessionAuthorizationError(null);
+      setSessionAuthorizationStatusCode(null);
       setIsLoadingSessionAuthorization(false);
       return;
     }
 
     void loadSessionAuthorizationData();
   }, [session.data]);
+
+  useEffect(() => {
+    if (!session.data || !sessionAuthorizationError) {
+      return;
+    }
+
+    const reload = () => {
+      void loadSessionAuthorizationData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        reload();
+      }
+    };
+
+    window.addEventListener("online", reload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", reload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [session.data, sessionAuthorizationError]);
 
   useEffect(() => {
     if (!session.data) {
@@ -2169,6 +2205,11 @@ export default function AdminPage() {
     void loadRecords(activeCollection);
   }, [activeCollection, canViewRecords]);
 
+  const setupStatusHeading =
+    setupStatus.statusCode === 503
+      ? "Auth config is incomplete"
+      : "Datamix setup status is temporarily unavailable";
+
   useEffect(() => {
     if (
       hasAppliedInitialSectionRef.current ||
@@ -2329,8 +2370,26 @@ export default function AdminPage() {
       <main className="shell">
         <div className="panel stack">
           <p className="eyebrow">Admin</p>
-          <h1 className="page-title">Auth config is incomplete</h1>
+          <h1 className="page-title">{setupStatusHeading}</h1>
           <p className="body">{setupStatus.errorMessage}</p>
+          {setupStatus.statusCode === 503 ? (
+            <p className="body">
+              Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
+            </p>
+          ) : (
+            <p className="body">
+              Datamix will retry automatically when the network comes back or this tab
+              regains focus. You can also retry now.
+            </p>
+          )}
+          <div className="actions">
+            <a className="button button-secondary" href="/">
+              Back home
+            </a>
+            <button className="button" onClick={setupStatus.reload} type="button">
+              Retry status
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -2350,6 +2409,25 @@ export default function AdminPage() {
             {sessionAuthorizationError ??
               "Datamix could not resolve the current role and permission summary."}
           </p>
+          {sessionAuthorizationStatusCode && sessionAuthorizationStatusCode >= 500 ? (
+            <p className="body">
+              The protected session route is reachable, but it could not finish resolving
+              your role just now. Retry once the API Worker settles.
+            </p>
+          ) : (
+            <p className="body">
+              Datamix will retry automatically when the session stabilizes, and you can
+              manually retry without losing your browser state.
+            </p>
+          )}
+          <div className="actions">
+            <a className="button button-secondary" href="/">
+              Back home
+            </a>
+            <button className="button" onClick={() => void loadSessionAuthorizationData()} type="button">
+              Retry access profile
+            </button>
+          </div>
         </div>
       </main>
     );

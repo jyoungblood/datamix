@@ -8,6 +8,10 @@ const adminSurface = datamixSurfaces.find((surface) => surface.id === "admin");
 export default function HomePage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const setupStatusHeading =
+    setupStatus.statusCode === 503
+      ? "Auth config is incomplete"
+      : "Setup status is temporarily unavailable";
 
   const authDescription = setupStatus.isPending
     ? "Checking whether this instance still needs its first admin account..."
@@ -42,7 +46,9 @@ export default function HomePage() {
 
         <section className="surface-card stack" aria-label="Authentication status">
           <p className="surface-name">Authentication status</p>
-          <p className="surface-description">{authDescription}</p>
+          <p className="surface-description">
+            {setupStatus.errorMessage ? `${setupStatusHeading}. ${authDescription}` : authDescription}
+          </p>
 
           <div className="actions">
             {setupStatus.data?.setupRequired ? (
@@ -54,6 +60,11 @@ export default function HomePage() {
                 {session.data ? "Switch account" : "Open login"}
               </a>
             )}
+            {setupStatus.errorMessage ? (
+              <button className="button button-secondary" onClick={setupStatus.reload} type="button">
+                Retry status
+              </button>
+            ) : null}
             <a className="button" href="/admin">
               Open admin dashboard
             </a>

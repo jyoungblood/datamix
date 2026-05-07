@@ -17,7 +17,19 @@ type SetupStatusState = {
   errorMessage: string | null;
   isPending: boolean;
   oauth: DatamixAuthRuntimeSummary | null;
+  reload: () => void;
+  statusCode: number | null;
 };
+
+export class SetupStatusError extends Error {
+  readonly statusCode: number;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.name = "SetupStatusError";
+    this.statusCode = statusCode;
+  }
+}
 
 export async function fetchSetupRuntime() {
   const response = await fetch(`${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/setup/status`, {
@@ -29,7 +41,10 @@ export async function fetchSetupRuntime() {
       | { error?: string }
       | null;
 
-    throw new Error(errorBody?.error ?? "Unable to read Datamix setup status.");
+    throw new SetupStatusError(
+      errorBody?.error ?? "Unable to read Datamix setup status.",
+      response.status,
+    );
   }
 
   const body = (await response.json()) as SetupStatusResponse;
@@ -42,17 +57,31 @@ export async function fetchSetupStatus() {
 }
 
 export function useSetupStatus() {
+  const [reloadToken, setReloadToken] = useState(0);
   const [state, setState] = useState<SetupStatusState>({
     data: null,
     errorMessage: null,
     isPending: true,
     oauth: null,
+    reload: () => {
+      setReloadToken((currentValue) => currentValue + 1);
+    },
+    statusCode: null,
   });
 
   useEffect(() => {
     let isCancelled = false;
 
     async function load() {
+      if (!isCancelled) {
+        setState((currentState) => ({
+          ...currentState,
+          errorMessage: null,
+          isPending: true,
+          statusCode: null,
+        }));
+      }
+
       try {
         const auth = await fetchSetupRuntime();
 
@@ -65,6 +94,10 @@ export function useSetupStatus() {
           errorMessage: null,
           isPending: false,
           oauth: auth.oauth,
+          reload: () => {
+            setReloadToken((currentValue) => currentValue + 1);
+          },
+          statusCode: null,
         });
       } catch (error) {
         if (isCancelled) {
@@ -76,6 +109,10 @@ export function useSetupStatus() {
           errorMessage: error instanceof Error ? error.message : "Unable to load setup status.",
           isPending: false,
           oauth: null,
+          reload: () => {
+            setReloadToken((currentValue) => currentValue + 1);
+          },
+          statusCode: error instanceof SetupStatusError ? error.statusCode : null,
         });
       }
     }
@@ -85,7 +122,31 @@ export function useSetupStatus() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
+
+  useEffect(() => {
+    if (state.isPending || !state.errorMessage) {
+      return;
+    }
+
+    const reload = () => {
+      setReloadToken((currentValue) => currentValue + 1);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        reload();
+      }
+    };
+
+    window.addEventListener("online", reload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("online", reload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [state.errorMessage, state.isPending]);
 
   return state;
 }

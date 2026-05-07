@@ -63,6 +63,10 @@ function readOAuthErrorMessage() {
 export default function LoginPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const setupStatusHeading =
+    setupStatus.statusCode === 503
+      ? "Auth config is incomplete"
+      : "Datamix is temporarily unavailable";
   const [email, setEmail] = useState(readPrefillEmail);
   const [password, setPassword] = useState("");
   const [activeSocialProviderId, setActiveSocialProviderId] =
@@ -164,11 +168,26 @@ export default function LoginPage() {
       <main className="shell">
         <div className="panel stack">
           <p className="eyebrow">Authentication</p>
-          <h1 className="page-title">Auth config is incomplete</h1>
+          <h1 className="page-title">{setupStatusHeading}</h1>
           <p className="body">{setupStatus.errorMessage}</p>
-          <p className="body">
-            Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
-          </p>
+          {setupStatus.statusCode === 503 ? (
+            <p className="body">
+              Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
+            </p>
+          ) : (
+            <p className="body">
+              Datamix will retry automatically when the tab regains focus or the network
+              comes back. You can also retry now.
+            </p>
+          )}
+          <div className="actions">
+            <a className="button button-secondary" href="/">
+              Back home
+            </a>
+            <button className="button" onClick={setupStatus.reload} type="button">
+              Retry status
+            </button>
+          </div>
         </div>
       </main>
     );

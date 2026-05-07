@@ -97,9 +97,9 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M3 Content API and Editor Depth | 6 | 0 | 0 | 0 | 6 | 0 |
 | M4 Media Pipeline | 6 | 0 | 0 | 0 | 6 | 0 |
 | M5 RBAC, Invites, and API Keys | 6 | 6 | 0 | 0 | 0 | 0 |
-| M6 Global UX and Launch Hardening | 6 | 2 | 0 | 0 | 4 | 0 |
+| M6 Global UX and Launch Hardening | 6 | 3 | 0 | 0 | 3 | 0 |
 | M7 v1 Parking Lot Preparation | 3 | 0 | 0 | 0 | 3 | 0 |
-| Total | 42 | 8 | 0 | 1 | 33 | 0 |
+| Total | 42 | 9 | 0 | 1 | 32 | 0 |
 
 ## Milestones
 
@@ -153,7 +153,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M5-S6 | M5 | Optional OAuth providers | Add optional GitHub and Google OAuth configuration | M1-S2, M1-S4 | OAuth provider setup and auth flows | OAuth can be enabled with user-supplied credentials without breaking password auth | `done` | Keep this optional and isolated |
 | M6-S1 | M6 | Command palette | Implement command palette for collections, records, and admin actions | M2-S6, M3-S1 | Palette UI and command indexing | Users can navigate core objects and actions with Cmd+K | `done` | Prioritize speed and clarity over long-tail commands |
 | M6-S2 | M6 | Collection-first navigation polish | Refine sidebar and navigation behavior around collection-first usage | M2-S6, M6-S1 | Navigation refinements | Daily admin navigation feels coherent and low-friction | `done` | Preserve the product's minimal, content-first feel |
-| M6-S3 | M6 | Session and failure hardening | Harden session restoration, auth edge cases, and retry/loading behavior | M1-S2, M1-S3, M3-S6 | Reliability fixes and recovery UX | Session handling and recoverable failures behave predictably | `planned` | Especially important for first-run trust |
+| M6-S3 | M6 | Session and failure hardening | Harden session restoration, auth edge cases, and retry/loading behavior | M1-S2, M1-S3, M3-S6 | Reliability fixes and recovery UX | Session handling and recoverable failures behave predictably | `done` | Especially important for first-run trust |
 | M6-S4 | M6 | End-to-end smoke coverage | Create smoke coverage for deploy, login, collection, record, media, and API flows | M4-S6, M5-S5 | Automated smoke tests | Critical v0 flows have reliable automated coverage | `planned` | Keep suite focused on must-not-break paths |
 | M6-S5 | M6 | Contributor readability docs | Write architecture docs and 30-minute contributor onboarding | M0-S4, M3-S6 | OSS-facing docs | New contributor can understand structure and run checks quickly | `planned` | This is a product requirement, not just project hygiene |
 | M6-S6 | M6 | Secondary bootstrap path | Add `create-datamix` bootstrap path after browser-first deploy is proven | M1-S3, M6-S4 | Bootstrap scaffolder plan/implementation | Secondary bootstrap flow exists without compromising the primary deploy path | `planned` | Must not become the assumed primary onboarding path |
