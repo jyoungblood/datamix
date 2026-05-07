@@ -288,9 +288,20 @@ function createGeneratedRecordFormStateFromRecord(
 
     switch (field.type) {
       case "text":
+      case "date":
+      case "select":
       case "richText":
       case "markdown":
         defaultState[field.name] = typeof recordValue === "string" ? recordValue : "";
+        break;
+      case "relationship":
+        defaultState[field.name] = field.multiple
+          ? Array.isArray(recordValue)
+            ? recordValue.join("\n")
+            : ""
+          : typeof recordValue === "string"
+            ? recordValue
+            : "";
         break;
       case "number":
         defaultState[field.name] =
@@ -366,10 +377,21 @@ function createPersistedRecordPayload(
 
     switch (field.type) {
       case "text":
+      case "date":
+      case "select":
       case "richText":
       case "markdown":
         payload[field.name] =
           typeof rawValue === "string" && rawValue.length > 0 ? rawValue : null;
+        break;
+      case "relationship":
+        payload[field.name] = field.multiple
+          ? typeof rawValue === "string"
+            ? readListValues(rawValue)
+            : []
+          : typeof rawValue === "string" && rawValue.trim().length > 0
+            ? rawValue.trim()
+            : null;
         break;
       case "number": {
         const parsedValue =
@@ -2173,9 +2195,9 @@ export default function AdminPage() {
                   <div>
                     <p className="section-title">Current persistence support</p>
                   <p className="section-copy">
-                      This slice persists `text`, `number`, `boolean`, `richText`, and
-                      `markdown` fields. Other schema fields stay visible here but remain
-                      read-only until later milestones.
+                      This slice persists `text`, `number`, `boolean`, `date`, `select`,
+                      `relationship`, `richText`, and `markdown` fields. Other schema
+                      fields stay visible here but remain read-only until later milestones.
                     </p>
                   </div>
                   <div className="actions">
@@ -2228,8 +2250,9 @@ export default function AdminPage() {
                     </p>
                     {persistedRecordFields.length === 0 ? (
                       <p className="section-copy">
-                        Add at least one `text`, `number`, `boolean`, `richText`, or
-                        `markdown` field to create records in this slice.
+                        Add at least one `text`, `number`, `boolean`, `date`, `select`,
+                        `relationship`, `richText`, or `markdown` field to create records
+                        in this slice.
                       </p>
                     ) : null}
                     {unsupportedRecordFields.length > 0 ? (
@@ -2350,9 +2373,9 @@ export default function AdminPage() {
               <p className="card-eyebrow">Coming online later</p>
               <h3 className="card-title">Media and richer editors still stay in later slices</h3>
               <p className="card-copy">
-                Markdown and rich text editing are now live, while media picking,
-                relationships, selects, and date-specific editing still stay decoupled
-                until later milestones.
+                Structured record editing is now live for dates, selects, and simple
+                relationships, while media picking and image-specific editing still stay
+                decoupled until later milestones.
               </p>
             </article>
           </section>

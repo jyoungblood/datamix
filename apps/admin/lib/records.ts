@@ -2,7 +2,7 @@ import type { DatamixSchemaValidationIssue } from "@datamix/core";
 
 import { adminPublicEnv } from "./runtime";
 
-export type PrimitiveRecordValue = boolean | number | string | null;
+export type PrimitiveRecordValue = boolean | number | string | string[] | null;
 
 export type StoredCollectionRecord = {
   createdAt: string;

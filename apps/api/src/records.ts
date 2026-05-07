@@ -12,7 +12,7 @@ import {
 } from "./collections";
 import type { ApiBindings } from "./env";
 
-type StoredRecordValue = boolean | number | string | null;
+type StoredRecordValue = boolean | number | string | string[] | null;
 
 type RawRecordRow = {
   created_at: string;
@@ -91,10 +91,70 @@ function assertPersistedCrudFields(
 ) {
   if (fields.length === 0) {
     throw new CollectionRecordError(
-      "This collection has no text, number, boolean, richText, or markdown fields to persist in the current CRUD slice.",
+      "This collection has no text, number, boolean, date, select, relationship, richText, or markdown fields to persist in the current CRUD slice.",
       { statusCode: 409 },
     );
   }
+}
+
+function isValidDateOnlyString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return false;
+  }
+
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day
+  );
+}
+
+function parseStoredRelationshipList(rawValue: unknown) {
+  if (typeof rawValue !== "string") {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter((item): item is string => typeof item === "string");
+  } catch {
+    return [];
+  }
+}
+
+function serializeStoredValue(
+  field: DatamixRecordCrudFieldDefinition,
+  value: StoredRecordValue,
+) {
+  if (field.type === "relationship" && field.multiple) {
+    return JSON.stringify(Array.isArray(value) ? value : []);
+  }
+
+  return value;
 }
 
 function createGeneratedRecordsPath(collectionName: string) {
@@ -164,6 +224,8 @@ function normalizePersistedRecordValues(
 
     switch (field.type) {
       case "text":
+      case "date":
+      case "select":
       case "richText":
       case "markdown": {
         if (rawValue === undefined || rawValue === null || rawValue === "") {
@@ -193,7 +255,109 @@ function normalizePersistedRecordValues(
           });
         }
 
-        normalizedValues[field.name] = rawValue;
+        const normalizedValue = rawValue.trim();
+
+        if (field.type === "date" && !isValidDateOnlyString(normalizedValue)) {
+          issues.push({
+            message: "Expected a valid YYYY-MM-DD date.",
+            path: buildFieldPath(field.name),
+          });
+          break;
+        }
+
+        if (
+          field.type === "select" &&
+          !field.options.some((option) => option.value === normalizedValue)
+        ) {
+          issues.push({
+            message: "Expected one of the saved select options.",
+            path: buildFieldPath(field.name),
+          });
+          break;
+        }
+
+        normalizedValues[field.name] = normalizedValue;
+        break;
+      }
+      case "relationship": {
+        if (field.multiple) {
+          if (rawValue === undefined || rawValue === null) {
+            if (field.required) {
+              issues.push({
+                message: "This field is required.",
+                path: buildFieldPath(field.name),
+              });
+            }
+
+            normalizedValues[field.name] = [];
+            break;
+          }
+
+          if (!Array.isArray(rawValue)) {
+            issues.push({
+              message: "Expected an array of relationship ids.",
+              path: buildFieldPath(field.name),
+            });
+            break;
+          }
+
+          const relationshipIds = rawValue.map((item) =>
+            typeof item === "string" ? item.trim() : item,
+          );
+
+          if (
+            relationshipIds.some(
+              (item) => typeof item !== "string" || item.length === 0,
+            )
+          ) {
+            issues.push({
+              message: "Each relationship id must be a non-empty string.",
+              path: buildFieldPath(field.name),
+            });
+            break;
+          }
+
+          if (field.required && relationshipIds.length === 0) {
+            issues.push({
+              message: "This field is required.",
+              path: buildFieldPath(field.name),
+            });
+          }
+
+          normalizedValues[field.name] = relationshipIds as string[];
+          break;
+        }
+
+        if (rawValue === undefined || rawValue === null || rawValue === "") {
+          if (field.required) {
+            issues.push({
+              message: "This field is required.",
+              path: buildFieldPath(field.name),
+            });
+          }
+
+          normalizedValues[field.name] = null;
+          break;
+        }
+
+        if (typeof rawValue !== "string") {
+          issues.push({
+            message: "Expected a relationship id string.",
+            path: buildFieldPath(field.name),
+          });
+          break;
+        }
+
+        const normalizedValue = rawValue.trim();
+
+        if (field.required && normalizedValue.length === 0) {
+          issues.push({
+            message: "This field is required.",
+            path: buildFieldPath(field.name),
+          });
+        }
+
+        normalizedValues[field.name] = normalizedValue.length > 0 ? normalizedValue : null;
         break;
       }
       case "number": {
@@ -298,9 +462,15 @@ function mapStoredRecord(
 
       switch (field.type) {
         case "text":
+        case "date":
+        case "select":
         case "richText":
         case "markdown":
           return [field.name, typeof rawValue === "string" ? rawValue : null];
+        case "relationship":
+          return field.multiple
+            ? [field.name, parseStoredRelationshipList(rawValue)]
+            : [field.name, typeof rawValue === "string" ? rawValue : null];
         case "number":
           return [
             field.name,
@@ -353,7 +523,9 @@ function createWriteStatement(
   recordId?: string,
 ) {
   const now = new Date().toISOString();
-  const recordValues = fields.map((field) => values[field.name]);
+  const recordValues = fields.map((field) =>
+    serializeStoredValue(field, values[field.name] ?? null),
+  );
 
   if (recordId) {
     const assignments = fields.map((field) => `${quoteIdentifier(field.name)} = ?`);
