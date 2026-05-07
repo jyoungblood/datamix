@@ -23,6 +23,10 @@ async function countUsers(context: GenericEndpointContext<BetterAuthOptions>) {
   return context.context.internalAdapter.countTotalUsers();
 }
 
+function quoteIdentifier(identifier: string) {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
 export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
   const authRuntime = readApiAuthRuntime(env);
 
@@ -56,6 +60,18 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
             { name: "datamix_surface", value: "auth" },
           ],
         );
+      },
+      onPasswordReset: async ({ user }) => {
+        await env.DB
+          .prepare(
+            `
+              UPDATE ${quoteIdentifier("user")}
+              SET emailVerified = 1, updatedAt = ?
+              WHERE id = ?
+            `.trim(),
+          )
+          .bind(new Date().toISOString(), user.id)
+          .run();
       },
     },
     user: {
@@ -101,7 +117,7 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
             return {
               data: {
                 ...user,
-                emailVerified: false,
+                emailVerified: true,
                 role: datamixDefaultRoleAssignments.firstUser,
               },
             };

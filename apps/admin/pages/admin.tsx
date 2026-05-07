@@ -1,5 +1,6 @@
 import {
   createMediaObjectUrl,
+  datamixDefaultRoleAssignments,
   datamixFieldTypes,
   datamixPermissionResourceDefinitions,
   datamixRolePresets,
@@ -1379,6 +1380,9 @@ export default function AdminPage() {
   const [isSavingRecord, setIsSavingRecord] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
+  const [inviteRoleId, setInviteRoleId] = useState<string>(
+    datamixDefaultRoleAssignments.invitedUser,
+  );
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [isInviting, setIsInviting] = useState(false);
@@ -1783,6 +1787,20 @@ export default function AdminPage() {
     setRoleDraft(createRoleDraftFromRole(selectedRole));
   }, [availableRoles, isCreatingRole, selectedRoleId]);
 
+  useEffect(() => {
+    setInviteRoleId((currentInviteRoleId) => {
+      if (availableRoles.some((role) => role.id === currentInviteRoleId)) {
+        return currentInviteRoleId;
+      }
+
+      const defaultInviteRole = availableRoles.find(
+        (role) => role.id === datamixDefaultRoleAssignments.invitedUser,
+      );
+
+      return defaultInviteRole?.id ?? availableRoles[0]?.id ?? datamixDefaultRoleAssignments.invitedUser;
+    });
+  }, [availableRoles]);
+
   const activeCollection = collections.find(
     (collection) => collection.definition.name === selectedCollectionName,
   );
@@ -2176,19 +2194,20 @@ export default function AdminPage() {
 
     try {
       const message = await sendInvite(
-        inviteName
-          ? {
-              email: inviteEmail,
-              name: inviteName,
-            }
-          : {
-              email: inviteEmail,
-            },
+        {
+          email: inviteEmail,
+          ...(inviteName ? { name: inviteName } : {}),
+          roleId: inviteRoleId,
+        },
       );
 
       setInviteMessage(message);
       setInviteEmail("");
       setInviteName("");
+
+      if (canViewUsers) {
+        await loadUserList();
+      }
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : "Unable to send invite.");
     } finally {
@@ -4078,7 +4097,7 @@ export default function AdminPage() {
                               <span className="status-pill status-pill-muted">Current session</span>
                             ) : null}
                             <span className="status-pill status-pill-muted">
-                              {user.emailVerified ? "Verified" : "Pending verification"}
+                              {user.emailVerified ? "Joined" : "Invite pending"}
                             </span>
                           </div>
 
@@ -4137,7 +4156,7 @@ export default function AdminPage() {
                       <h4 className="section-title">Invite a teammate</h4>
                       <p className="section-copy">
                         Datamix emails a secure invite link and routes the recipient through
-                        password setup on first sign-in.
+                        password setup on first sign-in with the role you choose here.
                       </p>
                     </div>
 
@@ -4162,6 +4181,21 @@ export default function AdminPage() {
                           type="email"
                           value={inviteEmail}
                         />
+                      </label>
+
+                      <label className="field">
+                        <span>Starting role</span>
+                        <select
+                          disabled={!canInviteUsers || availableRoles.length === 0}
+                          onChange={(event) => setInviteRoleId(event.target.value)}
+                          value={inviteRoleId}
+                        >
+                          {availableRoles.map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {role.label}
+                            </option>
+                          ))}
+                        </select>
                       </label>
 
                       {inviteError ? <p className="form-error">{inviteError}</p> : null}

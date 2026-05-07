@@ -60,6 +60,7 @@ export const app = new Hono<{ Bindings: ApiBindings }>();
 const inviteRequestSchema = z.object({
   email: z.email(),
   name: z.string().trim().min(1).max(120).optional(),
+  roleId: z.string().trim().min(1).max(64).optional(),
 });
 
 const roleDefinitionRequestSchema = z.object({
@@ -492,6 +493,7 @@ app.post("/invites", requirePermission("users.invite"), async (c) => {
         email: parsed.data.email,
         ...(parsed.data.name ? { inviteeName: parsed.data.name } : {}),
         inviterName: c.get("session").user.name || c.get("session").user.email,
+        ...(parsed.data.roleId ? { roleId: parsed.data.roleId } : {}),
       }),
     );
 

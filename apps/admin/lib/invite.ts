@@ -1,6 +1,6 @@
 import { adminPublicEnv } from "./runtime";
 
-export async function sendInvite(input: { email: string; name?: string }) {
+export async function sendInvite(input: { email: string; name?: string; roleId?: string }) {
   const response = await fetch(`${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/invites`, {
     method: "POST",
     credentials: "include",
