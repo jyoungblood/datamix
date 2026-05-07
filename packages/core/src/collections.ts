@@ -22,6 +22,8 @@ export const datamixRecordCrudFieldTypes = [
   "relationship",
   "richText",
   "markdown",
+  "image",
+  "imageGallery",
 ] as const;
 export type DatamixRecordCrudFieldType =
   (typeof datamixRecordCrudFieldTypes)[number];
@@ -80,7 +82,9 @@ export type DatamixRecordCrudFieldDefinition =
   | DatamixSelectFieldDefinition
   | DatamixRelationshipFieldDefinition
   | DatamixRichTextFieldDefinition
-  | DatamixMarkdownFieldDefinition;
+  | DatamixMarkdownFieldDefinition
+  | DatamixImageFieldDefinition
+  | DatamixImageGalleryFieldDefinition;
 
 export type DatamixCollectionDefinition = {
   name: string;

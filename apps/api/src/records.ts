@@ -91,7 +91,7 @@ function assertPersistedCrudFields(
 ) {
   if (fields.length === 0) {
     throw new CollectionRecordError(
-      "This collection has no text, number, boolean, date, select, relationship, richText, or markdown fields to persist in the current CRUD slice.",
+      "This collection has no text, number, boolean, date, select, relationship, richText, markdown, image, or imageGallery fields to persist in the current CRUD slice.",
       { statusCode: 409 },
     );
   }
@@ -128,7 +128,7 @@ function isValidDateOnlyString(value: string) {
   );
 }
 
-function parseStoredRelationshipList(rawValue: unknown) {
+function parseStoredStringList(rawValue: unknown) {
   if (typeof rawValue !== "string") {
     return [];
   }
@@ -150,7 +150,10 @@ function serializeStoredValue(
   field: DatamixRecordCrudFieldDefinition,
   value: StoredRecordValue,
 ) {
-  if (field.type === "relationship" && field.multiple) {
+  if (
+    (field.type === "relationship" && field.multiple) ||
+    field.type === "imageGallery"
+  ) {
     return JSON.stringify(Array.isArray(value) ? value : []);
   }
 
@@ -227,7 +230,8 @@ function normalizePersistedRecordValues(
       case "date":
       case "select":
       case "richText":
-      case "markdown": {
+      case "markdown":
+      case "image": {
         if (rawValue === undefined || rawValue === null || rawValue === "") {
           if (field.required) {
             issues.push({
@@ -277,6 +281,51 @@ function normalizePersistedRecordValues(
         }
 
         normalizedValues[field.name] = normalizedValue;
+        break;
+      }
+      case "imageGallery": {
+        if (rawValue === undefined || rawValue === null) {
+          if (field.required) {
+            issues.push({
+              message: "This field is required.",
+              path: buildFieldPath(field.name),
+            });
+          }
+
+          normalizedValues[field.name] = [];
+          break;
+        }
+
+        if (!Array.isArray(rawValue)) {
+          issues.push({
+            message: "Expected an array of media storage keys.",
+            path: buildFieldPath(field.name),
+          });
+          break;
+        }
+
+        const storageKeys = rawValue.map((item) =>
+          typeof item === "string" ? item.trim() : item,
+        );
+
+        if (
+          storageKeys.some((item) => typeof item !== "string" || item.length === 0)
+        ) {
+          issues.push({
+            message: "Each media storage key must be a non-empty string.",
+            path: buildFieldPath(field.name),
+          });
+          break;
+        }
+
+        if (field.required && storageKeys.length === 0) {
+          issues.push({
+            message: "This field is required.",
+            path: buildFieldPath(field.name),
+          });
+        }
+
+        normalizedValues[field.name] = storageKeys as string[];
         break;
       }
       case "relationship": {
@@ -466,10 +515,13 @@ function mapStoredRecord(
         case "select":
         case "richText":
         case "markdown":
+        case "image":
           return [field.name, typeof rawValue === "string" ? rawValue : null];
+        case "imageGallery":
+          return [field.name, parseStoredStringList(rawValue)];
         case "relationship":
           return field.multiple
-            ? [field.name, parseStoredRelationshipList(rawValue)]
+            ? [field.name, parseStoredStringList(rawValue)]
             : [field.name, typeof rawValue === "string" ? rawValue : null];
         case "number":
           return [

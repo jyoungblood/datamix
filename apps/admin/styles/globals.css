@@ -646,6 +646,43 @@ button.admin-nav-item {
   align-content: start;
 }
 
+.media-field {
+  gap: 0.75rem;
+}
+
+.media-field-box {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(73, 54, 24, 0.12);
+  border-radius: 18px;
+  background: rgba(250, 246, 238, 0.72);
+}
+
+.field-compact {
+  gap: 0.35rem;
+}
+
+.media-field-selected-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.media-field-selected-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.media-field-library-list {
+  margin-top: 0;
+}
+
+.media-field-key {
+  overflow-wrap: anywhere;
+}
+
 .markdown-field {
   gap: 0.75rem;
 }

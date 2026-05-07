@@ -298,7 +298,11 @@ function createGeneratedRecordFormStateFromRecord(
       case "select":
       case "richText":
       case "markdown":
+      case "image":
         defaultState[field.name] = typeof recordValue === "string" ? recordValue : "";
+        break;
+      case "imageGallery":
+        defaultState[field.name] = Array.isArray(recordValue) ? recordValue.join("\n") : "";
         break;
       case "relationship":
         defaultState[field.name] = field.multiple
@@ -327,6 +331,28 @@ function readListValues(value: string) {
     .split("\n")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
+}
+
+function appendListValue(value: string, item: string) {
+  const nextItem = item.trim();
+
+  if (nextItem.length === 0) {
+    return value;
+  }
+
+  const items = readListValues(value);
+
+  if (items.includes(nextItem)) {
+    return items.join("\n");
+  }
+
+  return [...items, nextItem].join("\n");
+}
+
+function removeListValue(value: string, item: string) {
+  return readListValues(value)
+    .filter((currentItem) => currentItem !== item)
+    .join("\n");
 }
 
 function createGeneratedRecordPayload(
@@ -387,8 +413,12 @@ function createPersistedRecordPayload(
       case "select":
       case "richText":
       case "markdown":
+      case "image":
         payload[field.name] =
           typeof rawValue === "string" && rawValue.length > 0 ? rawValue : null;
+        break;
+      case "imageGallery":
+        payload[field.name] = typeof rawValue === "string" ? readListValues(rawValue) : [];
         break;
       case "relationship":
         payload[field.name] = field.multiple
@@ -517,9 +547,9 @@ function createGeneratedFieldHint(field: DatamixFieldDefinition) {
     case "markdown":
       return "Raw markdown is stored as text and previewed live beside the editor.";
     case "image":
-      return "Paste an asset URL or storage key for now. Media picking lands in M4.";
+      return "Choose a media asset below or paste a storage key manually.";
     case "imageGallery":
-      return "Enter one asset URL or storage key per line until gallery tools land.";
+      return "Add media assets below or paste one storage key per line.";
   }
 }
 
@@ -540,9 +570,9 @@ function createGeneratedFieldPlaceholder(field: DatamixFieldDefinition) {
     case "markdown":
       return "## Start writing in markdown";
     case "image":
-      return "https://cdn.example.com/hero.jpg";
+      return "originals/asset-id/hero.jpg";
     case "imageGallery":
-      return "https://cdn.example.com/hero.jpg\nhttps://cdn.example.com/detail.jpg";
+      return "originals/asset-id/hero.jpg\noriginals/asset-id/detail.jpg";
     case "select":
     case "boolean":
       return "";
@@ -552,6 +582,8 @@ function createGeneratedFieldPlaceholder(field: DatamixFieldDefinition) {
 type GeneratedRecordFieldInputProps = {
   disabled?: boolean;
   field: DatamixFieldDefinition;
+  mediaAssets: DatamixMediaAsset[];
+  onOpenMediaLibrary: () => void;
   value: GeneratedRecordFormValue;
   onChange: (nextValue: GeneratedRecordFormValue) => void;
 };
@@ -603,6 +635,153 @@ function FlowStateBox({
           ) : null}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+type MediaAssetFieldPickerProps = {
+  fieldType: "image" | "imageGallery";
+  mediaAssets: DatamixMediaAsset[];
+  onChange: (nextValue: string) => void;
+  onOpenMediaLibrary: () => void;
+  value: string;
+};
+
+function MediaAssetFieldPicker({
+  fieldType,
+  mediaAssets,
+  onChange,
+  onOpenMediaLibrary,
+  value,
+}: MediaAssetFieldPickerProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredAssets =
+    normalizedSearchQuery.length === 0
+      ? mediaAssets
+      : mediaAssets.filter((asset) =>
+          createMediaAssetSearchText(asset).includes(normalizedSearchQuery),
+        );
+
+  const selectedStorageKeys =
+    fieldType === "imageGallery" ? readListValues(value) : value.trim().length > 0 ? [value.trim()] : [];
+
+  return (
+    <div className="media-field-box">
+      <div className="section-row">
+        <div>
+          <p className="section-title">Media library</p>
+          <p className="section-copy">
+            {fieldType === "image"
+              ? "Choose one stored asset or paste a storage key manually."
+              : "Add stored assets to the gallery. Ordering stays simple until the next slice."}
+          </p>
+        </div>
+        <button className="mini-button" onClick={onOpenMediaLibrary} type="button">
+          Open library
+        </button>
+      </div>
+
+      {selectedStorageKeys.length > 0 ? (
+        <div className="media-field-selected-list">
+          {selectedStorageKeys.map((storageKey) => {
+            const selectedAsset =
+              mediaAssets.find((asset) => asset.storageKey === storageKey) ?? null;
+
+            return (
+              <div className="type-specific-box media-field-selected-item" key={storageKey}>
+                <div>
+                  <p className="section-title">
+                    {selectedAsset?.fileName ?? storageKey.split("/").at(-1) ?? storageKey}
+                  </p>
+                  <p className="section-copy media-field-key">{storageKey}</p>
+                </div>
+                <button
+                  className="mini-button mini-button-danger"
+                  onClick={() =>
+                    onChange(
+                      fieldType === "image"
+                        ? ""
+                        : removeListValue(value, storageKey),
+                    )
+                  }
+                  type="button"
+                >
+                  Remove
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {mediaAssets.length === 0 ? (
+        <FlowStateBox
+          actionLabel="Go to media library"
+          body="No uploaded media assets are available yet. Upload an asset in the media library first, then return here to attach it."
+          compact
+          onAction={onOpenMediaLibrary}
+          title="No media assets available"
+          tone="warning"
+        />
+      ) : (
+        <>
+          <label className="field field-compact">
+            <span>Filter library assets</span>
+            <input
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search filename or storage key"
+              type="text"
+              value={searchQuery}
+            />
+          </label>
+
+          {filteredAssets.length === 0 ? (
+            <FlowStateBox
+              actionLabel="Clear filter"
+              body={`No media assets matched "${searchQuery}".`}
+              compact
+              onAction={() => setSearchQuery("")}
+              title="No matching media assets"
+              tone="warning"
+            />
+          ) : (
+            <div className="mini-list media-field-library-list">
+              {filteredAssets.slice(0, 8).map((asset) => {
+                const isSelected = selectedStorageKeys.includes(asset.storageKey);
+
+                return (
+                  <button
+                    className={
+                      isSelected
+                        ? "mini-list-item is-selected mini-list-item-stacked"
+                        : "mini-list-item mini-list-item-stacked"
+                    }
+                    key={asset.id}
+                    onClick={() =>
+                      onChange(
+                        fieldType === "image"
+                          ? asset.storageKey
+                          : appendListValue(value, asset.storageKey),
+                      )
+                    }
+                    type="button"
+                  >
+                    <div className="mini-list-content">
+                      <span>{asset.fileName}</span>
+                      <small>
+                        {asset.mimeType} • {formatByteSize(asset.byteSize)}
+                      </small>
+                      <small>{asset.storageKey}</small>
+                    </div>
+                    <small>{isSelected ? "Selected" : fieldType === "image" ? "Use" : "Add"}</small>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -828,6 +1007,8 @@ function renderMarkdownPreview(markdown: string) {
 function GeneratedRecordFieldInput({
   disabled = false,
   field,
+  mediaAssets,
+  onOpenMediaLibrary,
   value,
   onChange,
 }: GeneratedRecordFieldInputProps) {
@@ -887,20 +1068,61 @@ function GeneratedRecordFieldInput({
     );
   }
 
+  if (field.type === "image") {
+    const stringValue = typeof value === "string" ? value : "";
+
+    return (
+      <div className="field media-field">
+        <label className="field">
+          <span>{label}</span>
+          <input
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={createGeneratedFieldPlaceholder(field)}
+            required={field.required}
+            type="text"
+            value={stringValue}
+          />
+          <small className="field-hint">{hint}</small>
+        </label>
+        {!disabled ? (
+          <MediaAssetFieldPicker
+            fieldType="image"
+            mediaAssets={mediaAssets}
+            onChange={onChange}
+            onOpenMediaLibrary={onOpenMediaLibrary}
+            value={stringValue}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
   if (field.type === "imageGallery" || (field.type === "relationship" && field.multiple)) {
     return (
-      <label className="field">
-        <span>{label}</span>
-        <textarea
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={createGeneratedFieldPlaceholder(field)}
-          required={field.required}
-          rows={field.type === "imageGallery" ? 4 : 6}
-          value={typeof value === "string" ? value : ""}
-        />
-        <small className="field-hint">{hint}</small>
-      </label>
+      <div className="field media-field">
+        <label className="field">
+          <span>{label}</span>
+          <textarea
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={createGeneratedFieldPlaceholder(field)}
+            required={field.required}
+            rows={field.type === "imageGallery" ? 4 : 6}
+            value={typeof value === "string" ? value : ""}
+          />
+          <small className="field-hint">{hint}</small>
+        </label>
+        {field.type === "imageGallery" && !disabled ? (
+          <MediaAssetFieldPicker
+            fieldType="imageGallery"
+            mediaAssets={mediaAssets}
+            onChange={onChange}
+            onOpenMediaLibrary={onOpenMediaLibrary}
+            value={typeof value === "string" ? value : ""}
+          />
+        ) : null}
+      </div>
     );
   }
 
@@ -1313,9 +1535,6 @@ export default function AdminPage() {
     JSON.stringify(activeCollection.definition) !== JSON.stringify(serializeDraft(draft));
   const persistedRecordFields = activeCollection
     ? activeCollection.definition.fields.filter(isRecordCrudFieldDefinition)
-    : [];
-  const unsupportedRecordFields = activeCollection
-    ? activeCollection.definition.fields.filter((field) => !isRecordCrudFieldDefinition(field))
     : [];
   const canRefreshCollections =
     Boolean(session.data) && !isLoadingCollections && !isRefreshingCollections;
@@ -2632,8 +2851,9 @@ export default function AdminPage() {
                     <p className="section-title">Current persistence support</p>
                     <p className="section-copy">
                       This slice persists `text`, `number`, `boolean`, `date`, `select`,
-                      `relationship`, `richText`, and `markdown` fields. Other schema
-                      fields stay visible here but remain read-only until later milestones.
+                      `relationship`, `richText`, `markdown`, `image`, and
+                      `imageGallery` fields. Gallery ordering still stays intentionally
+                      simple until the next media slice.
                     </p>
                   </div>
                   <div className="actions">
@@ -2724,19 +2944,11 @@ export default function AdminPage() {
                     </p>
                     {persistedRecordFields.length === 0 ? (
                       <FlowStateBox
-                        body="Add at least one `text`, `number`, `boolean`, `date`, `select`, `relationship`, `richText`, or `markdown` field to create records in this slice."
+                        body="Add at least one `text`, `number`, `boolean`, `date`, `select`, `relationship`, `richText`, `markdown`, `image`, or `imageGallery` field to create records in this slice."
                         compact
                         title="No persisted fields yet"
                         tone="warning"
                       />
-                    ) : null}
-                    {unsupportedRecordFields.length > 0 ? (
-                      <p className="section-copy">
-                        Waiting for later slices:{" "}
-                        <strong>
-                          {unsupportedRecordFields.map((field) => field.name).join(", ")}
-                        </strong>
-                      </p>
                     ) : null}
                   </aside>
                 </div>
@@ -2757,9 +2969,11 @@ export default function AdminPage() {
                           disabled={!isRecordCrudFieldDefinition(field)}
                           field={field}
                           key={field.name}
+                          mediaAssets={mediaAssets}
                           onChange={(nextValue) =>
                             handleRecordFieldChange(field.name, nextValue)
                           }
+                          onOpenMediaLibrary={() => jumpToSection("media")}
                           value={recordDraft[field.name] ?? ""}
                         />
                       ))
