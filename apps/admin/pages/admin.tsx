@@ -355,6 +355,17 @@ function removeListValue(value: string, item: string) {
     .join("\n");
 }
 
+function moveListValue(value: string, item: string, direction: -1 | 1) {
+  const items = readListValues(value);
+  const currentIndex = items.indexOf(item);
+
+  if (currentIndex === -1) {
+    return value;
+  }
+
+  return moveItem(items, currentIndex, direction).join("\n");
+}
+
 function createGeneratedRecordPayload(
   definition: DatamixCollectionDefinition,
   values: GeneratedRecordFormState,
@@ -674,7 +685,7 @@ function MediaAssetFieldPicker({
           <p className="section-copy">
             {fieldType === "image"
               ? "Choose one stored asset or paste a storage key manually."
-              : "Add stored assets to the gallery. Ordering stays simple until the next slice."}
+              : "Add stored assets to the gallery, then move them into the saved display order."}
           </p>
         </div>
         <button className="mini-button" onClick={onOpenMediaLibrary} type="button">
@@ -687,28 +698,56 @@ function MediaAssetFieldPicker({
           {selectedStorageKeys.map((storageKey) => {
             const selectedAsset =
               mediaAssets.find((asset) => asset.storageKey === storageKey) ?? null;
+            const selectedIndex = selectedStorageKeys.indexOf(storageKey);
 
             return (
               <div className="type-specific-box media-field-selected-item" key={storageKey}>
-                <div>
-                  <p className="section-title">
-                    {selectedAsset?.fileName ?? storageKey.split("/").at(-1) ?? storageKey}
-                  </p>
-                  <p className="section-copy media-field-key">{storageKey}</p>
+                <div className="media-field-selected-copy">
+                  {fieldType === "imageGallery" ? (
+                    <span className="media-field-order-badge">{selectedIndex + 1}</span>
+                  ) : null}
+                  <div>
+                    <p className="section-title">
+                      {selectedAsset?.fileName ?? storageKey.split("/").at(-1) ?? storageKey}
+                    </p>
+                    <p className="section-copy media-field-key">{storageKey}</p>
+                  </div>
                 </div>
-                <button
-                  className="mini-button mini-button-danger"
-                  onClick={() =>
-                    onChange(
-                      fieldType === "image"
-                        ? ""
-                        : removeListValue(value, storageKey),
-                    )
-                  }
-                  type="button"
-                >
-                  Remove
-                </button>
+                <div className="media-field-selected-actions">
+                  {fieldType === "imageGallery" ? (
+                    <>
+                      <button
+                        className="mini-button"
+                        disabled={selectedIndex === 0}
+                        onClick={() => onChange(moveListValue(value, storageKey, -1))}
+                        type="button"
+                      >
+                        Move up
+                      </button>
+                      <button
+                        className="mini-button"
+                        disabled={selectedIndex === selectedStorageKeys.length - 1}
+                        onClick={() => onChange(moveListValue(value, storageKey, 1))}
+                        type="button"
+                      >
+                        Move down
+                      </button>
+                    </>
+                  ) : null}
+                  <button
+                    className="mini-button mini-button-danger"
+                    onClick={() =>
+                      onChange(
+                        fieldType === "image"
+                          ? ""
+                          : removeListValue(value, storageKey),
+                      )
+                    }
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -2852,8 +2891,8 @@ export default function AdminPage() {
                     <p className="section-copy">
                       This slice persists `text`, `number`, `boolean`, `date`, `select`,
                       `relationship`, `richText`, `markdown`, `image`, and
-                      `imageGallery` fields. Gallery ordering still stays intentionally
-                      simple until the next media slice.
+                      `imageGallery` fields. Gallery selection order now saves exactly as
+                      arranged in the editor.
                     </p>
                   </div>
                   <div className="actions">
