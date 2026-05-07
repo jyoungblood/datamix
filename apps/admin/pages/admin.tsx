@@ -1,6 +1,6 @@
 import {
   datamixFieldTypes,
-  isPrimitiveRecordFieldDefinition,
+  isRecordCrudFieldDefinition,
   type DatamixCollectionDefinition,
   type DatamixFieldDefinition,
   type DatamixFieldType,
@@ -279,7 +279,7 @@ function createGeneratedRecordFormStateFromRecord(
   const defaultState = createGeneratedRecordFormState(definition);
 
   for (const field of definition.fields) {
-    if (!isPrimitiveRecordFieldDefinition(field)) {
+    if (!isRecordCrudFieldDefinition(field)) {
       continue;
     }
 
@@ -287,6 +287,7 @@ function createGeneratedRecordFormStateFromRecord(
 
     switch (field.type) {
       case "text":
+      case "markdown":
         defaultState[field.name] = typeof recordValue === "string" ? recordValue : "";
         break;
       case "number":
@@ -348,14 +349,14 @@ function createGeneratedRecordPayload(
   );
 }
 
-function createPrimitiveRecordPayload(
+function createPersistedRecordPayload(
   definition: DatamixCollectionDefinition,
   values: GeneratedRecordFormState,
 ): PrimitiveRecordPayload {
   const payload: PrimitiveRecordPayload = {};
 
   for (const field of definition.fields) {
-    if (!isPrimitiveRecordFieldDefinition(field)) {
+    if (!isRecordCrudFieldDefinition(field)) {
       continue;
     }
 
@@ -363,6 +364,7 @@ function createPrimitiveRecordPayload(
 
     switch (field.type) {
       case "text":
+      case "markdown":
         payload[field.name] =
           typeof rawValue === "string" && rawValue.length > 0 ? rawValue : null;
         break;
@@ -395,8 +397,8 @@ function summarizeRecord(
 ) {
   const summaryField = definition.fields.find(
     (field) =>
-      isPrimitiveRecordFieldDefinition(field) &&
-      field.type === "text" &&
+      isRecordCrudFieldDefinition(field) &&
+      (field.type === "text" || field.type === "markdown") &&
       typeof record.values[field.name] === "string" &&
       record.values[field.name] !== null &&
       String(record.values[field.name]).trim().length > 0,
@@ -457,7 +459,7 @@ function createGeneratedFieldHint(field: DatamixFieldDefinition) {
     case "richText":
       return "First-pass rich text editing uses a plain multiline field.";
     case "markdown":
-      return "Markdown preview lands in a later slice.";
+      return "Raw markdown is stored as text and previewed live beside the editor.";
     case "image":
       return "Paste an asset URL or storage key for now. Media picking lands in M4.";
     case "imageGallery":
@@ -497,6 +499,224 @@ type GeneratedRecordFieldInputProps = {
   value: GeneratedRecordFormValue;
   onChange: (nextValue: GeneratedRecordFormValue) => void;
 };
+
+function createInlineMarkdownPreview(
+  value: string,
+  keyPrefix: string,
+): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const tokenPattern =
+    /(\[([^\]]+)\]\((https?:\/\/[^\s)]+)\))|(`([^`]+)`)|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)/g;
+  let cursor = 0;
+  let matchIndex = 0;
+
+  for (const match of value.matchAll(tokenPattern)) {
+    const matchText = match[0];
+    const index = match.index ?? 0;
+
+    if (index > cursor) {
+      nodes.push(value.slice(cursor, index));
+    }
+
+    if (match[2] && match[3]) {
+      nodes.push(
+        <a
+          href={match[3]}
+          key={`${keyPrefix}-link-${matchIndex}`}
+          rel="noreferrer"
+          target="_blank"
+        >
+          {match[2]}
+        </a>,
+      );
+    } else if (match[5]) {
+      nodes.push(<code key={`${keyPrefix}-code-${matchIndex}`}>{match[5]}</code>);
+    } else if (match[7]) {
+      nodes.push(<strong key={`${keyPrefix}-strong-${matchIndex}`}>{match[7]}</strong>);
+    } else if (match[9]) {
+      nodes.push(<em key={`${keyPrefix}-em-${matchIndex}`}>{match[9]}</em>);
+    } else {
+      nodes.push(matchText);
+    }
+
+    cursor = index + matchText.length;
+    matchIndex += 1;
+  }
+
+  if (cursor < value.length) {
+    nodes.push(value.slice(cursor));
+  }
+
+  return nodes;
+}
+
+function renderMarkdownPreview(markdown: string) {
+  const normalizedMarkdown = markdown.replaceAll("\r\n", "\n");
+
+  if (normalizedMarkdown.trim().length === 0) {
+    return (
+      <p className="markdown-preview-empty">
+        Nothing to preview yet. Start writing markdown on the left.
+      </p>
+    );
+  }
+
+  const lines = normalizedMarkdown.split("\n");
+  const blocks: React.ReactNode[] = [];
+  let lineIndex = 0;
+
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex] ?? "";
+    const trimmedLine = line.trim();
+
+    if (trimmedLine.length === 0) {
+      lineIndex += 1;
+      continue;
+    }
+
+    if (trimmedLine.startsWith("```")) {
+      const codeLines: string[] = [];
+      lineIndex += 1;
+
+      while (lineIndex < lines.length && !(lines[lineIndex] ?? "").trim().startsWith("```")) {
+        codeLines.push(lines[lineIndex] ?? "");
+        lineIndex += 1;
+      }
+
+      if (lineIndex < lines.length) {
+        lineIndex += 1;
+      }
+
+      blocks.push(
+        <pre className="markdown-preview-code" key={`code-${lineIndex}`}>
+          <code>{codeLines.join("\n")}</code>
+        </pre>,
+      );
+      continue;
+    }
+
+    const headingMatch = trimmedLine.match(/^(#{1,3})\s+(.*)$/);
+
+    if (headingMatch) {
+      const content = createInlineMarkdownPreview(
+        headingMatch[2] ?? "",
+        `heading-${lineIndex}`,
+      );
+
+      switch (headingMatch[1]) {
+        case "#":
+          blocks.push(<h1 key={`heading-${lineIndex}`}>{content}</h1>);
+          break;
+        case "##":
+          blocks.push(<h2 key={`heading-${lineIndex}`}>{content}</h2>);
+          break;
+        default:
+          blocks.push(<h3 key={`heading-${lineIndex}`}>{content}</h3>);
+          break;
+      }
+
+      lineIndex += 1;
+      continue;
+    }
+
+    if (trimmedLine.startsWith(">")) {
+      const quoteLines: string[] = [];
+
+      while (lineIndex < lines.length) {
+        const nextLine = lines[lineIndex] ?? "";
+
+        if (!nextLine.trim().startsWith(">")) {
+          break;
+        }
+
+        quoteLines.push(nextLine.trim().replace(/^>\s?/, ""));
+        lineIndex += 1;
+      }
+
+      blocks.push(
+        <blockquote key={`quote-${lineIndex}`}>
+          {createInlineMarkdownPreview(quoteLines.join(" "), `quote-${lineIndex}`)}
+        </blockquote>,
+      );
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(trimmedLine)) {
+      const items: React.ReactNode[] = [];
+
+      while (lineIndex < lines.length) {
+        const nextLine = (lines[lineIndex] ?? "").trim();
+        const nextMatch = nextLine.match(/^[-*]\s+(.*)$/);
+
+        if (!nextMatch) {
+          break;
+        }
+
+        items.push(
+          <li key={`ul-item-${lineIndex}`}>
+            {createInlineMarkdownPreview(nextMatch[1] ?? "", `ul-${lineIndex}`)}
+          </li>,
+        );
+        lineIndex += 1;
+      }
+
+      blocks.push(<ul key={`ul-${lineIndex}`}>{items}</ul>);
+      continue;
+    }
+
+    if (/^\d+\.\s+/.test(trimmedLine)) {
+      const items: React.ReactNode[] = [];
+
+      while (lineIndex < lines.length) {
+        const nextLine = (lines[lineIndex] ?? "").trim();
+        const nextMatch = nextLine.match(/^\d+\.\s+(.*)$/);
+
+        if (!nextMatch) {
+          break;
+        }
+
+        items.push(
+          <li key={`ol-item-${lineIndex}`}>
+            {createInlineMarkdownPreview(nextMatch[1] ?? "", `ol-${lineIndex}`)}
+          </li>,
+        );
+        lineIndex += 1;
+      }
+
+      blocks.push(<ol key={`ol-${lineIndex}`}>{items}</ol>);
+      continue;
+    }
+
+    const paragraphLines: string[] = [];
+
+    while (lineIndex < lines.length) {
+      const nextLine = lines[lineIndex] ?? "";
+      const nextTrimmedLine = nextLine.trim();
+
+      if (
+        nextTrimmedLine.length === 0 ||
+        nextTrimmedLine.startsWith("```") ||
+        /^#{1,3}\s+/.test(nextTrimmedLine) ||
+        nextTrimmedLine.startsWith(">") ||
+        /^[-*]\s+/.test(nextTrimmedLine) ||
+        /^\d+\.\s+/.test(nextTrimmedLine)
+      ) {
+        break;
+      }
+
+      paragraphLines.push(nextTrimmedLine);
+      lineIndex += 1;
+    }
+
+    blocks.push(
+      <p key={`paragraph-${lineIndex}`}>
+        {createInlineMarkdownPreview(paragraphLines.join(" "), `paragraph-${lineIndex}`)}
+      </p>,
+    );
+  }
+
+  return <div className="markdown-preview-content">{blocks}</div>;
+}
 
 function GeneratedRecordFieldInput({
   disabled = false,
@@ -546,12 +766,7 @@ function GeneratedRecordFieldInput({
     );
   }
 
-  if (
-    field.type === "markdown" ||
-    field.type === "richText" ||
-    field.type === "imageGallery" ||
-    (field.type === "relationship" && field.multiple)
-  ) {
+  if (field.type === "richText" || field.type === "imageGallery" || (field.type === "relationship" && field.multiple)) {
     return (
       <label className="field">
         <span>{label}</span>
@@ -565,6 +780,36 @@ function GeneratedRecordFieldInput({
         />
         <small className="field-hint">{hint}</small>
       </label>
+    );
+  }
+
+  if (field.type === "markdown") {
+    const stringValue = typeof value === "string" ? value : "";
+
+    return (
+      <div className="field markdown-field">
+        <div className="markdown-field-header">
+          <span>{label}</span>
+          <small className="field-hint">{hint}</small>
+        </div>
+        <div className="markdown-field-grid">
+          <label className="field markdown-field-panel">
+            <span>Editor</span>
+            <textarea
+              disabled={disabled}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder={createGeneratedFieldPlaceholder(field)}
+              required={field.required}
+              rows={10}
+              value={stringValue}
+            />
+          </label>
+          <div className="markdown-field-panel markdown-preview-panel">
+            <span>Preview</span>
+            {renderMarkdownPreview(stringValue)}
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -840,11 +1085,11 @@ export default function AdminPage() {
   const hasUnsavedSchemaChanges =
     activeCollection !== undefined &&
     JSON.stringify(activeCollection.definition) !== JSON.stringify(serializeDraft(draft));
-  const primitiveRecordFields = activeCollection
-    ? activeCollection.definition.fields.filter(isPrimitiveRecordFieldDefinition)
+  const persistedRecordFields = activeCollection
+    ? activeCollection.definition.fields.filter(isRecordCrudFieldDefinition)
     : [];
   const unsupportedRecordFields = activeCollection
-    ? activeCollection.definition.fields.filter((field) => !isPrimitiveRecordFieldDefinition(field))
+    ? activeCollection.definition.fields.filter((field) => !isRecordCrudFieldDefinition(field))
     : [];
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
@@ -852,8 +1097,8 @@ export default function AdminPage() {
   const generatedRecordPayload = activeCollection
     ? createGeneratedRecordPayload(activeCollection.definition, recordDraft)
     : null;
-  const primitiveRecordPayload = activeCollection
-    ? createPrimitiveRecordPayload(activeCollection.definition, recordDraft)
+  const persistedRecordPayload = activeCollection
+    ? createPersistedRecordPayload(activeCollection.definition, recordDraft)
     : null;
 
   const handleSignOut = async () => {
@@ -1086,11 +1331,11 @@ export default function AdminPage() {
         ? await updateCollectionRecord(
             activeCollection.definition.name,
             selectedRecordId,
-            primitiveRecordPayload ?? {},
+            persistedRecordPayload ?? {},
           )
         : await createCollectionRecord(
             activeCollection.definition.name,
-            primitiveRecordPayload ?? {},
+            persistedRecordPayload ?? {},
           );
 
       setRecords((currentRecords) => upsertRecord(currentRecords, result.record));
@@ -1909,11 +2154,11 @@ export default function AdminPage() {
 
                 <div className="section-row">
                   <div>
-                    <p className="section-title">Primitive CRUD support</p>
+                    <p className="section-title">Current persistence support</p>
                     <p className="section-copy">
-                      This slice persists `text`, `number`, and `boolean` fields. Other
-                      schema fields stay visible here but remain read-only until later
-                      milestones.
+                      This slice persists `text`, `number`, `boolean`, and `markdown`
+                      fields. Other schema fields stay visible here but remain read-only
+                      until later milestones.
                     </p>
                   </div>
                   <div className="actions">
@@ -1964,10 +2209,10 @@ export default function AdminPage() {
                     <p className="section-copy">
                       API-backed in this slice: <strong>{recordSupportedFieldNames}</strong>
                     </p>
-                    {primitiveRecordFields.length === 0 ? (
+                    {persistedRecordFields.length === 0 ? (
                       <p className="section-copy">
-                        Add at least one `text`, `number`, or `boolean` field to create
-                        records in this slice.
+                        Add at least one `text`, `number`, `boolean`, or `markdown`
+                        field to create records in this slice.
                       </p>
                     ) : null}
                     {unsupportedRecordFields.length > 0 ? (
@@ -1993,7 +2238,7 @@ export default function AdminPage() {
                     ) : (
                       activeCollection.definition.fields.map((field) => (
                         <GeneratedRecordFieldInput
-                          disabled={!isPrimitiveRecordFieldDefinition(field)}
+                          disabled={!isRecordCrudFieldDefinition(field)}
                           field={field}
                           key={field.name}
                           onChange={(nextValue) =>
@@ -2029,7 +2274,7 @@ export default function AdminPage() {
                     <div className="actions">
                       <button
                         className="button"
-                        disabled={isSavingRecord || primitiveRecordFields.length === 0}
+                        disabled={isSavingRecord || persistedRecordFields.length === 0}
                         type="submit"
                       >
                         {isSavingRecord
@@ -2052,13 +2297,13 @@ export default function AdminPage() {
 
                   <aside className="generated-record-preview">
                     <p className="card-eyebrow">Payload preview</p>
-                    <h4 className="section-title">Primitive save payload</h4>
+                    <h4 className="section-title">Persisted save payload</h4>
                     <p className="section-copy">
                       This is the JSON shape sent to the protected Worker route for this
                       slice.
                     </p>
                     <pre className="code-block">
-                      <code>{JSON.stringify(primitiveRecordPayload, null, 2)}</code>
+                      <code>{JSON.stringify(persistedRecordPayload, null, 2)}</code>
                     </pre>
                     <p className="section-copy">
                       Full local editor state still tracks the whole schema contract for
@@ -2088,9 +2333,9 @@ export default function AdminPage() {
               <p className="card-eyebrow">Coming online later</p>
               <h3 className="card-title">Media and richer editors still stay in later slices</h3>
               <p className="card-copy">
-                Primitive record persistence is live now, but richer markdown and rich
-                text ergonomics, media picking, relationships, selects, and date-specific
-                editing still stay decoupled until the next milestones.
+                Markdown editing and preview are now live, while rich text ergonomics,
+                media picking, relationships, selects, and date-specific editing still
+                stay decoupled until later milestones.
               </p>
             </article>
           </section>

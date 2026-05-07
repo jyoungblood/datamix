@@ -1,8 +1,8 @@
 import {
-  isPrimitiveRecordFieldDefinition,
+  isRecordCrudFieldDefinition,
   type DatamixSchemaValidationIssue,
-  type DatamixPrimitiveRecordFieldType,
-  type DatamixPrimitiveRecordFieldDefinition,
+  type DatamixRecordCrudFieldType,
+  type DatamixRecordCrudFieldDefinition,
 } from "@datamix/core";
 
 import {
@@ -12,7 +12,7 @@ import {
 } from "./collections";
 import type { ApiBindings } from "./env";
 
-type PrimitiveRecordValue = boolean | number | string | null;
+type StoredRecordValue = boolean | number | string | null;
 
 type RawRecordRow = {
   created_at: string;
@@ -24,7 +24,7 @@ export type StoredCollectionRecord = {
   createdAt: string;
   id: string;
   updatedAt: string;
-  values: Record<string, PrimitiveRecordValue>;
+  values: Record<string, StoredRecordValue>;
 };
 
 export type GeneratedCollectionCrudRoute = {
@@ -32,7 +32,7 @@ export type GeneratedCollectionCrudRoute = {
   label: string;
   recordItemPath: string;
   recordsPath: string;
-  supportedFieldNames: DatamixPrimitiveRecordFieldType[];
+  supportedFieldNames: DatamixRecordCrudFieldType[];
   tableName: string;
 };
 
@@ -68,7 +68,7 @@ function buildFieldPath(fieldName: string) {
   return `record.values.${fieldName}`;
 }
 
-function listPrimitiveFields(fields: readonly DatamixPrimitiveRecordFieldDefinition[]) {
+function listPersistedFields(fields: readonly DatamixRecordCrudFieldDefinition[]) {
   if (fields.length === 0) {
     return "none";
   }
@@ -76,8 +76,8 @@ function listPrimitiveFields(fields: readonly DatamixPrimitiveRecordFieldDefinit
   return fields.map((field) => field.name).join(", ");
 }
 
-function listPrimitiveFieldTypes(fields: readonly DatamixPrimitiveRecordFieldDefinition[]) {
-  const fieldTypes = new Set<DatamixPrimitiveRecordFieldType>();
+function listPersistedFieldTypes(fields: readonly DatamixRecordCrudFieldDefinition[]) {
+  const fieldTypes = new Set<DatamixRecordCrudFieldType>();
 
   for (const field of fields) {
     fieldTypes.add(field.type);
@@ -86,12 +86,12 @@ function listPrimitiveFieldTypes(fields: readonly DatamixPrimitiveRecordFieldDef
   return [...fieldTypes];
 }
 
-function assertPrimitiveCrudFields(
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
+function assertPersistedCrudFields(
+  fields: readonly DatamixRecordCrudFieldDefinition[],
 ) {
   if (fields.length === 0) {
     throw new CollectionRecordError(
-      "This collection has no text, number, or boolean fields to persist in the primitive CRUD slice.",
+      "This collection has no text, number, boolean, or markdown fields to persist in the current CRUD slice.",
       { statusCode: 409 },
     );
   }
@@ -122,17 +122,17 @@ async function resolveCollectionRecordContext(env: ApiBindings, collectionName: 
     });
   }
 
-  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+  const persistedFields = collection.definition.fields.filter(isRecordCrudFieldDefinition);
 
   return {
     collection,
-    primitiveFields,
-    supportedFieldNames: listPrimitiveFields(primitiveFields),
+    persistedFields,
+    supportedFieldNames: listPersistedFields(persistedFields),
   };
 }
 
-function normalizePrimitiveRecordValues(
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
+function normalizePersistedRecordValues(
+  fields: readonly DatamixRecordCrudFieldDefinition[],
   input: unknown,
 ) {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
@@ -148,12 +148,12 @@ function normalizePrimitiveRecordValues(
   const values = rawValues as Record<string, unknown>;
   const issues = createIssues();
   const allowedFieldNames = new Set(fields.map((field) => field.name));
-  const normalizedValues: Record<string, PrimitiveRecordValue> = {};
+  const normalizedValues: Record<string, StoredRecordValue> = {};
 
   for (const key of Object.keys(values)) {
     if (!allowedFieldNames.has(key)) {
       issues.push({
-        message: "This field is not editable in the primitive CRUD slice.",
+        message: "This field is not editable in the current CRUD slice.",
         path: buildFieldPath(key),
       });
     }
@@ -163,7 +163,8 @@ function normalizePrimitiveRecordValues(
     const rawValue = values[field.name];
 
     switch (field.type) {
-      case "text": {
+      case "text":
+      case "markdown": {
         if (rawValue === undefined || rawValue === null || rawValue === "") {
           if (field.required) {
             issues.push({
@@ -250,7 +251,7 @@ function normalizePrimitiveRecordValues(
 
 function buildListRecordsSql(
   tableName: string,
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
+  fields: readonly DatamixRecordCrudFieldDefinition[],
 ) {
   const columns = [
     `"id"`,
@@ -269,7 +270,7 @@ function buildListRecordsSql(
 
 function buildReadRecordSql(
   tableName: string,
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
+  fields: readonly DatamixRecordCrudFieldDefinition[],
 ) {
   const columns = [
     `"id"`,
@@ -288,7 +289,7 @@ function buildReadRecordSql(
 
 function mapStoredRecord(
   row: RawRecordRow,
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
+  fields: readonly DatamixRecordCrudFieldDefinition[],
 ): StoredCollectionRecord {
   const values = Object.fromEntries(
     fields.map((field) => {
@@ -296,6 +297,7 @@ function mapStoredRecord(
 
       switch (field.type) {
         case "text":
+        case "markdown":
           return [field.name, typeof rawValue === "string" ? rawValue : null];
         case "number":
           return [
@@ -323,7 +325,7 @@ function mapStoredRecord(
 async function readStoredRecord(
   database: D1Database | D1DatabaseSession,
   tableName: string,
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
+  fields: readonly DatamixRecordCrudFieldDefinition[],
   id: string,
 ) {
   const row = await database
@@ -344,8 +346,8 @@ function buildDeleteRecordSql(tableName: string) {
 function createWriteStatement(
   database: D1DatabaseSession,
   tableName: string,
-  fields: readonly DatamixPrimitiveRecordFieldDefinition[],
-  values: Record<string, PrimitiveRecordValue>,
+  fields: readonly DatamixRecordCrudFieldDefinition[],
+  values: Record<string, StoredRecordValue>,
   recordId?: string,
 ) {
   const now = new Date().toISOString();
@@ -393,15 +395,15 @@ function createWriteStatement(
 }
 
 export async function listCollectionRecords(env: ApiBindings, collectionName: string) {
-  const { collection, primitiveFields, supportedFieldNames } =
+  const { collection, persistedFields, supportedFieldNames } =
     await resolveCollectionRecordContext(env, collectionName);
   const result = await env.DB
-    .prepare(buildListRecordsSql(collection.tableName, primitiveFields))
+    .prepare(buildListRecordsSql(collection.tableName, persistedFields))
     .all<RawRecordRow>();
 
   return {
     collection,
-    records: result.results.map((row) => mapStoredRecord(row, primitiveFields)),
+    records: result.results.map((row) => mapStoredRecord(row, persistedFields)),
     supportedFieldNames,
   };
 }
@@ -411,9 +413,9 @@ export async function getCollectionRecord(
   collectionName: string,
   recordId: string,
 ) {
-  const { collection, primitiveFields, supportedFieldNames } =
+  const { collection, persistedFields, supportedFieldNames } =
     await resolveCollectionRecordContext(env, collectionName);
-  const record = await readStoredRecord(env.DB, collection.tableName, primitiveFields, recordId);
+  const record = await readStoredRecord(env.DB, collection.tableName, persistedFields, recordId);
 
   if (!record) {
     throw new CollectionRecordError("Record not found.", {
@@ -433,16 +435,16 @@ export async function createCollectionRecord(
   collectionName: string,
   input: unknown,
 ) {
-  const { collection, primitiveFields, supportedFieldNames } =
+  const { collection, persistedFields, supportedFieldNames } =
     await resolveCollectionRecordContext(env, collectionName);
-  assertPrimitiveCrudFields(primitiveFields);
-  const values = normalizePrimitiveRecordValues(primitiveFields, input);
+  assertPersistedCrudFields(persistedFields);
+  const values = normalizePersistedRecordValues(persistedFields, input);
   const session = env.DB.withSession("first-primary");
-  const write = createWriteStatement(session, collection.tableName, primitiveFields, values);
+  const write = createWriteStatement(session, collection.tableName, persistedFields, values);
 
   await session.batch([write.statement]);
 
-  const record = await readStoredRecord(session, collection.tableName, primitiveFields, write.id);
+  const record = await readStoredRecord(session, collection.tableName, persistedFields, write.id);
 
   if (!record) {
     throw new CollectionRecordError("Record was created but could not be reloaded.", {
@@ -463,12 +465,12 @@ export async function updateCollectionRecord(
   recordId: string,
   input: unknown,
 ) {
-  const { collection, primitiveFields, supportedFieldNames } =
+  const { collection, persistedFields, supportedFieldNames } =
     await resolveCollectionRecordContext(env, collectionName);
-  assertPrimitiveCrudFields(primitiveFields);
-  const values = normalizePrimitiveRecordValues(primitiveFields, input);
+  assertPersistedCrudFields(persistedFields);
+  const values = normalizePersistedRecordValues(persistedFields, input);
   const session = env.DB.withSession("first-primary");
-  const existingRecord = await readStoredRecord(session, collection.tableName, primitiveFields, recordId);
+  const existingRecord = await readStoredRecord(session, collection.tableName, persistedFields, recordId);
 
   if (!existingRecord) {
     throw new CollectionRecordError("Record not found.", {
@@ -479,14 +481,14 @@ export async function updateCollectionRecord(
   const write = createWriteStatement(
     session,
     collection.tableName,
-    primitiveFields,
+    persistedFields,
     values,
     recordId,
   );
 
   await session.batch([write.statement]);
 
-  const record = await readStoredRecord(session, collection.tableName, primitiveFields, recordId);
+  const record = await readStoredRecord(session, collection.tableName, persistedFields, recordId);
 
   if (!record) {
     throw new CollectionRecordError("Record was updated but could not be reloaded.", {
@@ -506,10 +508,10 @@ export async function deleteCollectionRecord(
   collectionName: string,
   recordId: string,
 ) {
-  const { collection, primitiveFields, supportedFieldNames } =
+  const { collection, persistedFields, supportedFieldNames } =
     await resolveCollectionRecordContext(env, collectionName);
   const session = env.DB.withSession("first-primary");
-  const existingRecord = await readStoredRecord(session, collection.tableName, primitiveFields, recordId);
+  const existingRecord = await readStoredRecord(session, collection.tableName, persistedFields, recordId);
 
   if (!existingRecord) {
     throw new CollectionRecordError("Record not found.", {
@@ -531,14 +533,14 @@ export async function deleteCollectionRecord(
 function formatGeneratedCollectionCrudRoute(
   collection: StoredCollectionDefinition,
 ): GeneratedCollectionCrudRoute {
-  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+  const persistedFields = collection.definition.fields.filter(isRecordCrudFieldDefinition);
 
   return {
     collectionName: collection.definition.name,
     label: collection.definition.label,
     recordItemPath: createGeneratedRecordItemPath(collection.definition.name),
     recordsPath: createGeneratedRecordsPath(collection.definition.name),
-    supportedFieldNames: listPrimitiveFieldTypes(primitiveFields),
+    supportedFieldNames: listPersistedFieldTypes(persistedFields),
     tableName: collection.tableName,
   };
 }
@@ -546,14 +548,14 @@ function formatGeneratedCollectionCrudRoute(
 function formatPublicCollectionCrudRoute(
   collection: StoredCollectionDefinition,
 ): PublicCollectionCrudRoute {
-  const primitiveFields = collection.definition.fields.filter(isPrimitiveRecordFieldDefinition);
+  const persistedFields = collection.definition.fields.filter(isRecordCrudFieldDefinition);
 
   return {
     collectionName: collection.definition.name,
     label: collection.definition.label,
     recordItemPath: createPublicGeneratedRecordItemPath(collection.definition.name),
     recordsPath: createPublicGeneratedRecordsPath(collection.definition.name),
-    supportedFieldNames: listPrimitiveFieldTypes(primitiveFields),
+    supportedFieldNames: listPersistedFieldTypes(persistedFields),
   };
 }
 
@@ -573,7 +575,7 @@ export async function getPublicCollectionCrudRoute(
   env: ApiBindings,
   collectionName: string,
 ): Promise<PublicCollectionCrudRoute> {
-  const { collection, primitiveFields } = await resolveCollectionRecordContext(
+  const { collection, persistedFields } = await resolveCollectionRecordContext(
     env,
     collectionName,
   );
@@ -583,7 +585,7 @@ export async function getPublicCollectionCrudRoute(
     label: collection.definition.label,
     recordItemPath: createPublicGeneratedRecordItemPath(collection.definition.name),
     recordsPath: createPublicGeneratedRecordsPath(collection.definition.name),
-    supportedFieldNames: listPrimitiveFieldTypes(primitiveFields),
+    supportedFieldNames: listPersistedFieldTypes(persistedFields),
   };
 }
 

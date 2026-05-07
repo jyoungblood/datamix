@@ -614,6 +614,102 @@ button.admin-nav-item {
   align-content: start;
 }
 
+.markdown-field {
+  gap: 0.75rem;
+}
+
+.markdown-field-header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.markdown-field-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+}
+
+.markdown-field-panel {
+  align-content: start;
+}
+
+.markdown-preview-panel {
+  min-height: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(73, 54, 24, 0.18);
+  border-radius: 14px;
+  background: rgba(250, 246, 238, 0.92);
+}
+
+.markdown-preview-empty {
+  margin: 0;
+  color: #6d5a40;
+  line-height: 1.6;
+}
+
+.markdown-preview-content {
+  display: grid;
+  gap: 0.9rem;
+  color: #2f281d;
+}
+
+.markdown-preview-content h1,
+.markdown-preview-content h2,
+.markdown-preview-content h3,
+.markdown-preview-content p,
+.markdown-preview-content blockquote,
+.markdown-preview-content ul,
+.markdown-preview-content ol {
+  margin: 0;
+}
+
+.markdown-preview-content h1 {
+  font-size: 1.35rem;
+}
+
+.markdown-preview-content h2 {
+  font-size: 1.15rem;
+}
+
+.markdown-preview-content h3 {
+  font-size: 1rem;
+}
+
+.markdown-preview-content p,
+.markdown-preview-content li,
+.markdown-preview-content blockquote {
+  line-height: 1.7;
+}
+
+.markdown-preview-content ul,
+.markdown-preview-content ol {
+  padding-left: 1.25rem;
+}
+
+.markdown-preview-content blockquote {
+  padding-left: 0.85rem;
+  border-left: 3px solid rgba(160, 111, 33, 0.28);
+  color: #5c4a31;
+}
+
+.markdown-preview-content code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(54, 36, 15, 0.08);
+  font-size: 0.9em;
+}
+
+.markdown-preview-code {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: #2c241a;
+  color: #fffaf0;
+  overflow: auto;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
 .code-block {
   margin: 1rem 0 0;
   padding: 1rem;
@@ -697,6 +793,10 @@ button.admin-nav-item {
   }
 
   .generated-record-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .markdown-field-grid {
     grid-template-columns: 1fr;
   }
 

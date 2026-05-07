@@ -15,6 +15,12 @@ export type DatamixFieldType = (typeof datamixFieldTypes)[number];
 export const datamixPrimitiveRecordFieldTypes = ["text", "number", "boolean"] as const;
 export type DatamixPrimitiveRecordFieldType =
   (typeof datamixPrimitiveRecordFieldTypes)[number];
+export const datamixRecordCrudFieldTypes = [
+  ...datamixPrimitiveRecordFieldTypes,
+  "markdown",
+] as const;
+export type DatamixRecordCrudFieldType =
+  (typeof datamixRecordCrudFieldTypes)[number];
 
 export type DatamixSelectOption = {
   label: string;
@@ -63,6 +69,10 @@ export type DatamixPrimitiveRecordFieldDefinition =
   | DatamixTextFieldDefinition
   | DatamixNumberFieldDefinition
   | DatamixBooleanFieldDefinition;
+
+export type DatamixRecordCrudFieldDefinition =
+  | DatamixPrimitiveRecordFieldDefinition
+  | DatamixMarkdownFieldDefinition;
 
 export type DatamixCollectionDefinition = {
   name: string;
@@ -437,6 +447,12 @@ export function isPrimitiveRecordFieldDefinition(
   return datamixPrimitiveRecordFieldTypes.includes(
     field.type as DatamixPrimitiveRecordFieldType,
   );
+}
+
+export function isRecordCrudFieldDefinition(
+  field: DatamixFieldDefinition,
+): field is DatamixRecordCrudFieldDefinition {
+  return datamixRecordCrudFieldTypes.includes(field.type as DatamixRecordCrudFieldType);
 }
 
 export function validateCollectionDefinition(
