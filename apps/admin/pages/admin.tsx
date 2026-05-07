@@ -1596,13 +1596,13 @@ export default function AdminPage() {
     : null;
   const selectedMediaOriginalUrl = selectedFilteredMediaAsset
     ? createMediaObjectUrl(
-        adminPublicEnv.NEXT_PUBLIC_API_ORIGIN,
+        adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN,
         selectedFilteredMediaAsset.storageKey,
       )
     : null;
   const selectedMediaTransformUrl = selectedFilteredMediaAsset
     ? createMediaObjectUrl(
-        adminPublicEnv.NEXT_PUBLIC_API_ORIGIN,
+        adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN,
         selectedFilteredMediaAsset.storageKey,
         {
           fit: "cover",
@@ -3270,6 +3270,8 @@ export default function AdminPage() {
                         Stored metadata and delivery URLs for the selected asset. The
                         Worker route serves originals directly from R2 and can apply
                         resize, crop, format, and compression parameters on demand.
+                        Datamix now points those URLs at the configured media origin
+                        when one is available.
                       </p>
                       <dl className="detail-list">
                         <div>
@@ -3413,6 +3415,10 @@ export default function AdminPage() {
                 <div>
                   <dt>API origin</dt>
                   <dd>{adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}</dd>
+                </div>
+                <div>
+                  <dt>Media origin</dt>
+                  <dd>{adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN}</dd>
                 </div>
                 <div>
                   <dt>Auth posture</dt>

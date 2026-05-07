@@ -1,6 +1,7 @@
 import {
   datamixEnvironments,
   defaultApiRuntimeEnv,
+  normalizeDatamixOrigin,
   type ApiRuntimeEnv,
   type DatamixEnvironment,
 } from "@datamix/core";
@@ -11,6 +12,7 @@ export type ApiBindings = Pick<
   | "APP_ENV"
   | "BETTER_AUTH_SECRET"
   | "DB"
+  | "MEDIA_PUBLIC_ORIGIN"
   | "PUBLIC_API_READ_ACCESS"
   | "PUBLIC_API_WRITE_ACCESS"
   | "PUBLIC_API_READ_KEY"
@@ -69,6 +71,16 @@ function readOptionalSecret(value: string | undefined) {
   return trimmed ? trimmed : null;
 }
 
+function readOptionalOrigin(value: string | undefined, envName: string) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return normalizeDatamixOrigin(trimmed, envName);
+}
+
 function readEnumValue<TValue extends string>(
   value: string | undefined,
   allowedValues: readonly TValue[],
@@ -92,10 +104,14 @@ function readEnumValue<TValue extends string>(
 
 export function readApiRuntime(env: ApiBindings): ApiRuntimeEnv {
   return {
-    ADMIN_ORIGIN: env.ADMIN_ORIGIN,
+    ADMIN_ORIGIN: normalizeDatamixOrigin(env.ADMIN_ORIGIN, "ADMIN_ORIGIN"),
     APP_ENV: isDatamixEnvironment(env.APP_ENV)
       ? env.APP_ENV
       : defaultApiRuntimeEnv.APP_ENV,
+    MEDIA_PUBLIC_ORIGIN: readOptionalOrigin(
+      env.MEDIA_PUBLIC_ORIGIN,
+      "MEDIA_PUBLIC_ORIGIN",
+    ),
   };
 }
 
