@@ -13,6 +13,7 @@ import {
   type DatamixAuthorizationSummary,
   type DatamixApiKeyAccessLevel,
   type DatamixApiKeySummary,
+  type DatamixAuthProviderStatus,
   type DatamixFieldDefinition,
   type DatamixFieldType,
   type DatamixMediaAsset,
@@ -1390,6 +1391,17 @@ function formatPublicApiAccessMode(value: PublicApiRuntimeSummary["readAccess"] 
       return "API key";
     case "disabled":
       return "Disabled";
+  }
+}
+
+function formatAuthProviderStatus(status: DatamixAuthProviderStatus) {
+  switch (status) {
+    case "enabled":
+      return "Enabled";
+    case "disabled":
+      return "Not configured";
+    case "incomplete":
+      return "Needs both values";
   }
 }
 
@@ -4581,6 +4593,39 @@ export default function AdminPage() {
                       <dd>Persisted better-auth session on the API Worker origin</dd>
                     </div>
                   </dl>
+
+                  {setupStatus.oauth ? (
+                    <div className="section-stack">
+                      <div>
+                        <h4 className="section-title">Optional OAuth sign-in</h4>
+                        <p className="section-copy">
+                          GitHub and Google stay optional. Datamix only uses them for
+                          existing or invited users, so password auth remains the baseline
+                          sign-in path.
+                        </p>
+                      </div>
+
+                      <div className="mini-list">
+                        {setupStatus.oauth.providers.map((provider) => (
+                          <div
+                            className="mini-list-item mini-list-item-stacked"
+                            key={provider.id}
+                          >
+                            <div className="mini-list-content">
+                              <strong>{provider.label}</strong>
+                              <small>{provider.message}</small>
+                            </div>
+
+                            <div className="status-row status-row-compact">
+                              <span className="status-pill">
+                                {formatAuthProviderStatus(provider.status)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="section-stack">
                     <div className="section-row">

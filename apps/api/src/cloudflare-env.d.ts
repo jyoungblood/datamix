@@ -10,6 +10,10 @@ declare global {
     AUTH_EMAIL_FROM_EMAIL?: string;
     AUTH_EMAIL_FROM_NAME?: string;
     AUTH_EMAIL_REPLY_TO_EMAIL?: string;
+    AUTH_GITHUB_CLIENT_ID?: string;
+    AUTH_GITHUB_CLIENT_SECRET?: string;
+    AUTH_GOOGLE_CLIENT_ID?: string;
+    AUTH_GOOGLE_CLIENT_SECRET?: string;
     AUTH_RESEND_API_KEY?: string;
     AUTH_SMTP_HOST?: string;
     AUTH_SMTP_PORT?: string;

@@ -58,9 +58,32 @@ export type AuthSetupStatus = {
 
 export const authEmailProviders = ["smtp", "resend"] as const;
 export const authEmailTemplates = ["invite", "reset-password"] as const;
+export const datamixAuthProviderDefinitions = [
+  {
+    id: "github",
+    label: "GitHub",
+  },
+  {
+    id: "google",
+    label: "Google",
+  },
+] as const;
+export const datamixAuthProviderStatuses = ["enabled", "disabled", "incomplete"] as const;
 
 export type AuthEmailProvider = (typeof authEmailProviders)[number];
 export type AuthEmailTemplate = (typeof authEmailTemplates)[number];
+export type DatamixAuthProviderId = (typeof datamixAuthProviderDefinitions)[number]["id"];
+export type DatamixAuthProviderStatus = (typeof datamixAuthProviderStatuses)[number];
+export type DatamixAuthProviderSummary = {
+  enabled: boolean;
+  id: DatamixAuthProviderId;
+  label: string;
+  message: string;
+  status: DatamixAuthProviderStatus;
+};
+export type DatamixAuthRuntimeSummary = {
+  providers: DatamixAuthProviderSummary[];
+};
 
 export const defaultAdminPublicEnv: AdminPublicEnv = {
   NEXT_PUBLIC_API_ORIGIN: "http://127.0.0.1:8787",

@@ -1,21 +1,25 @@
-import type { AuthSetupStatus } from "@datamix/core";
+import type { AuthSetupStatus, DatamixAuthRuntimeSummary } from "@datamix/core";
 import { useEffect, useState } from "react";
 
 import { adminPublicEnv } from "./runtime";
 
+export type AuthSetupRuntime = {
+  oauth: DatamixAuthRuntimeSummary;
+  setup: AuthSetupStatus;
+};
+
 type SetupStatusResponse = {
-  auth: {
-    setup: AuthSetupStatus;
-  };
+  auth: AuthSetupRuntime;
 };
 
 type SetupStatusState = {
   data: AuthSetupStatus | null;
   errorMessage: string | null;
   isPending: boolean;
+  oauth: DatamixAuthRuntimeSummary | null;
 };
 
-export async function fetchSetupStatus() {
+export async function fetchSetupRuntime() {
   const response = await fetch(`${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/setup/status`, {
     credentials: "include",
   });
@@ -30,7 +34,11 @@ export async function fetchSetupStatus() {
 
   const body = (await response.json()) as SetupStatusResponse;
 
-  return body.auth.setup;
+  return body.auth;
+}
+
+export async function fetchSetupStatus() {
+  return (await fetchSetupRuntime()).setup;
 }
 
 export function useSetupStatus() {
@@ -38,6 +46,7 @@ export function useSetupStatus() {
     data: null,
     errorMessage: null,
     isPending: true,
+    oauth: null,
   });
 
   useEffect(() => {
@@ -45,16 +54,17 @@ export function useSetupStatus() {
 
     async function load() {
       try {
-        const data = await fetchSetupStatus();
+        const auth = await fetchSetupRuntime();
 
         if (isCancelled) {
           return;
         }
 
         setState({
-          data,
+          data: auth.setup,
           errorMessage: null,
           isPending: false,
+          oauth: auth.oauth,
         });
       } catch (error) {
         if (isCancelled) {
@@ -65,6 +75,7 @@ export function useSetupStatus() {
           data: null,
           errorMessage: error instanceof Error ? error.message : "Unable to load setup status.",
           isPending: false,
+          oauth: null,
         });
       }
     }

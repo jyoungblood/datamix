@@ -1,6 +1,6 @@
 # Datamix v0 Roadmap and Progress Tracker
 
-Last updated: 2026-05-05
+Last updated: 2026-05-07
 Source of truth: [Datamix-PRD-revised.md](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.md)
 
 ## Summary
@@ -96,10 +96,10 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M2 Collections as Schema + Edit Form | 6 | 0 | 0 | 0 | 6 | 0 |
 | M3 Content API and Editor Depth | 6 | 0 | 0 | 0 | 6 | 0 |
 | M4 Media Pipeline | 6 | 0 | 0 | 0 | 6 | 0 |
-| M5 RBAC, Invites, and API Keys | 6 | 0 | 0 | 0 | 6 | 0 |
+| M5 RBAC, Invites, and API Keys | 6 | 6 | 0 | 0 | 0 | 0 |
 | M6 Global UX and Launch Hardening | 6 | 0 | 0 | 0 | 6 | 0 |
 | M7 v1 Parking Lot Preparation | 3 | 0 | 0 | 0 | 3 | 0 |
-| Total | 42 | 0 | 0 | 1 | 41 | 0 |
+| Total | 42 | 6 | 0 | 1 | 35 | 0 |
 
 ## Milestones
 
@@ -110,7 +110,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M2 | Users can define a collection once and immediately get storage structure plus a record edit UI | Schema model, D1 changes, schema builder, generated edit forms, and record CRUD exist | `planned` |
 | M3 | Datamix behaves like a usable content backend | Generated REST API, auth hooks, richer editors, and content UX depth exist | `planned` |
 | M4 | Media works end to end through records and a central library | Uploads, asset metadata, media UI, gallery UX, and transforms are working | `planned` |
-| M5 | Multi-user access control is production-shaped | Roles, permission enforcement, invites, API keys, and optional OAuth exist | `planned` |
+| M5 | Multi-user access control is production-shaped | Roles, permission enforcement, invites, API keys, and optional OAuth exist | `done` |
 | M6 | The app feels coherent and launch-ready | Command palette, navigation polish, hardening, smoke coverage, docs, and bootstrap path exist | `planned` |
 | M7 | v1 work is clearly deferred without contaminating v0 | Deferred epics are documented and v0 cut line is enforced | `planned` |
 
@@ -145,12 +145,12 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M4-S4 | M4 | Gallery ordering UX | Add gallery ordering interactions | M4-S3 | Drag-and-drop gallery ordering | Editors can reorder images and saved order persists | `planned` | Keep interactions straightforward and predictable |
 | M4-S5 | M4 | Worker image transforms | Implement Worker routes for resize, compress, and crop | M4-S1 | Media transform routes and URL contract | Requested transforms are served through Worker-managed R2 routes | `planned` | Do not use Cloudflare Image Resizing service |
 | M4-S6 | M4 | Custom-domain media support | Add custom-domain media URL configuration support | M4-S1, M4-S5 | Config path and URL generation rules | Media URLs can resolve through configured custom domain | `planned` | Treat this as configuration, not a second storage system |
-| M5-S1 | M5 | Role and permission model | Define role/permission model for collections, records, media, users, and settings | M1-S2, M2-S1 | Shared RBAC model and permission matrix | Permission model is explicit and usable by both API and UI | `planned` | Keep model granular enough for v0 without overfitting |
-| M5-S2 | M5 | Permission enforcement | Enforce permissions in API middleware and admin guards | M5-S1, M3-S2 | Shared enforcement layer | Unauthorized actions are blocked consistently in UI and API | `planned` | Centralize checks to avoid drift |
-| M5-S3 | M5 | Role management UI | Build role management UI and permission editing UX | M5-S1, M5-S2 | Roles screens and editing flows | Admin can create and edit roles with understandable permission controls | `planned` | Favor legibility over dense matrices |
-| M5-S4 | M5 | Invite-based onboarding | Implement invite-based onboarding flow | M1-S4, M5-S2 | Invite creation, acceptance, and membership flow | Invited users can join with assigned role and correct access | `planned` | Align with persistent auth/session model |
-| M5-S5 | M5 | API key management | Add API key creation, revocation, and access-level management | M3-S2, M5-S2 | API key UI and backend lifecycle support | Admin can create, revoke, and constrain API keys by access level | `planned` | Record one-time secret display behavior clearly |
-| M5-S6 | M5 | Optional OAuth providers | Add optional GitHub and Google OAuth configuration | M1-S2, M1-S4 | OAuth provider setup and auth flows | OAuth can be enabled with user-supplied credentials without breaking password auth | `planned` | Keep this optional and isolated |
+| M5-S1 | M5 | Role and permission model | Define role/permission model for collections, records, media, users, and settings | M1-S2, M2-S1 | Shared RBAC model and permission matrix | Permission model is explicit and usable by both API and UI | `done` | Keep model granular enough for v0 without overfitting |
+| M5-S2 | M5 | Permission enforcement | Enforce permissions in API middleware and admin guards | M5-S1, M3-S2 | Shared enforcement layer | Unauthorized actions are blocked consistently in UI and API | `done` | Centralize checks to avoid drift |
+| M5-S3 | M5 | Role management UI | Build role management UI and permission editing UX | M5-S1, M5-S2 | Roles screens and editing flows | Admin can create and edit roles with understandable permission controls | `done` | Favor legibility over dense matrices |
+| M5-S4 | M5 | Invite-based onboarding | Implement invite-based onboarding flow | M1-S4, M5-S2 | Invite creation, acceptance, and membership flow | Invited users can join with assigned role and correct access | `done` | Align with persistent auth/session model |
+| M5-S5 | M5 | API key management | Add API key creation, revocation, and access-level management | M3-S2, M5-S2 | API key UI and backend lifecycle support | Admin can create, revoke, and constrain API keys by access level | `done` | Record one-time secret display behavior clearly |
+| M5-S6 | M5 | Optional OAuth providers | Add optional GitHub and Google OAuth configuration | M1-S2, M1-S4 | OAuth provider setup and auth flows | OAuth can be enabled with user-supplied credentials without breaking password auth | `done` | Keep this optional and isolated |
 | M6-S1 | M6 | Command palette | Implement command palette for collections, records, and admin actions | M2-S6, M3-S1 | Palette UI and command indexing | Users can navigate core objects and actions with Cmd+K | `planned` | Prioritize speed and clarity over long-tail commands |
 | M6-S2 | M6 | Collection-first navigation polish | Refine sidebar and navigation behavior around collection-first usage | M2-S6, M6-S1 | Navigation refinements | Daily admin navigation feels coherent and low-friction | `planned` | Preserve the product's minimal, content-first feel |
 | M6-S3 | M6 | Session and failure hardening | Harden session restoration, auth edge cases, and retry/loading behavior | M1-S2, M1-S3, M3-S6 | Reliability fixes and recovery UX | Session handling and recoverable failures behave predictably | `planned` | Especially important for first-run trust |

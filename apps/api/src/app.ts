@@ -220,7 +220,9 @@ app.use("/api-keys/*", async (c, next) => {
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   return runWithExecutionContext(c.executionCtx, () => {
     try {
-      return createAuth(c.env).handler(c.req.raw);
+      return createAuth(c.env, {
+        baseURL: new URL(c.req.url).origin,
+      }).handler(c.req.raw);
     } catch (error) {
       if (error instanceof AuthConfigError) {
         return c.json({ error: error.message }, 503);

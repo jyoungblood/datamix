@@ -27,12 +27,35 @@ function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
-export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
+export function createAuthOptions(
+  env: ApiBindings,
+  options?: {
+    baseURL?: string;
+  },
+): BetterAuthOptions {
   const authRuntime = readApiAuthRuntime(env);
+  const socialProviders: NonNullable<BetterAuthOptions["socialProviders"]> = {};
+
+  if (authRuntime.socialProviders.github) {
+    socialProviders.github = {
+      clientId: authRuntime.socialProviders.github.clientId,
+      clientSecret: authRuntime.socialProviders.github.clientSecret,
+      disableImplicitSignUp: true,
+    };
+  }
+
+  if (authRuntime.socialProviders.google) {
+    socialProviders.google = {
+      clientId: authRuntime.socialProviders.google.clientId,
+      clientSecret: authRuntime.socialProviders.google.clientSecret,
+      disableImplicitSignUp: true,
+    };
+  }
 
   return {
     appName: datamixProduct.name,
     basePath: datamixAuthPath,
+    ...(options?.baseURL ? { baseURL: options.baseURL } : {}),
     secret: authRuntime.BETTER_AUTH_SECRET,
     database: env.DB,
     trustedOrigins: [env.ADMIN_ORIGIN],
@@ -84,6 +107,7 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
         },
       },
     },
+    ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
     advanced: {
       backgroundTasks: {
         handler(promise) {
@@ -128,8 +152,13 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
   };
 }
 
-export function createAuth(env: ApiBindings) {
-  return betterAuth(createAuthOptions(env));
+export function createAuth(
+  env: ApiBindings,
+  options?: {
+    baseURL?: string;
+  },
+) {
+  return betterAuth(createAuthOptions(env, options));
 }
 
 export async function runAuthMigrations(env: ApiBindings) {
@@ -144,6 +173,7 @@ export async function runAuthMigrations(env: ApiBindings) {
 }
 
 export async function getAuthSetupStatus(env: ApiBindings) {
+  const authRuntime = readApiAuthRuntime(env);
   const migration = await runAuthMigrations(env);
   const auth = createAuth(env);
   const context = await auth.$context;
@@ -151,6 +181,7 @@ export async function getAuthSetupStatus(env: ApiBindings) {
 
   return {
     migration,
+    oauth: authRuntime.oauth,
     setup: createAuthSetupStatus(userCount),
   };
 }

@@ -1,7 +1,10 @@
 import {
+  datamixAuthProviderDefinitions,
   datamixEnvironments,
   defaultApiRuntimeEnv,
   normalizeDatamixOrigin,
+  type DatamixAuthProviderSummary,
+  type DatamixAuthRuntimeSummary,
   type ApiRuntimeEnv,
   type DatamixEnvironment,
 } from "@datamix/core";
@@ -21,6 +24,10 @@ export type ApiBindings = Pick<
   | "AUTH_EMAIL_FROM_EMAIL"
   | "AUTH_EMAIL_FROM_NAME"
   | "AUTH_EMAIL_REPLY_TO_EMAIL"
+  | "AUTH_GITHUB_CLIENT_ID"
+  | "AUTH_GITHUB_CLIENT_SECRET"
+  | "AUTH_GOOGLE_CLIENT_ID"
+  | "AUTH_GOOGLE_CLIENT_SECRET"
   | "AUTH_RESEND_API_KEY"
   | "AUTH_SMTP_HOST"
   | "AUTH_SMTP_PORT"
@@ -32,6 +39,17 @@ export type ApiBindings = Pick<
 
 export type ApiAuthRuntimeEnv = {
   BETTER_AUTH_SECRET: string;
+  oauth: DatamixAuthRuntimeSummary;
+  socialProviders: {
+    github: {
+      clientId: string;
+      clientSecret: string;
+    } | null;
+    google: {
+      clientId: string;
+      clientSecret: string;
+    } | null;
+  };
 };
 
 export const publicApiReadAccessModes = ["public", "api-key", "disabled"] as const;
@@ -72,7 +90,7 @@ function isDatamixEnvironment(value: string): value is DatamixEnvironment {
   return datamixEnvironments.includes(value as DatamixEnvironment);
 }
 
-function readOptionalSecret(value: string | undefined) {
+function readOptionalValue(value: string | undefined) {
   const trimmed = value?.trim();
 
   return trimmed ? trimmed : null;
@@ -86,6 +104,53 @@ function readOptionalOrigin(value: string | undefined, envName: string) {
   }
 
   return normalizeDatamixOrigin(trimmed, envName);
+}
+
+function createOAuthProviderSummary(
+  provider: (typeof datamixAuthProviderDefinitions)[number],
+  clientId: string | null,
+  clientSecret: string | null,
+): DatamixAuthProviderSummary {
+  if (clientId && clientSecret) {
+    return {
+      enabled: true,
+      id: provider.id,
+      label: provider.label,
+      message: `${provider.label} sign-in is available on the Datamix login screen.`,
+      status: "enabled",
+    };
+  }
+
+  if (!clientId && !clientSecret) {
+    return {
+      enabled: false,
+      id: provider.id,
+      label: provider.label,
+      message: `Add both ${provider.label} OAuth credentials to enable this provider.`,
+      status: "disabled",
+    };
+  }
+
+  return {
+    enabled: false,
+    id: provider.id,
+    label: provider.label,
+    message: clientId
+      ? `${provider.label} client ID is set, but the client secret is still missing.`
+      : `${provider.label} client secret is set, but the client ID is still missing.`,
+    status: "incomplete",
+  };
+}
+
+function readConfiguredOAuthProvider(clientId: string | null, clientSecret: string | null) {
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  return {
+    clientId,
+    clientSecret,
+  };
 }
 
 function readEnumValue<TValue extends string>(
@@ -124,6 +189,10 @@ export function readApiRuntime(env: ApiBindings): ApiRuntimeEnv {
 
 export function readApiAuthRuntime(env: ApiBindings): ApiAuthRuntimeEnv {
   const secret = env.BETTER_AUTH_SECRET?.trim();
+  const githubClientId = readOptionalValue(env.AUTH_GITHUB_CLIENT_ID);
+  const githubClientSecret = readOptionalValue(env.AUTH_GITHUB_CLIENT_SECRET);
+  const googleClientId = readOptionalValue(env.AUTH_GOOGLE_CLIENT_ID);
+  const googleClientSecret = readOptionalValue(env.AUTH_GOOGLE_CLIENT_SECRET);
 
   if (!secret) {
     throw new AuthConfigError(
@@ -133,6 +202,24 @@ export function readApiAuthRuntime(env: ApiBindings): ApiAuthRuntimeEnv {
 
   return {
     BETTER_AUTH_SECRET: secret,
+    oauth: {
+      providers: [
+        createOAuthProviderSummary(
+          datamixAuthProviderDefinitions[0],
+          githubClientId,
+          githubClientSecret,
+        ),
+        createOAuthProviderSummary(
+          datamixAuthProviderDefinitions[1],
+          googleClientId,
+          googleClientSecret,
+        ),
+      ],
+    },
+    socialProviders: {
+      github: readConfiguredOAuthProvider(githubClientId, githubClientSecret),
+      google: readConfiguredOAuthProvider(googleClientId, googleClientSecret),
+    },
   };
 }
 
@@ -149,8 +236,8 @@ export function readPublicApiRuntime(env: ApiBindings): PublicApiRuntimeEnv {
     "PUBLIC_API_WRITE_ACCESS",
     "disabled",
   );
-  const readKey = readOptionalSecret(env.PUBLIC_API_READ_KEY);
-  const writeKey = readOptionalSecret(env.PUBLIC_API_WRITE_KEY);
+  const readKey = readOptionalValue(env.PUBLIC_API_READ_KEY);
+  const writeKey = readOptionalValue(env.PUBLIC_API_WRITE_KEY);
 
   return {
     readAccess,
