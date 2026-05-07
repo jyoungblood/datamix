@@ -3,8 +3,10 @@ import {
   createMediaObjectUrl,
   datamixRolePresets,
   datamixFieldTypes,
+  getDatamixPermissionActionDefinition,
   isRecordCrudFieldDefinition,
-  listDatamixPermissionResourcesForRole,
+  listDatamixPermissionGrantsForRole,
+  readDatamixRoleId,
   resolveDatamixRolePreset,
   type DatamixCollectionDefinition,
   type DatamixFieldDefinition,
@@ -76,7 +78,7 @@ const shellCapabilities = [
 
 const rolePresetPreviewItems = datamixRolePresets.map((role) => ({
   ...role,
-  resources: listDatamixPermissionResourcesForRole(role),
+  grants: listDatamixPermissionGrantsForRole(role),
 }));
 
 const overviewSectionId = "overview";
@@ -1275,16 +1277,6 @@ function jumpToSection(sectionId: string) {
   window.history.replaceState(null, "", `#${sectionId}`);
 }
 
-function readSessionUserRole(
-  sessionData: NonNullable<ReturnType<typeof authClient.useSession>["data"]>,
-) {
-  const user = sessionData.user as typeof sessionData.user & {
-    role?: string | null;
-  };
-
-  return typeof user.role === "string" ? user.role : null;
-}
-
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
@@ -1330,7 +1322,7 @@ export default function AdminPage() {
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
   const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
-  const sessionUserRole = session.data ? readSessionUserRole(session.data) : null;
+  const sessionUserRole = session.data ? readDatamixRoleId(session.data.user) : null;
   const sessionRole = session.data
     ? resolveDatamixRolePreset(sessionUserRole, "administrator")
     : null;
@@ -3603,10 +3595,16 @@ export default function AdminPage() {
                         <span className="status-pill">
                           {role.permissions.length} permissions
                         </span>
-                        {role.resources.map((resource) => (
-                          <span className="status-pill status-pill-muted" key={resource.id}>
-                            {resource.label}
-                          </span>
+                      </div>
+
+                      <div className="section-stack">
+                        {role.grants.map((grant) => (
+                          <p className="helper-text" key={`${role.id}-${grant.resource.id}`}>
+                            <strong>{grant.resource.label}:</strong>{" "}
+                            {grant.actions
+                              .map((action) => getDatamixPermissionActionDefinition(action).label)
+                              .join(", ")}
+                          </p>
                         ))}
                       </div>
                     </div>

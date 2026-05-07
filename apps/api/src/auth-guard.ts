@@ -1,5 +1,6 @@
 import {
   createDatamixAuthorizationSummary,
+  readDatamixRoleId,
   type DatamixAuthorizationSummary,
   type DatamixPermissionKey,
 } from "@datamix/core";
@@ -26,9 +27,7 @@ function isBetterAuthError(error: unknown): error is HTTPException {
   return typeof error === "object" && error !== null && "getResponse" in error;
 }
 
-async function resolveAuthorizedSession(
-  c: ApiAuthRequestContext,
-) {
+async function resolveAuthorizedSession(c: ApiAuthRequestContext) {
   try {
     const session = await createAuth(c.env).api.getSession({
       headers: c.req.raw.headers,
@@ -42,7 +41,7 @@ async function resolveAuthorizedSession(
     }
 
     const authorization = createDatamixAuthorizationSummary(
-      readSessionUserRole(session),
+      readDatamixRoleId(session.user),
       "administrator",
     );
 
@@ -95,15 +94,6 @@ export function forbidMissingPermission(
     403,
   );
 }
-
-function readSessionUserRole(session: DatamixSession) {
-  const user = session.user as DatamixSession["user"] & {
-    role?: string | null;
-  };
-
-  return typeof user.role === "string" ? user.role : null;
-}
-
 export const requireSession = createMiddleware<ApiAuthContext>(async (c, next) => {
   const resolvedSession = await resolveAuthorizedSession(c);
 
