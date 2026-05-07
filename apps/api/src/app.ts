@@ -4,7 +4,11 @@ import { cors } from "hono/cors";
 import { Hono } from "hono";
 
 import { createAuth, getAuthSetupStatus } from "./auth";
-import { requireSession } from "./auth-guard";
+import {
+  forbidMissingPermission,
+  requirePermission,
+  requireSession,
+} from "./auth-guard";
 import {
   CollectionSchemaError,
   formatCollectionDefinitionResponse,
@@ -434,11 +438,12 @@ app.get("/setup/status", async (c) => {
 app.get("/session", requireSession, (c) => {
   return c.json({
     ...createServiceStatus("api"),
+    authorization: c.get("authorization"),
     session: c.get("session"),
   });
 });
 
-app.post("/invites", requireSession, async (c) => {
+app.post("/invites", requirePermission("users.invite"), async (c) => {
   const body = await c.req.json();
   const parsed = inviteRequestSchema.safeParse(body);
 
@@ -476,7 +481,7 @@ app.post("/invites", requireSession, async (c) => {
   }
 });
 
-app.get("/media/assets", requireSession, async (c) => {
+app.get("/media/assets", requirePermission("media.read"), async (c) => {
   try {
     const assets = await listMediaAssets(c.env);
 
@@ -494,7 +499,7 @@ app.get("/media/assets", requireSession, async (c) => {
   }
 });
 
-app.post("/media/assets", requireSession, async (c) => {
+app.post("/media/assets", requirePermission("media.upload"), async (c) => {
   const contentType = c.req.header("content-type") ?? "";
 
   if (!contentType.toLowerCase().includes("multipart/form-data")) {
@@ -559,7 +564,7 @@ app.get("/media/object/*", async (c) => {
   }
 });
 
-app.get("/collection-definitions", requireSession, async (c) => {
+app.get("/collection-definitions", requirePermission("collections.read"), async (c) => {
   try {
     const collections = await listCollectionDefinitions(c.env);
 
@@ -587,7 +592,7 @@ app.get("/collection-definitions", requireSession, async (c) => {
   }
 });
 
-app.get("/collection-definitions/:name", requireSession, async (c) => {
+app.get("/collection-definitions/:name", requirePermission("collections.read"), async (c) => {
   try {
     const collection = await getCollectionDefinition(c.env, c.req.param("name"));
 
@@ -644,6 +649,16 @@ app.put("/collection-definitions/:name", requireSession, async (c) => {
   }
 
   try {
+    const existingCollection = await getCollectionDefinition(c.env, c.req.param("name"));
+    const forbiddenResponse = forbidMissingPermission(
+      c,
+      existingCollection ? "collections.update" : "collections.create",
+    );
+
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
     const result = await saveCollectionDefinition(c.env, body);
 
     return c.json({
@@ -666,7 +681,7 @@ app.put("/collection-definitions/:name", requireSession, async (c) => {
   }
 });
 
-app.get("/collections", requireSession, async (c) => {
+app.get("/collections", requirePermission("collections.read"), async (c) => {
   try {
     const collections = await listGeneratedCollectionCrudRoutes(c.env);
 
@@ -690,7 +705,7 @@ app.get("/collections", requireSession, async (c) => {
   }
 });
 
-app.get("/collections/:name", requireSession, async (c) => {
+app.get("/collections/:name", requirePermission("collections.read"), async (c) => {
   try {
     const collection = await getCollectionDefinition(c.env, c.req.param("name"));
 
@@ -723,7 +738,7 @@ app.get("/collections/:name", requireSession, async (c) => {
   }
 });
 
-app.get("/collections/:name/records", requireSession, async (c) => {
+app.get("/collections/:name/records", requirePermission("records.read"), async (c) => {
   try {
     const result = await listCollectionRecords(c.env, c.req.param("name"));
 
@@ -754,7 +769,7 @@ app.get("/collections/:name/records", requireSession, async (c) => {
   }
 });
 
-app.post("/collections/:name/records", requireSession, async (c) => {
+app.post("/collections/:name/records", requirePermission("records.create"), async (c) => {
   let body: unknown;
 
   try {
@@ -794,7 +809,7 @@ app.post("/collections/:name/records", requireSession, async (c) => {
   }
 });
 
-app.get("/collections/:name/records/:id", requireSession, async (c) => {
+app.get("/collections/:name/records/:id", requirePermission("records.read"), async (c) => {
   try {
     const result = await getCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
 
@@ -825,7 +840,7 @@ app.get("/collections/:name/records/:id", requireSession, async (c) => {
   }
 });
 
-app.put("/collections/:name/records/:id", requireSession, async (c) => {
+app.put("/collections/:name/records/:id", requirePermission("records.update"), async (c) => {
   let body: unknown;
 
   try {
@@ -870,7 +885,7 @@ app.put("/collections/:name/records/:id", requireSession, async (c) => {
   }
 });
 
-app.delete("/collections/:name/records/:id", requireSession, async (c) => {
+app.delete("/collections/:name/records/:id", requirePermission("records.delete"), async (c) => {
   try {
     const result = await deleteCollectionRecord(c.env, c.req.param("name"), c.req.param("id"));
 
@@ -902,7 +917,7 @@ app.delete("/collections/:name/records/:id", requireSession, async (c) => {
   }
 });
 
-app.get("/records/:name", requireSession, async (c) => {
+app.get("/records/:name", requirePermission("records.read"), async (c) => {
   try {
     const result = await listCollectionRecords(c.env, c.req.param("name"));
 
@@ -932,7 +947,7 @@ app.get("/records/:name", requireSession, async (c) => {
   }
 });
 
-app.post("/records/:name", requireSession, async (c) => {
+app.post("/records/:name", requirePermission("records.create"), async (c) => {
   let body: unknown;
 
   try {
@@ -971,7 +986,7 @@ app.post("/records/:name", requireSession, async (c) => {
   }
 });
 
-app.put("/records/:name/:id", requireSession, async (c) => {
+app.put("/records/:name/:id", requirePermission("records.update"), async (c) => {
   let body: unknown;
 
   try {

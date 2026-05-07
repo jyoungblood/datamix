@@ -239,6 +239,12 @@ export type DatamixRoleAssignment = {
   roleId: string;
 };
 
+export type DatamixAuthorizationSummary = {
+  permissionMap: DatamixPermissionMap;
+  permissions: DatamixPermissionKey[];
+  role: DatamixRolePreset;
+};
+
 const datamixPermissionDefinitionMap = new Map(
   datamixPermissionDefinitions.map((permission) => [permission.key, permission] as const),
 );
@@ -388,6 +394,30 @@ export function listDatamixPermissionResourcesForRole(
 
 export function getDatamixRolePreset(roleId: DatamixRolePresetId) {
   return datamixRolePresetMap.get(roleId)!;
+}
+
+export function resolveDatamixRolePreset(
+  roleId: string | null | undefined,
+  fallbackRoleId: DatamixRolePresetId = "viewer",
+) {
+  if (roleId && isDatamixRolePresetId(roleId)) {
+    return getDatamixRolePreset(roleId);
+  }
+
+  return getDatamixRolePreset(fallbackRoleId);
+}
+
+export function createDatamixAuthorizationSummary(
+  roleId: string | null | undefined,
+  fallbackRoleId: DatamixRolePresetId = "viewer",
+): DatamixAuthorizationSummary {
+  const role = resolveDatamixRolePreset(roleId, fallbackRoleId);
+
+  return {
+    permissionMap: createDatamixPermissionMap(role.permissions),
+    permissions: [...role.permissions],
+    role,
+  };
 }
 
 export function hasDatamixPermission(

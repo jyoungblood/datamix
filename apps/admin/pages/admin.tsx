@@ -1,9 +1,11 @@
 import {
+  createDatamixAuthorizationSummary,
   createMediaObjectUrl,
   datamixRolePresets,
   datamixFieldTypes,
   isRecordCrudFieldDefinition,
   listDatamixPermissionResourcesForRole,
+  resolveDatamixRolePreset,
   type DatamixCollectionDefinition,
   type DatamixFieldDefinition,
   type DatamixFieldType,
@@ -1273,6 +1275,16 @@ function jumpToSection(sectionId: string) {
   window.history.replaceState(null, "", `#${sectionId}`);
 }
 
+function readSessionUserRole(
+  sessionData: NonNullable<ReturnType<typeof authClient.useSession>["data"]>,
+) {
+  const user = sessionData.user as typeof sessionData.user & {
+    role?: string | null;
+  };
+
+  return typeof user.role === "string" ? user.role : null;
+}
+
 export default function AdminPage() {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
@@ -1318,6 +1330,25 @@ export default function AdminPage() {
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = useState(false);
   const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const sessionUserRole = session.data ? readSessionUserRole(session.data) : null;
+  const sessionRole = session.data
+    ? resolveDatamixRolePreset(sessionUserRole, "administrator")
+    : null;
+  const sessionAuthorization = session.data
+    ? createDatamixAuthorizationSummary(sessionUserRole, "administrator")
+    : null;
+  const permissionMap = sessionAuthorization?.permissionMap ?? null;
+  const canViewCollections = permissionMap?.["collections.read"] ?? false;
+  const canCreateCollections = permissionMap?.["collections.create"] ?? false;
+  const canUpdateCollections = permissionMap?.["collections.update"] ?? false;
+  const canAccessCollectionBuilder =
+    canViewCollections || canCreateCollections || canUpdateCollections;
+  const canViewRecords = permissionMap?.["records.read"] ?? false;
+  const canCreateRecords = permissionMap?.["records.create"] ?? false;
+  const canUpdateRecords = permissionMap?.["records.update"] ?? false;
+  const canViewMedia = permissionMap?.["media.read"] ?? false;
+  const canUploadMedia = permissionMap?.["media.upload"] ?? false;
+  const canInviteUsers = permissionMap?.["users.invite"] ?? false;
 
   const loadCollections = async (options?: { refresh?: boolean }) => {
     const requestId = collectionLoadRequestId.current + 1;
@@ -1487,16 +1518,35 @@ export default function AdminPage() {
       return;
     }
 
+    if (!canViewCollections) {
+      setCollections([]);
+      setSelectedCollectionName(null);
+      setHasLoadedCollections(false);
+      setIsLoadingCollections(false);
+      setIsRefreshingCollections(false);
+      setCollectionLoadError(null);
+      return;
+    }
+
     void loadCollections();
-  }, [session.data]);
+  }, [canViewCollections, session.data]);
 
   useEffect(() => {
     if (!session.data) {
       return;
     }
 
+    if (!canViewMedia) {
+      setMediaAssets([]);
+      setSelectedMediaAssetId(null);
+      setIsLoadingMediaAssets(false);
+      setIsRefreshingMediaAssets(false);
+      setMediaLoadError(null);
+      return;
+    }
+
     void loadMediaAssets();
-  }, [session.data]);
+  }, [canViewMedia, session.data]);
 
   const activeCollection = collections.find(
     (collection) => collection.definition.name === selectedCollectionName,
@@ -1522,7 +1572,7 @@ export default function AdminPage() {
   }, [collections, isCreatingCollection, isLoadingCollections, selectedCollectionName]);
 
   useEffect(() => {
-    if (!activeCollection) {
+    if (!activeCollection || !canViewRecords) {
       recordLoadRequestId.current += 1;
       setRecords([]);
       setSelectedRecordId(null);
@@ -1542,7 +1592,7 @@ export default function AdminPage() {
     setRecordDraft(createGeneratedRecordFormState(activeDefinition));
 
     void loadRecords(activeCollection);
-  }, [activeCollection]);
+  }, [activeCollection, canViewRecords]);
 
   if (session.isPending || setupStatus.isPending) {
     return (
@@ -1577,6 +1627,9 @@ export default function AdminPage() {
   const userLabel = session.data.user.name || session.data.user.email;
   const isEditingExistingCollection =
     selectedCollectionName !== null && !isCreatingCollection;
+  const canSaveCurrentCollection = isEditingExistingCollection
+    ? canUpdateCollections
+    : canCreateCollections;
   const hasUnsavedSchemaChanges =
     activeCollection !== undefined &&
     JSON.stringify(activeCollection.definition) !== JSON.stringify(serializeDraft(draft));
@@ -1584,10 +1637,17 @@ export default function AdminPage() {
     ? activeCollection.definition.fields.filter(isRecordCrudFieldDefinition)
     : [];
   const canRefreshCollections =
-    Boolean(session.data) && !isLoadingCollections && !isRefreshingCollections;
+    canViewCollections &&
+    Boolean(session.data) &&
+    !isLoadingCollections &&
+    !isRefreshingCollections;
   const canRefreshRecords =
-    activeCollection !== undefined && !isLoadingRecords && !isRefreshingRecords;
-  const canRefreshMediaAssets = !isLoadingMediaAssets && !isRefreshingMediaAssets;
+    canViewRecords &&
+    activeCollection !== undefined &&
+    !isLoadingRecords &&
+    !isRefreshingRecords;
+  const canRefreshMediaAssets =
+    canViewMedia && !isLoadingMediaAssets && !isRefreshingMediaAssets;
   const normalizedMediaSearchQuery = mediaSearchQuery.trim().toLowerCase();
   const filteredMediaAssets =
     normalizedMediaSearchQuery.length === 0
@@ -1633,6 +1693,9 @@ export default function AdminPage() {
   const recordStatusTone = recordIssues.length > 0 ? "error" : "success";
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const isInitialRecordLoad = isLoadingRecords && !hasLoadedRecords;
+  const canSaveCurrentRecord = selectedRecord
+    ? canUpdateRecords
+    : canCreateRecords;
   const recordStatusTitle =
     recordIssues.length > 0
       ? "Record needs attention"
@@ -1646,6 +1709,10 @@ export default function AdminPage() {
   };
 
   const handleStartNewCollection = () => {
+    if (!canCreateCollections) {
+      return;
+    }
+
     setIsCreatingCollection(true);
     setSelectedCollectionName(null);
     setDraft(createEmptyCollectionDraft());
@@ -1789,6 +1856,11 @@ export default function AdminPage() {
 
   const handleSaveCollection = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!canSaveCurrentCollection) {
+      return;
+    }
+
     setIsSavingCollection(true);
     setCollectionIssues([]);
     setCollectionMessage(null);
@@ -1827,6 +1899,11 @@ export default function AdminPage() {
 
   const handleInviteSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!canInviteUsers) {
+      return;
+    }
+
     setInviteError(null);
     setInviteMessage(null);
     setIsInviting(true);
@@ -1855,6 +1932,10 @@ export default function AdminPage() {
 
   const handleMediaUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!canUploadMedia) {
+      return;
+    }
 
     if (!selectedMediaFile) {
       setMediaLoadError("Choose a file before uploading.");
@@ -1925,7 +2006,7 @@ export default function AdminPage() {
   };
 
   const handleStartNewRecord = () => {
-    if (!activeCollection) {
+    if (!activeCollection || !canCreateRecords) {
       return;
     }
 
@@ -1937,7 +2018,7 @@ export default function AdminPage() {
   };
 
   const handleEditRecord = (record: StoredCollectionRecord) => {
-    if (!activeCollection) {
+    if (!activeCollection || !canViewRecords) {
       return;
     }
 
@@ -1951,7 +2032,7 @@ export default function AdminPage() {
   const handleGeneratedRecordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!activeCollection) {
+    if (!activeCollection || !canSaveCurrentRecord) {
       return;
     }
 
@@ -2010,6 +2091,7 @@ export default function AdminPage() {
             <p className="admin-sidebar-copy">{session.data.user.email}</p>
             <div className="status-row">
               <span className="status-pill">Setup complete</span>
+              {sessionRole ? <span className="status-pill">{sessionRole.label}</span> : null}
               <span className="status-pill">Collection builder live</span>
               <span className="status-pill status-pill-muted">
                 {adminPublicEnv.NEXT_PUBLIC_APP_ENV}
@@ -2029,13 +2111,25 @@ export default function AdminPage() {
                 >
                   {isRefreshingCollections ? "Refreshing..." : "Refresh"}
                 </button>
-                <button className="mini-button" onClick={handleStartNewCollection} type="button">
+                <button
+                  className="mini-button"
+                  disabled={!canCreateCollections}
+                  onClick={handleStartNewCollection}
+                  type="button"
+                >
                   New
                 </button>
               </div>
             </div>
             <div className="mini-list">
-              {isInitialCollectionLoad ? (
+              {!canViewCollections ? (
+                <FlowStateBox
+                  body={`Your ${sessionRole?.label ?? "current"} role cannot view collection schemas yet.`}
+                  compact
+                  title="Collection access is restricted"
+                  tone="warning"
+                />
+              ) : isInitialCollectionLoad ? (
                 <FlowStateBox
                   body="Datamix is loading your saved collection definitions from the API Worker."
                   compact
@@ -2125,11 +2219,12 @@ export default function AdminPage() {
 
             {activeCollection ? (
               <div className="workspace-actions">
-                <button
-                  className="admin-nav-item"
-                  onClick={() => jumpToSection(collectionBuilderSectionId)}
-                  type="button"
-                >
+	                <button
+	                  className="admin-nav-item"
+	                  disabled={!canAccessCollectionBuilder}
+	                  onClick={() => jumpToSection(collectionBuilderSectionId)}
+	                  type="button"
+	                >
                   <div>
                     <p className="admin-nav-label">Schema</p>
                     <p className="admin-nav-copy">
@@ -2139,11 +2234,12 @@ export default function AdminPage() {
                   <span className="status-pill">Model</span>
                 </button>
 
-                <button
-                  className="admin-nav-item"
-                  onClick={() => jumpToSection(recordEditorSectionId)}
-                  type="button"
-                >
+	                <button
+	                  className="admin-nav-item"
+	                  disabled={!canViewRecords}
+	                  onClick={() => jumpToSection(recordEditorSectionId)}
+	                  type="button"
+	                >
                   <div>
                     <p className="admin-nav-label">Records</p>
                     <p className="admin-nav-copy">
@@ -2169,17 +2265,22 @@ export default function AdminPage() {
               <p className="admin-sidebar-heading">Saved records</p>
               {activeCollection ? (
                 <div className="actions actions-compact">
-                  <button
-                    className="mini-button"
-                    disabled={!canRefreshRecords}
-                    onClick={handleRefreshRecords}
-                    type="button"
-                  >
-                    {isRefreshingRecords ? "Refreshing..." : "Refresh"}
-                  </button>
-                  <button className="mini-button" onClick={handleStartNewRecord} type="button">
-                    New
-                  </button>
+	                  <button
+	                    className="mini-button"
+	                    disabled={!canRefreshRecords}
+	                    onClick={handleRefreshRecords}
+	                    type="button"
+	                  >
+	                    {isRefreshingRecords ? "Refreshing..." : "Refresh"}
+	                  </button>
+	                  <button
+	                    className="mini-button"
+	                    disabled={!canCreateRecords}
+	                    onClick={handleStartNewRecord}
+	                    type="button"
+	                  >
+	                    New
+	                  </button>
                 </div>
               ) : null}
             </div>
@@ -2301,11 +2402,18 @@ export default function AdminPage() {
                   ? "Move between schema and records from one collection workspace. The saved schema defines the editing surface, and the record list stays one click away."
                   : "Collections now anchor the admin experience. Start a new collection or pick an existing one to open its schema and records."}
               </p>
+              {sessionRole ? (
+                <p className="helper-text">
+                  Signed in as <strong>{sessionRole.label}</strong>. API middleware and the
+                  admin shell now read from the same shared permission model.
+                </p>
+              ) : null}
             </div>
 
             <div className="actions">
               <button
                 className="button button-secondary"
+                disabled={!canAccessCollectionBuilder}
                 onClick={() => jumpToSection(collectionBuilderSectionId)}
                 type="button"
               >
@@ -2313,7 +2421,7 @@ export default function AdminPage() {
               </button>
               <button
                 className="button button-secondary"
-                disabled={!activeCollection}
+                disabled={!activeCollection || !canViewRecords}
                 onClick={() => jumpToSection(recordEditorSectionId)}
                 type="button"
               >
@@ -2322,7 +2430,7 @@ export default function AdminPage() {
               {activeCollection ? (
                 <button
                   className="button button-secondary"
-                  disabled={isInitialRecordLoad}
+                  disabled={isInitialRecordLoad || !canCreateRecords}
                   onClick={handleStartNewRecord}
                   type="button"
                 >
@@ -2331,6 +2439,7 @@ export default function AdminPage() {
               ) : (
                 <button
                   className="button button-secondary"
+                  disabled={!canCreateCollections}
                   onClick={handleStartNewCollection}
                   type="button"
                 >
@@ -2390,12 +2499,18 @@ export default function AdminPage() {
                     : "Pick a collection from the sidebar to open its workspace, or start a fresh one to shape another content type."}
               </p>
               <div className="actions">
-                <button className="button button-secondary" onClick={handleStartNewCollection} type="button">
+                <button
+                  className="button button-secondary"
+                  disabled={!canCreateCollections}
+                  onClick={handleStartNewCollection}
+                  type="button"
+                >
                   New collection
                 </button>
                 {activeCollection ? (
                   <button
                     className="button button-secondary"
+                    disabled={!canViewRecords}
                     onClick={() => jumpToSection(recordEditorSectionId)}
                     type="button"
                   >
@@ -2429,13 +2544,30 @@ export default function AdminPage() {
                 </p>
               </div>
               <div className="actions">
-                <button className="button button-secondary" onClick={handleStartNewCollection} type="button">
+                <button
+                  className="button button-secondary"
+                  disabled={!canCreateCollections}
+                  onClick={handleStartNewCollection}
+                  type="button"
+                >
                   Reset draft
                 </button>
               </div>
             </div>
 
+            {!canAccessCollectionBuilder ? (
+              <FlowStateBox
+                body={`Your ${sessionRole?.label ?? "current"} role cannot open the collection builder.`}
+                title="Collection builder is restricted"
+                tone="warning"
+              />
+            ) : null}
+
             <form className="collection-form" onSubmit={handleSaveCollection}>
+              <fieldset
+                className="form-fieldset-reset"
+                disabled={!canSaveCurrentCollection}
+              >
               <section className="admin-grid">
                 <label className="field">
                   <span>Collection label</span>
@@ -2847,14 +2979,19 @@ export default function AdminPage() {
               ) : null}
 
               <div className="actions">
-                <button className="button" disabled={isSavingCollection} type="submit">
+                <button
+                  className="button"
+                  disabled={isSavingCollection || !canSaveCurrentCollection}
+                  type="submit"
+                >
                   {isSavingCollection
                     ? "Saving collection..."
                     : isEditingExistingCollection
                       ? "Save collection changes"
                       : "Create collection"}
-                </button>
+                  </button>
               </div>
+              </fieldset>
             </form>
           </section>
 
@@ -2893,7 +3030,13 @@ export default function AdminPage() {
               ) : null}
             </div>
 
-            {!activeCollection ? (
+            {!canViewRecords ? (
+              <FlowStateBox
+                body={`Your ${sessionRole?.label ?? "current"} role cannot view generated records.`}
+                title="Record access is restricted"
+                tone="warning"
+              />
+            ) : !activeCollection ? (
               <FlowStateBox
                 actionLabel="Create collection"
                 body="Save a collection from the builder, or choose one from the sidebar, to see its generated record editor."
@@ -2933,6 +3076,7 @@ export default function AdminPage() {
                     </button>
                     <button
                       className="button button-secondary"
+                      disabled={!canCreateRecords}
                       onClick={handleStartNewRecord}
                       type="button"
                     >
@@ -3032,7 +3176,9 @@ export default function AdminPage() {
                     ) : (
                       activeCollection.definition.fields.map((field) => (
                         <GeneratedRecordFieldInput
-                          disabled={!isRecordCrudFieldDefinition(field)}
+                          disabled={
+                            !isRecordCrudFieldDefinition(field) || !canSaveCurrentRecord
+                          }
                           field={field}
                           key={field.name}
                           mediaAssets={mediaAssets}
@@ -3078,7 +3224,11 @@ export default function AdminPage() {
                     <div className="actions">
                       <button
                         className="button"
-                        disabled={isSavingRecord || persistedRecordFields.length === 0}
+                        disabled={
+                          isSavingRecord ||
+                          persistedRecordFields.length === 0 ||
+                          !canSaveCurrentRecord
+                        }
                         type="submit"
                       >
                         {isSavingRecord
@@ -3091,6 +3241,7 @@ export default function AdminPage() {
                       </button>
                       <button
                         className="button button-secondary"
+                        disabled={!canSaveCurrentRecord}
                         onClick={handleResetGeneratedRecord}
                         type="button"
                       >
@@ -3142,10 +3293,18 @@ export default function AdminPage() {
                 for the next slice.
               </p>
 
+              {!canViewMedia && !canUploadMedia ? (
+                <FlowStateBox
+                  body={`Your ${sessionRole?.label ?? "current"} role cannot access the shared media library.`}
+                  title="Media access is restricted"
+                  tone="warning"
+                />
+              ) : (
               <form className="auth-form" onSubmit={handleMediaUploadSubmit}>
                 <label className="field">
                   <span>Upload file</span>
                   <input
+                    disabled={!canUploadMedia}
                     ref={mediaFileInputRef}
                     accept="*/*"
                     onChange={(event) =>
@@ -3189,7 +3348,11 @@ export default function AdminPage() {
                 ) : null}
 
                 <div className="actions">
-                  <button className="button" disabled={isUploadingMedia} type="submit">
+                  <button
+                    className="button"
+                    disabled={isUploadingMedia || !canUploadMedia}
+                    type="submit"
+                  >
                     {isUploadingMedia ? "Uploading asset..." : "Upload asset"}
                   </button>
                   <button
@@ -3202,7 +3365,9 @@ export default function AdminPage() {
                   </button>
                 </div>
               </form>
+              )}
 
+              {canViewMedia ? (
               <div className="record-browser">
                 <div className="record-browser-list">
                   <div>
@@ -3359,6 +3524,7 @@ export default function AdminPage() {
                   )}
                 </aside>
               </div>
+              ) : null}
             </article>
           </section>
 
@@ -3375,6 +3541,7 @@ export default function AdminPage() {
                 <label className="field">
                   <span>Name</span>
                   <input
+                    disabled={!canInviteUsers}
                     onChange={(event) => setInviteName(event.target.value)}
                     placeholder="Optional display name"
                     type="text"
@@ -3385,6 +3552,7 @@ export default function AdminPage() {
                 <label className="field">
                   <span>Email</span>
                   <input
+                    disabled={!canInviteUsers}
                     onChange={(event) => setInviteEmail(event.target.value)}
                     required
                     type="email"
@@ -3396,11 +3564,22 @@ export default function AdminPage() {
                 {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
 
                 <div className="actions">
-                  <button className="button" disabled={isInviting} type="submit">
+                  <button
+                    className="button"
+                    disabled={isInviting || !canInviteUsers}
+                    type="submit"
+                  >
                     {isInviting ? "Sending invite..." : "Send invite"}
                   </button>
                 </div>
               </form>
+
+              {!canInviteUsers ? (
+                <p className="helper-text">
+                  Your {sessionRole?.label ?? "current"} role can sign in, but it cannot send
+                  team invites.
+                </p>
+              ) : null}
 
               <div className="section-stack">
                 <div>

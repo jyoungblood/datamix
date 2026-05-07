@@ -322,6 +322,11 @@ button.admin-nav-item {
   cursor: pointer;
 }
 
+button.admin-nav-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .admin-nav-item.is-current {
   border-color: rgba(87, 62, 25, 0.24);
   background: rgba(246, 237, 216, 0.92);
@@ -368,6 +373,13 @@ button.admin-nav-item {
   display: grid;
   gap: 1rem;
   margin-top: 1.5rem;
+}
+
+.form-fieldset-reset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
 }
 
 .section-title {

@@ -4,7 +4,12 @@ import {
   type BetterAuthOptions,
   type GenericEndpointContext,
 } from "better-auth";
-import { createAuthSetupStatus, datamixAuthPath, datamixProduct } from "@datamix/core";
+import {
+  createAuthSetupStatus,
+  datamixAuthPath,
+  datamixProduct,
+  type DatamixRolePresetId,
+} from "@datamix/core";
 import { getMigrations } from "better-auth/db/migration";
 
 import { sendAuthEmail } from "./email";
@@ -13,6 +18,9 @@ import { getExecutionContext } from "./request-context";
 
 export type DatamixAuth = ReturnType<typeof createAuth>;
 export type DatamixSession = DatamixAuth["$Infer"]["Session"];
+
+const invitedUserRole: DatamixRolePresetId = "contributor";
+const initialAdminRole: DatamixRolePresetId = "administrator";
 
 async function countUsers(context: GenericEndpointContext<BetterAuthOptions>) {
   return context.context.internalAdapter.countTotalUsers();
@@ -53,6 +61,16 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
         );
       },
     },
+    user: {
+      additionalFields: {
+        role: {
+          type: "string",
+          required: false,
+          input: false,
+          defaultValue: invitedUserRole,
+        },
+      },
+    },
     advanced: {
       backgroundTasks: {
         handler(promise) {
@@ -87,6 +105,7 @@ export function createAuthOptions(env: ApiBindings): BetterAuthOptions {
               data: {
                 ...user,
                 emailVerified: false,
+                role: initialAdminRole,
               },
             };
           },

@@ -1,3 +1,4 @@
+import type { DatamixRolePresetId } from "@datamix/core";
 import { APIError } from "better-auth";
 
 import { createAuth } from "./auth";
@@ -25,6 +26,8 @@ function createTemporaryPassword() {
   return `dmx-invite-${crypto.randomUUID()}-${crypto.randomUUID()}`;
 }
 
+const defaultInvitedUserRole: DatamixRolePresetId = "contributor";
+
 export async function createInvite(env: ApiBindings, input: CreateInviteInput) {
   const auth = createAuth(env);
   const context = await auth.$context;
@@ -44,6 +47,7 @@ export async function createInvite(env: ApiBindings, input: CreateInviteInput) {
     email: normalizedEmail,
     name: createInviteDisplayName(normalizedEmail, input.inviteeName),
     emailVerified: false,
+    role: defaultInvitedUserRole,
   });
 
   if (!createdUser) {
