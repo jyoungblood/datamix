@@ -97,9 +97,9 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M3 Content API and Editor Depth | 6 | 0 | 0 | 0 | 6 | 0 |
 | M4 Media Pipeline | 6 | 0 | 0 | 0 | 6 | 0 |
 | M5 RBAC, Invites, and API Keys | 6 | 6 | 0 | 0 | 0 | 0 |
-| M6 Global UX and Launch Hardening | 6 | 5 | 0 | 0 | 1 | 0 |
+| M6 Global UX and Launch Hardening | 6 | 6 | 0 | 0 | 0 | 0 |
 | M7 v1 Parking Lot Preparation | 3 | 0 | 0 | 0 | 3 | 0 |
-| Total | 42 | 11 | 0 | 1 | 30 | 0 |
+| Total | 42 | 12 | 0 | 1 | 29 | 0 |
 
 ## Milestones
 
@@ -111,7 +111,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M3 | Datamix behaves like a usable content backend | Generated REST API, auth hooks, richer editors, and content UX depth exist | `planned` |
 | M4 | Media works end to end through records and a central library | Uploads, asset metadata, media UI, gallery UX, and transforms are working | `planned` |
 | M5 | Multi-user access control is production-shaped | Roles, permission enforcement, invites, API keys, and optional OAuth exist | `done` |
-| M6 | The app feels coherent and launch-ready | Command palette, navigation polish, hardening, smoke coverage, docs, and bootstrap path exist | `planned` |
+| M6 | The app feels coherent and launch-ready | Command palette, navigation polish, hardening, smoke coverage, docs, and bootstrap path exist | `done` |
 | M7 | v1 work is clearly deferred without contaminating v0 | Deferred epics are documented and v0 cut line is enforced | `planned` |
 
 ## Detailed Slice Tracker
@@ -156,7 +156,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M6-S3 | M6 | Session and failure hardening | Harden session restoration, auth edge cases, and retry/loading behavior | M1-S2, M1-S3, M3-S6 | Reliability fixes and recovery UX | Session handling and recoverable failures behave predictably | `done` | Especially important for first-run trust |
 | M6-S4 | M6 | End-to-end smoke coverage | Create smoke coverage for deploy, login, collection, record, media, and API flows | M4-S6, M5-S5 | Automated smoke tests | Critical v0 flows have reliable automated coverage | `done` | Smoke harness lives at `tests/smoke/datamix-smoke.mjs` and stays focused on must-not-break paths |
 | M6-S5 | M6 | Contributor readability docs | Write architecture docs and 30-minute contributor onboarding | M0-S4, M3-S6 | OSS-facing docs | New contributor can understand structure and run checks quickly | `done` | Contributor docs now live in `docs/architecture-overview.md` and `docs/contributor-onboarding.md` |
-| M6-S6 | M6 | Secondary bootstrap path | Add `create-datamix` bootstrap path after browser-first deploy is proven | M1-S3, M6-S4 | Bootstrap scaffolder plan/implementation | Secondary bootstrap flow exists without compromising the primary deploy path | `planned` | Must not become the assumed primary onboarding path |
+| M6-S6 | M6 | Secondary bootstrap path | Add `create-datamix` bootstrap path after browser-first deploy is proven | M1-S3, M6-S4 | Bootstrap scaffolder plan/implementation | Secondary bootstrap flow exists without compromising the primary deploy path | `done` | `packages/create-datamix` now scaffolds a local workspace template and keeps the browser-first deploy path primary |
 | M7-S1 | M7 | v1 contact form scope note | Document v1 contact form / submission processing as backend endpoint only | None | Deferred scope note | Contact-form processing is clearly documented as v1 with no public builder | `planned` | Protects the repo from the old terminology confusion |
 | M7-S2 | M7 | v1 deferred epics | Document starter packs, data grid, CI triggers, draft/published, import/export, integrations, and MCP as deferred epics | None | Deferred epic list | Deferred work is visible without entering v0 implementation scope | `planned` | Useful for future planning without polluting current milestones |
 | M7-S3 | M7 | Final v0 cut review | Remove or defer any slices that drift beyond v0 | M6-S6 | Final scope review notes | Roadmap has a clean v0 cut line before launch work closes | `planned` | Run this before calling v0 complete |

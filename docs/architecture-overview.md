@@ -19,6 +19,8 @@ Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a J
   Hono Worker. `src/app.ts` wires middleware and routes, while focused modules such as `auth.ts`, `collections.ts`, `records.ts`, `media.ts`, and `roles.ts` own feature logic.
 - `packages/core`
   Shared domain vocabulary for collections, RBAC, media, API keys, and runtime helpers. This package exists to keep app boundaries honest, not to centralize everything by default.
+- `packages/create-datamix`
+  Secondary bootstrap CLI. It assembles a clean local template from this repo and helps contributors start a new Datamix workspace without changing the primary browser-first deployment story.
 - `tests/smoke`
   End-to-end smoke harness that exercises first-run setup, login, collection CRUD, record CRUD, media, and public JSON routes.
 - `docs`

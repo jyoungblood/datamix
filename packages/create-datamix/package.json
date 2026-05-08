@@ -1,0 +1,17 @@
+{
+  "name": "create-datamix",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "create-datamix": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node ../../scripts/build-create-datamix-template.mjs",
+    "prepack": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

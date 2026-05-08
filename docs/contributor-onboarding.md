@@ -82,6 +82,8 @@ Smoke note:
   Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/api/src/collections.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/collections.ts:1), and [apps/api/src/records.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/records.ts:1).
 - If you are changing media:
   Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/api/src/media.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/media.ts:1), and [apps/admin/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/media.ts:1).
+- If you are changing the secondary bootstrap path:
+  Start in [packages/create-datamix/src/index.ts](/Users/jy/Desktop/projects/datamix/packages/create-datamix/src/index.ts:1) and [scripts/build-create-datamix-template.mjs](/Users/jy/Desktop/projects/datamix/scripts/build-create-datamix-template.mjs:1).
 
 ## Working Rules for Contributions
 
