@@ -98,8 +98,8 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M4 Media Pipeline | 6 | 0 | 0 | 0 | 6 | 0 |
 | M5 RBAC, Invites, and API Keys | 6 | 6 | 0 | 0 | 0 | 0 |
 | M6 Global UX and Launch Hardening | 6 | 6 | 0 | 0 | 0 | 0 |
-| M7 v1 Parking Lot Preparation | 3 | 2 | 0 | 0 | 1 | 0 |
-| Total | 42 | 14 | 0 | 1 | 27 | 0 |
+| M7 v1 Parking Lot Preparation | 3 | 3 | 0 | 0 | 0 | 0 |
+| Total | 42 | 15 | 0 | 1 | 26 | 0 |
 
 ## Milestones
 
@@ -112,7 +112,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M4 | Media works end to end through records and a central library | Uploads, asset metadata, media UI, gallery UX, and transforms are working | `planned` |
 | M5 | Multi-user access control is production-shaped | Roles, permission enforcement, invites, API keys, and optional OAuth exist | `done` |
 | M6 | The app feels coherent and launch-ready | Command palette, navigation polish, hardening, smoke coverage, docs, and bootstrap path exist | `done` |
-| M7 | v1 work is clearly deferred without contaminating v0 | Deferred epics are documented and v0 cut line is enforced | `planned` |
+| M7 | v1 work is clearly deferred without contaminating v0 | Deferred epics are documented and v0 cut line is enforced | `done` |
 
 ## Detailed Slice Tracker
 
@@ -159,7 +159,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M6-S6 | M6 | Secondary bootstrap path | Add `create-datamix` bootstrap path after browser-first deploy is proven | M1-S3, M6-S4 | Bootstrap scaffolder plan/implementation | Secondary bootstrap flow exists without compromising the primary deploy path | `done` | `packages/create-datamix` now scaffolds a local workspace template and keeps the browser-first deploy path primary |
 | M7-S1 | M7 | v1 contact form scope note | Document v1 contact form / submission processing as backend endpoint only | None | Deferred scope note | Contact-form processing is clearly documented as v1 with no public builder | `done` | Scope note now lives in `docs/v1-contact-form-scope.md` to resolve the old terminology confusion |
 | M7-S2 | M7 | v1 deferred epics | Document starter packs, data grid, CI triggers, draft/published, import/export, integrations, and MCP as deferred epics | None | Deferred epic list | Deferred work is visible without entering v0 implementation scope | `done` | Deferred epic list now lives in `docs/v1-deferred-epics.md` |
-| M7-S3 | M7 | Final v0 cut review | Remove or defer any slices that drift beyond v0 | M6-S6 | Final scope review notes | Roadmap has a clean v0 cut line before launch work closes | `planned` | Run this before calling v0 complete |
+| M7-S3 | M7 | Final v0 cut review | Remove or defer any slices that drift beyond v0 | M6-S6 | Final scope review notes | Roadmap has a clean v0 cut line before launch work closes | `done` | Final cut review note now lives in `docs/v0-cut-review.md` |
 
 ## Acceptance Scenarios
 
@@ -187,9 +187,20 @@ Detailed deferred-epic notes live in [docs/v1-deferred-epics.md](/Users/jy/Deskt
 - Custom admin panels / extensibility
 - MCP server
 
+## Final v0 Cut Review
+
+The final launch-cut note lives at [docs/v0-cut-review.md](/Users/jy/Desktop/projects/datamix/docs/v0-cut-review.md:1).
+
+Review result:
+
+- The current v0 scope stays limited to the committed Cloudflare-only admin, API, media, auth, and contributor-readability surface.
+- Documented v1 and future items remain deferred; they do not re-enter v0 without explicit roadmap review.
+- No additional slices were added to the v0 launch cut through this review.
+
 ## Revision Notes
 
 - This tracker follows the revised PRD, including the clarification that schema definition and record edit form generation are the same feature.
 - The revised PRD still contains a stale line in section `3.2` mentioning form relay in v0 email scope. This tracker intentionally treats email as auth-only in v0 and reserves submission relay for v1.
 - The dedicated scope note for this clarification lives at [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1).
 - The broader deferred-epic list for v1 lives at [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1).
+- The final v0 scope boundary lives at [docs/v0-cut-review.md](/Users/jy/Desktop/projects/datamix/docs/v0-cut-review.md:1).

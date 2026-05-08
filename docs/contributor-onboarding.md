@@ -11,7 +11,8 @@ This guide is the fastest path from fresh clone to productive context in Datamix
   [docs/architecture-overview.md](/Users/jy/Desktop/projects/datamix/docs/architecture-overview.md:1),
   [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1),
   [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1),
-  [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1)
+  [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1),
+  [docs/v0-cut-review.md](/Users/jy/Desktop/projects/datamix/docs/v0-cut-review.md:1)
 
 ## 0-5 Minutes: Read the Shape
 
@@ -94,5 +95,6 @@ Smoke note:
 - Keep runtime contracts stable unless a small enabling change is clearly justified.
 - Treat contact-form and generic submission processing as v1-only backend scope, not a v0 builder feature.
 - Treat the rest of the v1 parking lot as deferred product direction, not silent implementation scope.
+- Use the final cut review note as the default tie-breaker when new scope questions come up close to launch.
 - Run the root checks before handing work back.
 - Update docs when setup steps, route contracts, or contributor expectations change.

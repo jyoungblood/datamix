@@ -11,6 +11,7 @@ Datamix is an edge-native, Cloudflare-only content modeling studio with a JSON-f
 - Secondary bootstrap path: [docs/create-datamix-bootstrap.md](/Users/jy/Desktop/projects/datamix/docs/create-datamix-bootstrap.md:1)
 - v1 contact form scope: [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1)
 - v1 deferred epics: [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1)
+- Final v0 cut review: [docs/v0-cut-review.md](/Users/jy/Desktop/projects/datamix/docs/v0-cut-review.md:1)
 - Product and roadmap references: [Datamix-PRD-revised.md](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.md:1), [datamix-roadmap-tracker.md](/Users/jy/Desktop/projects/datamix/_ref/datamix-roadmap-tracker.md:1)
 
 ## Workspace Layout
