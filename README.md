@@ -1,41 +1,38 @@
 # Datamix
 
-Initial monorepo bootstrap for the Datamix v0 build.
+Datamix is an edge-native, Cloudflare-only content modeling studio with a JSON-first API, a browser-first admin, and no separate non-Cloudflare runtime story in v0.
 
-## Workspace layout
+## Start Here
 
-- `apps/admin`: Vinext admin SPA scaffold
-- `apps/api`: Hono API scaffold
-- `packages/core`: shared domain types and helpers
-- `_ref`: product and roadmap reference material
+- Contributor walkthrough: [docs/contributor-onboarding.md](/Users/jy/Desktop/projects/datamix/docs/contributor-onboarding.md:1)
+- Architecture map: [docs/architecture-overview.md](/Users/jy/Desktop/projects/datamix/docs/architecture-overview.md:1)
+- Local setup details: [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1)
+- Deploy/runtime contract: [docs/deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1)
+- Product and roadmap references: [Datamix-PRD-revised.md](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.md:1), [datamix-roadmap-tracker.md](/Users/jy/Desktop/projects/datamix/_ref/datamix-roadmap-tracker.md:1)
 
-## Root commands
+## Workspace Layout
+
+- `apps/admin`: Vinext admin SPA deployed to Cloudflare Pages
+- `apps/api`: Hono API Worker that owns auth, content, media, and platform bindings
+- `packages/core`: shared schema, RBAC, media, and API-key types/helpers
+- `tests/smoke`: end-to-end smoke coverage for must-not-break flows
+- `docs`: contributor and runtime documentation
+- `_ref`: PRD and roadmap source material
+
+## Root Commands
 
 - `npm install`
 - `npm run check`
-- `npm run typecheck`
 - `npm run build`
+- `npm run smoke`
 - `npm run dev:admin`
 - `npm run dev:api`
 - `npm run typegen:api`
 - `npm run clean`
 
-## Local development
+## Contributor Principles
 
-Datamix is Cloudflare-only in v0. The current local contract is:
-
-1. Run `npm run dev:api` for the Worker API on `http://127.0.0.1:8787`
-2. Run `npm run dev:admin` for the Vinext admin on `http://127.0.0.1:3000`
-
-Environment files live beside the app that consumes them:
-
-- `apps/api/.dev.vars`
-- `apps/admin/.env.local`
-
-Example files and the detailed contributor notes live in [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1).
-
-## Deploy/runtime contract
-
-The Cloudflare deploy boundary for v0 lives in [docs/deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
-
-This repo is intentionally thin right now. `M0-S3` adds Cloudflare runtime conventions and typed env contracts without pulling deployment topology or product features forward from later slices.
+- Preserve the Cloudflare-only deployment model in v0.
+- Keep the public surface JSON-first and session-aware.
+- Treat the API Worker as the only process that talks to D1 and R2.
+- Prefer direct, readable code over extra layers or policy engines.

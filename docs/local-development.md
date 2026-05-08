@@ -14,8 +14,9 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate "g
 1. Run `npm install` from the repo root.
 2. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`.
 3. Copy `apps/admin/.env.example` to `apps/admin/.env.local`.
-4. Run `npm run typegen:api` once after changing `apps/api/wrangler.jsonc`.
-5. Start the apps and open `http://127.0.0.1:3000/setup` to create the first admin account in-browser.
+4. Replace `BETTER_AUTH_SECRET` in `apps/api/.dev.vars` with a long random string.
+5. Run `npm run typegen:api` after changing `apps/api/wrangler.jsonc`.
+6. Start the apps and open `http://127.0.0.1:3000/setup` to create the first admin account in-browser.
 
 ## Daily workflow
 
@@ -25,6 +26,16 @@ Use two terminals from the repo root:
 2. `npm run dev:admin`
 
 Then open `http://127.0.0.1:3000`.
+
+## Verification workflow
+
+Run these from the repo root before handing work back:
+
+1. `npm run check`
+2. `npm run build`
+3. `npm run smoke`
+
+The smoke harness starts its own local admin dev server and runs the API in-process through Miniflare, so it does not require a separate `npm run dev:api` session.
 
 ## Why the files live where they do
 
@@ -46,6 +57,14 @@ Then open `http://127.0.0.1:3000`.
 - `AUTH_SMTP_HOST`, `AUTH_SMTP_PORT`, `AUTH_SMTP_USERNAME`, `AUTH_SMTP_PASSWORD`, and `AUTH_SMTP_TLS` are required when `AUTH_EMAIL_PROVIDER=smtp`.
 - The admin auth client reuses `NEXT_PUBLIC_API_ORIGIN`; there is no separate public auth origin variable.
 - The API Worker prepares auth tables through the public first-run setup status route at `/setup/status`.
+
+For basic local UI and content work, only `BETTER_AUTH_SECRET` must be real. Configure the email provider values when you need to exercise password reset or invite delivery end to end.
+
+## Contributor references
+
+- [docs/contributor-onboarding.md](/Users/jy/Desktop/projects/datamix/docs/contributor-onboarding.md:1)
+- [docs/architecture-overview.md](/Users/jy/Desktop/projects/datamix/docs/architecture-overview.md:1)
+- [docs/deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1)
 
 ## Auth email flows
 
