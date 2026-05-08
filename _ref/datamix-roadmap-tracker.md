@@ -98,8 +98,8 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M4 Media Pipeline | 6 | 0 | 0 | 0 | 6 | 0 |
 | M5 RBAC, Invites, and API Keys | 6 | 6 | 0 | 0 | 0 | 0 |
 | M6 Global UX and Launch Hardening | 6 | 6 | 0 | 0 | 0 | 0 |
-| M7 v1 Parking Lot Preparation | 3 | 1 | 0 | 0 | 2 | 0 |
-| Total | 42 | 13 | 0 | 1 | 28 | 0 |
+| M7 v1 Parking Lot Preparation | 3 | 2 | 0 | 0 | 1 | 0 |
+| Total | 42 | 14 | 0 | 1 | 27 | 0 |
 
 ## Milestones
 
@@ -158,7 +158,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M6-S5 | M6 | Contributor readability docs | Write architecture docs and 30-minute contributor onboarding | M0-S4, M3-S6 | OSS-facing docs | New contributor can understand structure and run checks quickly | `done` | Contributor docs now live in `docs/architecture-overview.md` and `docs/contributor-onboarding.md` |
 | M6-S6 | M6 | Secondary bootstrap path | Add `create-datamix` bootstrap path after browser-first deploy is proven | M1-S3, M6-S4 | Bootstrap scaffolder plan/implementation | Secondary bootstrap flow exists without compromising the primary deploy path | `done` | `packages/create-datamix` now scaffolds a local workspace template and keeps the browser-first deploy path primary |
 | M7-S1 | M7 | v1 contact form scope note | Document v1 contact form / submission processing as backend endpoint only | None | Deferred scope note | Contact-form processing is clearly documented as v1 with no public builder | `done` | Scope note now lives in `docs/v1-contact-form-scope.md` to resolve the old terminology confusion |
-| M7-S2 | M7 | v1 deferred epics | Document starter packs, data grid, CI triggers, draft/published, import/export, integrations, and MCP as deferred epics | None | Deferred epic list | Deferred work is visible without entering v0 implementation scope | `planned` | Useful for future planning without polluting current milestones |
+| M7-S2 | M7 | v1 deferred epics | Document starter packs, data grid, CI triggers, draft/published, import/export, integrations, and MCP as deferred epics | None | Deferred epic list | Deferred work is visible without entering v0 implementation scope | `done` | Deferred epic list now lives in `docs/v1-deferred-epics.md` |
 | M7-S3 | M7 | Final v0 cut review | Remove or defer any slices that drift beyond v0 | M6-S6 | Final scope review notes | Roadmap has a clean v0 cut line before launch work closes | `planned` | Run this before calling v0 complete |
 
 ## Acceptance Scenarios
@@ -173,6 +173,8 @@ This section is the default technical source of truth for roadmap execution. Fut
 8. A new contributor can clone the repo, run checks, understand package boundaries, and navigate the codebase within 30 minutes.
 
 ## v1 Parking Lot
+
+Detailed deferred-epic notes live in [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1).
 
 - Contact form / submission processing:
   Backend endpoint for public-site POST submissions, submission storage/management, and optional email relay. No public-facing form builder.
@@ -190,3 +192,4 @@ This section is the default technical source of truth for roadmap execution. Fut
 - This tracker follows the revised PRD, including the clarification that schema definition and record edit form generation are the same feature.
 - The revised PRD still contains a stale line in section `3.2` mentioning form relay in v0 email scope. This tracker intentionally treats email as auth-only in v0 and reserves submission relay for v1.
 - The dedicated scope note for this clarification lives at [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1).
+- The broader deferred-epic list for v1 lives at [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1).
