@@ -9,7 +9,8 @@ This guide is the fastest path from fresh clone to productive context in Datamix
 - Keep these docs open:
   [README.md](/Users/jy/Desktop/projects/datamix/README.md:1),
   [docs/architecture-overview.md](/Users/jy/Desktop/projects/datamix/docs/architecture-overview.md:1),
-  [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1)
+  [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1),
+  [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1)
 
 ## 0-5 Minutes: Read the Shape
 
@@ -90,5 +91,6 @@ Smoke note:
 - Preserve Cloudflare-only deployment and the current session/auth flow.
 - Avoid premature abstractions, generic policy engines, or cross-cutting rewrites.
 - Keep runtime contracts stable unless a small enabling change is clearly justified.
+- Treat contact-form and generic submission processing as v1-only backend scope, not a v0 builder feature.
 - Run the root checks before handing work back.
 - Update docs when setup steps, route contracts, or contributor expectations change.
