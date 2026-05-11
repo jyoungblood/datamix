@@ -63,6 +63,7 @@ ${cssLinks}
       window.__NEXT_DATA__ = {
         page: window.location.pathname,
         query: Object.fromEntries(new URLSearchParams(window.location.search).entries()),
+        props: { pageProps: {} },
       };
     </script>
     <script type="module" src="/${clientEntryFile}"></script>
