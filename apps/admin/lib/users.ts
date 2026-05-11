@@ -1,6 +1,6 @@
 import type { DatamixRoleDefinition } from "@datamix/core";
 
-import { buildDatamixAppUrl } from "./runtime";
+import { buildDatamixAdminApiUrl } from "./runtime";
 
 export type DatamixUserSummary = {
   createdAt: string;
@@ -34,7 +34,7 @@ async function readApiBody<TValue>(response: Response) {
 function buildUsersUrl(userId?: string) {
   const pathname = userId ? `/users/${encodeURIComponent(userId)}/role` : "/users";
 
-  return buildDatamixAppUrl(pathname);
+  return buildDatamixAdminApiUrl(pathname);
 }
 
 export async function listUsers() {

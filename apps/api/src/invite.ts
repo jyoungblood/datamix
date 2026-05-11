@@ -103,7 +103,7 @@ export async function createInvite(env: ApiBindings, input: CreateInviteInput) {
   await auth.api.requestPasswordReset({
     body: {
       email: normalizedEmail,
-      redirectTo: `${env.APP_ORIGIN}/reset-password?mode=invite&email=${encodeURIComponent(
+      redirectTo: `${env.APP_ORIGIN}/admin/reset-password?mode=invite&email=${encodeURIComponent(
         normalizedEmail,
       )}`,
     },

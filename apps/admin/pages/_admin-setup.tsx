@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CenteredCardPage } from "../components/centered-card-page";
 import { authClient } from "../lib/auth-client";
+import { buildDatamixAdminPath } from "../lib/runtime";
 import { useSetupStatus } from "../lib/setup";
 
 export default function SetupPage() {
@@ -28,12 +29,12 @@ export default function SetupPage() {
     }
 
     if (session.data) {
-      window.location.replace("/admin");
+      window.location.replace(buildDatamixAdminPath());
       return;
     }
 
     if (setupStatus.data && !setupStatus.data.setupRequired) {
-      window.location.replace("/login");
+      window.location.replace(buildDatamixAdminPath("/login"));
     }
   }, [session.data, session.isPending, setupStatus.data, setupStatus.isPending]);
 
@@ -64,7 +65,7 @@ export default function SetupPage() {
     setIsSubmitting(false);
 
     if (result.data) {
-      window.location.replace("/admin");
+      window.location.replace(buildDatamixAdminPath());
     }
   };
 

@@ -3,7 +3,7 @@ import type {
   DatamixSchemaValidationIssue,
 } from "@datamix/core";
 
-import { buildDatamixAppUrl } from "./runtime";
+import { buildDatamixAdminApiUrl } from "./runtime";
 
 export type StoredCollectionDefinition = {
   createdAt: string;
@@ -54,7 +54,7 @@ function buildCollectionDefinitionsUrl(name?: string) {
     ? `/collection-definitions/${encodeURIComponent(name)}`
     : "/collection-definitions";
 
-  return buildDatamixAppUrl(pathname);
+  return buildDatamixAdminApiUrl(pathname);
 }
 
 export async function listCollectionDefinitions() {

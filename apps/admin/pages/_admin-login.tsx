@@ -8,16 +8,17 @@ import { useEffect, useState } from "react";
 
 import { CenteredCardPage } from "../components/centered-card-page";
 import { authClient } from "../lib/auth-client";
+import { buildDatamixAdminPath } from "../lib/runtime";
 import { useSetupStatus } from "../lib/setup";
 
 function readNextPath() {
   if (typeof window === "undefined") {
-    return "/admin";
+    return buildDatamixAdminPath();
   }
 
   const next = new URLSearchParams(window.location.search).get("next");
 
-  return next && next.startsWith("/") ? next : "/admin";
+  return next && next.startsWith("/") ? next : buildDatamixAdminPath();
 }
 
 function readPrefillEmail() {
@@ -92,7 +93,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!setupStatus.isPending && setupStatus.data?.setupRequired) {
-      window.location.replace("/setup");
+      window.location.replace(buildDatamixAdminPath("/setup"));
     }
   }, [setupStatus.data, setupStatus.isPending]);
 
@@ -128,7 +129,7 @@ export default function LoginPage() {
     const nextPath = readNextPath();
     const callbackURL = createAdminReturnUrl(nextPath);
     const errorCallbackURL = createAdminReturnUrl(
-      `/login?next=${encodeURIComponent(nextPath)}`,
+      `${buildDatamixAdminPath("/login")}?next=${encodeURIComponent(nextPath)}`,
     );
 
     const result = await authClient.signIn.social(
@@ -265,7 +266,10 @@ export default function LoginPage() {
           </Alert>
         ) : null}
 
-        <a className="inline-block text-sm text-muted-foreground underline-offset-4 hover:underline" href="/forgot-password">
+        <a
+          className="inline-block text-sm text-muted-foreground underline-offset-4 hover:underline"
+          href={buildDatamixAdminPath("/forgot-password")}
+        >
           Forgot your password?
         </a>
 

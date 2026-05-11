@@ -27,6 +27,8 @@ export function readAdminPublicEnv(env: NodeJS.ProcessEnv): AdminPublicEnv {
 }
 
 export const adminPublicEnv = readAdminPublicEnv(process.env);
+export const datamixAdminBasePath = "/admin";
+export const datamixAdminApiBasePath = "/api/admin";
 
 export function getAdminAppOrigin() {
   if (typeof window !== "undefined" && window.location.origin) {
@@ -38,4 +40,22 @@ export function getAdminAppOrigin() {
 
 export function buildDatamixAppUrl(pathname: string) {
   return new URL(pathname, getAdminAppOrigin()).toString();
+}
+
+export function buildDatamixAdminPath(pathname = "") {
+  if (!pathname || pathname === "/") {
+    return datamixAdminBasePath;
+  }
+
+  return `${datamixAdminBasePath}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+}
+
+export function buildDatamixAdminApiUrl(pathname = "") {
+  if (!pathname || pathname === "/") {
+    return buildDatamixAppUrl(datamixAdminApiBasePath);
+  }
+
+  const normalizedPathname = pathname.startsWith("/") ? pathname : `/${pathname}`;
+
+  return buildDatamixAppUrl(`${datamixAdminApiBasePath}${normalizedPathname}`);
 }

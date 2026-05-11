@@ -1,7 +1,7 @@
-import { buildDatamixAppUrl } from "./runtime";
+import { buildDatamixAdminApiUrl } from "./runtime";
 
 export async function sendInvite(input: { email: string; name?: string; roleId?: string }) {
-  const response = await fetch(buildDatamixAppUrl("/invites"), {
+  const response = await fetch(buildDatamixAdminApiUrl("/invites"), {
     method: "POST",
     credentials: "include",
     headers: {

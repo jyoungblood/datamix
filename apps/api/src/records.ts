@@ -160,8 +160,16 @@ function serializeStoredValue(
   return value;
 }
 
+function createAdminGeneratedRecordsPath(collectionName: string) {
+  return `/api/admin/collections/${encodeURIComponent(collectionName)}/records`;
+}
+
 function createGeneratedRecordsPath(collectionName: string) {
   return `/collections/${encodeURIComponent(collectionName)}/records`;
+}
+
+function createAdminGeneratedRecordItemPath(collectionName: string) {
+  return `${createAdminGeneratedRecordsPath(collectionName)}/{id}`;
 }
 
 function createGeneratedRecordItemPath(collectionName: string) {
@@ -819,8 +827,8 @@ export function createGeneratedCollectionCrudRoute(
   collectionName: string,
 ): Pick<GeneratedCollectionCrudRoute, "recordItemPath" | "recordsPath"> {
   return {
-    recordItemPath: createGeneratedRecordItemPath(collectionName),
-    recordsPath: createGeneratedRecordsPath(collectionName),
+    recordItemPath: createAdminGeneratedRecordItemPath(collectionName),
+    recordsPath: createAdminGeneratedRecordsPath(collectionName),
   };
 }
 

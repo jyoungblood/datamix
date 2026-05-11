@@ -63,10 +63,13 @@ import {
   UserRequestError,
   type DatamixUserSummary,
 } from "../lib/users";
+import { buildDatamixAdminPath } from "../lib/runtime";
 import { TiptapRichTextEditor } from "./_components/TiptapRichTextEditor";
 
-const loginHref = "/login?next=/admin";
-const apiHealthHref = "/health";
+const loginHref = `${buildDatamixAdminPath("/login")}?next=${encodeURIComponent(
+  buildDatamixAdminPath(),
+)}`;
+const apiHealthHref = "/api/health";
 const fieldTypeOptions = [...datamixFieldTypes];
 const apiKeyAccessLevelOptions = [...datamixApiKeyAccessLevels];
 
@@ -1979,7 +1982,7 @@ export default function AdminPage() {
     }
 
     if (setupStatus.data?.setupRequired) {
-      window.location.replace("/setup");
+      window.location.replace(buildDatamixAdminPath("/setup"));
       return;
     }
 
@@ -2383,7 +2386,7 @@ export default function AdminPage() {
             </p>
           )}
           <div className="actions">
-            <a className="button button-secondary" href="/">
+            <a className="button button-secondary" href={buildDatamixAdminPath("/login")}>
               Back home
             </a>
             <button className="button" onClick={setupStatus.reload} type="button">
@@ -2421,7 +2424,7 @@ export default function AdminPage() {
             </p>
           )}
           <div className="actions">
-            <a className="button button-secondary" href="/">
+            <a className="button button-secondary" href={buildDatamixAdminPath("/login")}>
               Back home
             </a>
             <button className="button" onClick={() => void loadSessionAuthorizationData()} type="button">
@@ -2528,7 +2531,7 @@ export default function AdminPage() {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    window.location.replace("/login");
+    window.location.replace(buildDatamixAdminPath("/login"));
   };
 
   const openSection = (sectionId: NavigableSectionId) => {

@@ -1,5 +1,5 @@
 export const datamixMediaAssetsTableName = "dmx_media_assets";
-export const datamixMediaObjectPathPrefix = "/media/object";
+export const datamixMediaObjectPathPrefix = "/api/media/object";
 
 export const datamixMediaTransformFormats = ["avif", "jpeg", "png", "webp"] as const;
 export const datamixMediaResizeFits = ["contain", "cover", "fill", "inside"] as const;

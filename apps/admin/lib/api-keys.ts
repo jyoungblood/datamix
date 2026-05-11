@@ -3,7 +3,7 @@ import type {
   DatamixApiKeySummary,
 } from "@datamix/core";
 
-import { buildDatamixAppUrl } from "./runtime";
+import { buildDatamixAdminApiUrl } from "./runtime";
 
 export type PublicApiRuntimeSummary = {
   hasConfiguredReadKey: boolean;
@@ -39,7 +39,7 @@ function buildApiKeysUrl(apiKeyId?: string, action?: "revoke") {
       : `/api-keys/${encodeURIComponent(apiKeyId)}`
     : "/api-keys";
 
-  return buildDatamixAppUrl(pathname);
+  return buildDatamixAdminApiUrl(pathname);
 }
 
 export async function listApiKeys() {

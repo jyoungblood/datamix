@@ -38,8 +38,9 @@ Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a J
 
 - Admin entrypoint:
   [apps/admin/pages/index.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/index.tsx:1),
-  [apps/admin/pages/setup.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/setup.tsx:1),
-  [apps/admin/pages/admin.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/admin.tsx:1)
+  [apps/admin/pages/admin/setup.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/admin/setup.tsx:1),
+  [apps/admin/pages/admin/index.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/admin/index.tsx:1),
+  [apps/admin/pages/_admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/_admin-dashboard.tsx:1)
 - Admin client helpers:
   [apps/admin/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/session.ts:1),
   [apps/admin/lib/collection-definitions.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/collection-definitions.ts:1),
@@ -64,7 +65,7 @@ Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a J
 ## Feature Ownership Today
 
 - Auth and session flow:
-  The API Worker mounts `better-auth` under `/api/auth/*`. The SPA checks session state through API routes and redirects between `/setup`, `/login`, and `/admin` based on that response.
+  The API Worker mounts `better-auth` under `/api/auth/*`. The SPA checks session state through `/api/admin/*` routes and redirects between `/admin/setup`, `/admin/login`, and `/admin` based on that response.
 - Collections and records:
   Collection definitions are persisted once, then used to generate record editing and CRUD behavior. If a schema change affects stored shape, expect to touch `packages/core`, `apps/api`, and the admin request/render path together.
 - Media:
@@ -77,7 +78,7 @@ Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a J
 - Changing public or session auth behavior:
   Start in [apps/api/src/app.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/app.ts:1), [apps/api/src/auth.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/auth.ts:1), and [apps/admin/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/session.ts:1).
 - Changing collection schema or generated record behavior:
-  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/api/src/collections.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/collections.ts:1), [apps/api/src/records.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/records.ts:1), and [apps/admin/pages/admin.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/admin.tsx:1).
+  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/api/src/collections.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/collections.ts:1), [apps/api/src/records.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/records.ts:1), and [apps/admin/pages/_admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/_admin-dashboard.tsx:1).
 - Changing media behavior:
   Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/api/src/media.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/media.ts:1), and [apps/admin/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/media.ts:1).
 - Changing roles, invites, or API keys:
@@ -85,7 +86,7 @@ Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a J
 
 ## Code Shape Guidance
 
-- `apps/admin/pages/admin.tsx` is currently a large, direct composition point for the authenticated shell. Prefer extracting a seam only when it becomes clearer, not simply because the file is long.
+- `apps/admin/pages/_admin-dashboard.tsx` is currently a large, direct composition point for the authenticated shell. Prefer extracting a seam only when it becomes clearer, not simply because the file is long.
 - `apps/api/src/app.ts` is the route assembly layer. Keep route wiring readable there, and keep feature-specific logic in neighboring modules.
 - `packages/core` should stay deliberately lean. Add shared code only when both surfaces genuinely benefit from the same contract.
 

@@ -44,9 +44,10 @@ Use one terminal from the repo root:
 
 Then open:
 
-- `http://127.0.0.1:8787/setup` for the first-run admin bootstrap
-- `http://127.0.0.1:8787/login` after the first account exists
-- `http://127.0.0.1:8787/health` to confirm the Worker is up
+- `http://127.0.0.1:8787/` for the splash page
+- `http://127.0.0.1:8787/admin/setup` for the first-run admin bootstrap
+- `http://127.0.0.1:8787/admin/login` after the first account exists
+- `http://127.0.0.1:8787/api/health` to confirm the Worker is up
 
 What to notice:
 
@@ -76,7 +77,7 @@ Smoke note:
 ## 25-30 Minutes: Learn the Main Seams
 
 - If you are changing admin UI or client fetch behavior:
-  Start in [apps/admin/pages/admin.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/admin.tsx:1) and the matching helper in `apps/admin/lib/`.
+  Start in [apps/admin/pages/_admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/_admin-dashboard.tsx:1) and the matching helper in `apps/admin/lib/`.
 - If you are changing auth or session behavior:
   Start in [apps/api/src/auth.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/auth.ts:1), [apps/api/src/auth-guard.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/auth-guard.ts:1), and [apps/admin/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/session.ts:1).
 - If you are changing collection schema or record behavior:

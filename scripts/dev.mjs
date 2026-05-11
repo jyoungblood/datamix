@@ -11,6 +11,22 @@ const localAppOrigin = process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://127.0.0.1:8
 const localAppEnv = process.env.NEXT_PUBLIC_APP_ENV ?? "development";
 const watchAdminAssets = process.env.DATAMIX_ADMIN_WATCH !== "0";
 const wranglerPersistTo = process.env.DATAMIX_PERSIST_TO?.trim();
+const localAppUrl = new URL(localAppOrigin);
+const appLinkOrigin =
+  localAppUrl.hostname === "127.0.0.1"
+    ? new URL(
+        `${localAppUrl.protocol}//localhost${localAppUrl.port ? `:${localAppUrl.port}` : ""}`,
+      ).toString()
+    : localAppOrigin;
+let adminShellRefresh = Promise.resolve();
+
+function isWorkerReadyLine(line) {
+  return line.includes("Ready on http://") || line.includes("Local server updated and ready");
+}
+
+function isAdminBuildCompleteLine(line) {
+  return /built in \d+/i.test(line);
+}
 
 function prefixOutput(stream, label) {
   stream?.on("data", (chunk) => {
@@ -24,6 +40,22 @@ function prefixOutput(stream, label) {
       }
 
       process.stdout.write(`[${label}] ${line}\n`);
+
+      if (label === "worker" && isWorkerReadyLine(line)) {
+        process.stdout.write(`[datamix] Open ${appLinkOrigin}\n`);
+      }
+
+      if (label === "admin-watch" && isAdminBuildCompleteLine(line)) {
+        adminShellRefresh = adminShellRefresh
+          .catch(() => undefined)
+          .then(() =>
+            runStep("admin-shell", "node", ["./scripts/generate-admin-spa-shell.mjs"], process.env),
+          )
+          .catch((error) => {
+            const message = error instanceof Error ? error.message : String(error);
+            process.stderr.write(`${message}\n`);
+          });
+      }
     }
   });
 }

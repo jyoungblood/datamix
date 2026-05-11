@@ -12,6 +12,7 @@ const apiDevVarsPath = path.join(repoRoot, "apps/api/.dev.vars");
 const smokePersistPath = `/private/tmp/datamix-smoke-state-${Date.now()}`;
 const appPort = 8787;
 const appOrigin = `http://127.0.0.1:${appPort}`;
+const adminApiOrigin = `${appOrigin}/api/admin`;
 const authBaseUrl = `${appOrigin}/api/auth`;
 
 class CookieJar {
@@ -239,7 +240,7 @@ function createMediaObjectUrlPath(storageKey) {
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 
-  return `/media/object/${encodedStorageKey}`;
+  return `/api/media/object/${encodedStorageKey}`;
 }
 
 async function main() {
@@ -279,7 +280,7 @@ async function main() {
       timeoutMs: 120_000,
     });
 
-    const healthResponse = await request(`${appOrigin}/health`);
+    const healthResponse = await request(`${appOrigin}/api/health`);
     assertOk(healthResponse, "Expected the in-process API health route to load.");
     const healthJson = await readJsonResponse(healthResponse);
 
@@ -291,8 +292,8 @@ async function main() {
     const homeResponse = await request(appOrigin);
     assertOk(homeResponse, "Expected the admin home page to load.");
 
-    const setupStatusBefore = await requestJson(`${appOrigin}/setup/status`);
-    assertOk(setupStatusBefore.response, "Expected /setup/status to load before setup.");
+    const setupStatusBefore = await requestJson(`${adminApiOrigin}/setup/status`);
+    assertOk(setupStatusBefore.response, "Expected /api/admin/setup/status to load before setup.");
     assert.equal(setupStatusBefore.json?.auth?.setup?.setupRequired, true);
     assert.equal(setupStatusBefore.json?.auth?.setup?.userCount, 0);
 
@@ -311,7 +312,7 @@ async function main() {
     });
     assertOk(signUpResponse.response, "Expected the first admin sign-up flow to succeed.");
 
-    const sessionAfterSetup = await requestJson(`${appOrigin}/session`, {
+    const sessionAfterSetup = await requestJson(`${adminApiOrigin}/session`, {
       cookieJar,
       origin: appOrigin,
     });
@@ -319,8 +320,8 @@ async function main() {
     assert.equal(sessionAfterSetup.json?.session?.user?.email, adminEmail);
     assert.equal(sessionAfterSetup.json?.authorization?.role?.id, "administrator");
 
-    const setupStatusAfter = await requestJson(`${appOrigin}/setup/status`);
-    assertOk(setupStatusAfter.response, "Expected /setup/status to load after setup.");
+    const setupStatusAfter = await requestJson(`${adminApiOrigin}/setup/status`);
+    assertOk(setupStatusAfter.response, "Expected /api/admin/setup/status to load after setup.");
     assert.equal(setupStatusAfter.json?.auth?.setup?.setupRequired, false);
     assert.equal(setupStatusAfter.json?.auth?.setup?.canLogin, true);
 
@@ -335,7 +336,7 @@ async function main() {
     assertOk(signOutResponse.response, "Expected sign-out to succeed.");
     cookieJar.clear();
 
-    const sessionAfterSignOut = await requestJson(`${appOrigin}/session`, {
+    const sessionAfterSignOut = await requestJson(`${adminApiOrigin}/session`, {
       cookieJar,
       origin: appOrigin,
     });
@@ -353,7 +354,7 @@ async function main() {
     });
     assertOk(signInResponse.response, "Expected email sign-in to succeed.");
 
-    const sessionAfterSignIn = await requestJson(`${appOrigin}/session`, {
+    const sessionAfterSignIn = await requestJson(`${adminApiOrigin}/session`, {
       cookieJar,
       origin: appOrigin,
     });
@@ -388,7 +389,7 @@ async function main() {
       name: "smoke_articles",
     };
     const saveCollectionResponse = await requestJson(
-      `${appOrigin}/collection-definitions/${collectionDefinition.name}`,
+      `${adminApiOrigin}/collection-definitions/${collectionDefinition.name}`,
       {
         body: collectionDefinition,
         cookieJar,
@@ -399,7 +400,7 @@ async function main() {
     assertOk(saveCollectionResponse.response, "Expected collection save to succeed.");
     assert.equal(saveCollectionResponse.json?.collection?.definition?.name, collectionDefinition.name);
 
-    const listCollectionsResponse = await requestJson(`${appOrigin}/collection-definitions`, {
+    const listCollectionsResponse = await requestJson(`${adminApiOrigin}/collection-definitions`, {
       cookieJar,
       origin: appOrigin,
     });
@@ -407,7 +408,7 @@ async function main() {
     assert.equal(listCollectionsResponse.json?.collections?.length, 1);
 
     const createRecordResponse = await requestJson(
-      `${appOrigin}/collections/${collectionDefinition.name}/records`,
+      `${adminApiOrigin}/collections/${collectionDefinition.name}/records`,
       {
         body: {
           values: {
@@ -426,7 +427,7 @@ async function main() {
     assert.equal(typeof recordId, "string");
 
     const listRecordsResponse = await requestJson(
-      `${appOrigin}/collections/${collectionDefinition.name}/records`,
+      `${adminApiOrigin}/collections/${collectionDefinition.name}/records`,
       {
         cookieJar,
         origin: appOrigin,
@@ -444,7 +445,7 @@ async function main() {
       new File([createFixtureImage()], "smoke.png", { type: "image/png" }),
     );
 
-    const uploadMediaResponse = await requestJson(`${appOrigin}/media/assets`, {
+    const uploadMediaResponse = await requestJson(`${adminApiOrigin}/media/assets`, {
       body: uploadForm,
       cookieJar,
       method: "POST",
@@ -455,7 +456,7 @@ async function main() {
 
     assert.equal(uploadedAsset?.mimeType, "image/png");
 
-    const listMediaResponse = await requestJson(`${appOrigin}/media/assets`, {
+    const listMediaResponse = await requestJson(`${adminApiOrigin}/media/assets`, {
       cookieJar,
       origin: appOrigin,
     });
@@ -463,7 +464,7 @@ async function main() {
     assert.equal(listMediaResponse.json?.assets?.length, 1);
 
     const updateRecordResponse = await requestJson(
-      `${appOrigin}/collections/${collectionDefinition.name}/records/${recordId}`,
+      `${adminApiOrigin}/collections/${collectionDefinition.name}/records/${recordId}`,
       {
         body: {
           values: {

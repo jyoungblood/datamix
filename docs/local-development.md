@@ -15,7 +15,7 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate "g
 2. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`.
 3. Replace `BETTER_AUTH_SECRET` in `apps/api/.dev.vars` with a long random string.
 4. Run `npm run typegen:api` after changing `apps/api/wrangler.jsonc`.
-5. Start the app and open `http://127.0.0.1:8787/setup` to create the first admin account in-browser.
+5. Start the app and open `http://127.0.0.1:8787/admin/setup` to create the first admin account in-browser.
 
 ## Daily workflow
 
@@ -54,7 +54,7 @@ The smoke harness starts the unified local app on its own, so it does not requir
 - `AUTH_RESEND_API_KEY` is required when `AUTH_EMAIL_PROVIDER=resend`.
 - `AUTH_SMTP_HOST`, `AUTH_SMTP_PORT`, `AUTH_SMTP_USERNAME`, `AUTH_SMTP_PASSWORD`, and `AUTH_SMTP_TLS` are required when `AUTH_EMAIL_PROVIDER=smtp`.
 - The admin auth client talks back to the current browser origin; there is no separate public auth origin variable in the single-app contract.
-- The API Worker prepares auth tables through the public first-run setup status route at `/setup/status`.
+- The API Worker prepares auth tables through the first-run admin status route at `/api/admin/setup/status`.
 
 For basic local UI and content work, only `BETTER_AUTH_SECRET` must be real. Configure the email provider values when you need to exercise password reset or invite delivery end to end.
 
@@ -66,6 +66,6 @@ For basic local UI and content work, only `BETTER_AUTH_SECRET` must be real. Con
 
 ## Auth email flows
 
-- `/forgot-password` requests a password-reset email through `better-auth`.
-- `/reset-password` completes both standard password resets and invite acceptance.
+- `/admin/forgot-password` requests a password-reset email through `better-auth`.
+- `/admin/reset-password` completes both standard password resets and invite acceptance.
 - The protected `/admin` screen exposes a minimal invite form that sends an invite email and routes the recipient through password setup.

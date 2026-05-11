@@ -79,7 +79,7 @@ Suggested remote resource names:
 
 - `apps/api/wrangler.jsonc` points `assets.directory` at `../admin/dist/client`.
 - `assets.not_found_handling` is set to `single-page-application` so client-side routes resolve to the SPA shell.
-- `assets.run_worker_first` is configured for dynamic app routes such as `/api/*`, `/setup/*`, `/session`, `/collections/*`, `/media/*`, and `/health`.
+- `assets.run_worker_first` is configured for `/api/*`, which keeps every auth, admin JSON, public JSON, and media route on the Worker while letting static admin assets resolve directly from the bundle.
 - The practical result is:
   static asset requests are served directly from the asset bundle,
   dynamic JSON/auth/media routes hit the Worker first,
@@ -90,7 +90,7 @@ Suggested remote resource names:
 - `better-auth` is mounted on the Worker at `/api/auth/*`.
 - Auth sessions persist as cookies on the same app origin and are consumed by the SPA with credentialed `fetch`.
 - Protected admin pages must verify session state through Worker routes; the SPA does not read D1 directly.
-- `GET /setup/status` is the browser-first bootstrap seam. It prepares auth tables if needed and reports whether the instance still needs its first admin user.
+- `GET /api/admin/setup/status` is the browser-first bootstrap seam. It prepares auth tables if needed and reports whether the instance still needs its first admin user.
 - Public email/password sign-up is only permitted for the very first account. After that, the sign-up route is blocked until a later invite/user-management slice expands it intentionally.
 - Auth email delivery is provider-swappable through env-only configuration:
   `AUTH_EMAIL_PROVIDER=resend` uses the Resend HTTPS API.
@@ -99,7 +99,7 @@ Suggested remote resource names:
 
 ## Content API contract
 
-- Admin-facing collection management and record editing routes stay session-protected at `/collections/*` and `/records/*`.
+- Admin-facing collection management, media, user, role, API key, and record editing routes stay session-protected under `/api/admin/*`.
 - Public content delivery routes live at `/api/collections/*`.
 - Public read access is controlled by `PUBLIC_API_READ_ACCESS`:
   `public` allows anonymous reads,

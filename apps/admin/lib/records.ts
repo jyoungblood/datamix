@@ -1,6 +1,6 @@
 import type { DatamixSchemaValidationIssue } from "@datamix/core";
 
-import { buildDatamixAppUrl } from "./runtime";
+import { buildDatamixAdminApiUrl } from "./runtime";
 
 export type PrimitiveRecordValue = boolean | number | string | string[] | null;
 
@@ -38,7 +38,7 @@ function buildRecordsUrl(collectionName: string, recordId?: string) {
   const basePath = `/collections/${encodeURIComponent(collectionName)}/records`;
   const pathname = recordId ? `${basePath}/${encodeURIComponent(recordId)}` : basePath;
 
-  return buildDatamixAppUrl(pathname);
+  return buildDatamixAdminApiUrl(pathname);
 }
 
 export async function listCollectionRecords(collectionName: string) {

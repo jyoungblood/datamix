@@ -1,6 +1,6 @@
 import type { DatamixMediaAsset } from "@datamix/core";
 
-import { buildDatamixAppUrl } from "./runtime";
+import { buildDatamixAdminApiUrl } from "./runtime";
 
 type MediaAssetApiBody = {
   asset?: DatamixMediaAsset;
@@ -21,7 +21,7 @@ async function readApiBody<TValue>(response: Response) {
 }
 
 function buildMediaAssetsUrl() {
-  return buildDatamixAppUrl("/media/assets");
+  return buildDatamixAdminApiUrl("/media/assets");
 }
 
 export async function listMediaAssets() {

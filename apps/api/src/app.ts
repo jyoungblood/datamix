@@ -252,51 +252,51 @@ app.use("/api/collections/*", async (c, next) => {
   return allowPublicJsonApi()(c, next);
 });
 
-app.use("/setup/*", async (c, next) => {
+app.use("/api/admin/setup/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/invites", async (c, next) => {
+app.use("/api/admin/invites", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/collection-definitions", async (c, next) => {
+app.use("/api/admin/collection-definitions", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/collection-definitions/*", async (c, next) => {
+app.use("/api/admin/collection-definitions/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/collections", async (c, next) => {
+app.use("/api/admin/collections", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/collections/*", async (c, next) => {
+app.use("/api/admin/collections/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/records", async (c, next) => {
+app.use("/api/admin/records", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/records/*", async (c, next) => {
+app.use("/api/admin/records/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/media/assets", async (c, next) => {
+app.use("/api/admin/media/assets", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/media/assets/*", async (c, next) => {
+app.use("/api/admin/media/assets/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/media/object/*", async (c, next) => {
+app.use("/api/media/object/*", async (c, next) => {
   return allowPublicMedia()(c, next);
 });
 
-app.use("/session", async (c, next) => {
+app.use("/api/admin/session", async (c, next) => {
   const corsMiddleware = cors({
     origin: c.env.APP_ORIGIN,
     allowMethods: ["GET", "POST", "OPTIONS"],
@@ -307,27 +307,27 @@ app.use("/session", async (c, next) => {
   return corsMiddleware(c, next);
 });
 
-app.use("/roles", async (c, next) => {
+app.use("/api/admin/roles", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/roles/*", async (c, next) => {
+app.use("/api/admin/roles/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/users", async (c, next) => {
+app.use("/api/admin/users", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/users/*", async (c, next) => {
+app.use("/api/admin/users/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/api-keys", async (c, next) => {
+app.use("/api/admin/api-keys", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
-app.use("/api-keys/*", async (c, next) => {
+app.use("/api/admin/api-keys/*", async (c, next) => {
   return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
@@ -347,7 +347,7 @@ app.on(["GET", "POST"], "/api/auth/*", (c) => {
   });
 });
 
-app.get("/", (c) => {
+app.get("/api", (c) => {
   const runtime = readApiRuntime(c.env);
 
   return c.json({
@@ -593,7 +593,7 @@ app.delete(
   },
 );
 
-app.get("/setup/status", async (c) => {
+app.get("/api/admin/setup/status", async (c) => {
   try {
     const auth = await getAuthSetupStatus(c.env);
 
@@ -610,7 +610,7 @@ app.get("/setup/status", async (c) => {
   }
 });
 
-app.get("/session", requireSession, (c) => {
+app.get("/api/admin/session", requireSession, (c) => {
   return c.json({
     ...createServiceStatus("api"),
     authorization: c.get("authorization"),
@@ -618,7 +618,7 @@ app.get("/session", requireSession, (c) => {
   });
 });
 
-app.post("/invites", requirePermission("users.invite"), async (c) => {
+app.post("/api/admin/invites", requirePermission("users.invite"), async (c) => {
   const body = await c.req.json();
   const parsed = parseInviteRequest(body);
 
@@ -658,7 +658,7 @@ app.post("/invites", requirePermission("users.invite"), async (c) => {
 });
 
 app.get(
-  "/roles",
+  "/api/admin/roles",
   requireAnyPermission([
     "users.read",
     "users.invite",
@@ -690,7 +690,7 @@ app.get(
   },
 );
 
-app.put("/roles/:id", requirePermission("settings.update"), async (c) => {
+app.put("/api/admin/roles/:id", requirePermission("settings.update"), async (c) => {
   let body: unknown;
 
   try {
@@ -732,7 +732,7 @@ app.put("/roles/:id", requirePermission("settings.update"), async (c) => {
   }
 });
 
-app.get("/users", requirePermission("users.read"), async (c) => {
+app.get("/api/admin/users", requirePermission("users.read"), async (c) => {
   try {
     const users = await listDatamixUsers(c.env);
 
@@ -749,7 +749,7 @@ app.get("/users", requirePermission("users.read"), async (c) => {
   }
 });
 
-app.put("/users/:id/role", requirePermission("users.update"), async (c) => {
+app.put("/api/admin/users/:id/role", requirePermission("users.update"), async (c) => {
   let body: unknown;
 
   try {
@@ -783,7 +783,7 @@ app.put("/users/:id/role", requirePermission("users.update"), async (c) => {
 });
 
 app.get(
-  "/api-keys",
+  "/api/admin/api-keys",
   requireAnyPermission(["settings.read", "settings.update"]),
   async (c) => {
   try {
@@ -809,7 +809,7 @@ app.get(
   },
 );
 
-app.post("/api-keys", requirePermission("settings.update"), async (c) => {
+app.post("/api/admin/api-keys", requirePermission("settings.update"), async (c) => {
   let body: unknown;
 
   try {
@@ -842,7 +842,7 @@ app.post("/api-keys", requirePermission("settings.update"), async (c) => {
   }
 });
 
-app.put("/api-keys/:id", requirePermission("settings.update"), async (c) => {
+app.put("/api/admin/api-keys/:id", requirePermission("settings.update"), async (c) => {
   let body: unknown;
 
   try {
@@ -874,7 +874,7 @@ app.put("/api-keys/:id", requirePermission("settings.update"), async (c) => {
   }
 });
 
-app.post("/api-keys/:id/revoke", requirePermission("settings.update"), async (c) => {
+app.post("/api/admin/api-keys/:id/revoke", requirePermission("settings.update"), async (c) => {
   try {
     const apiKey = await revokeDatamixApiKey(c.env, c.req.param("id"));
 
@@ -892,7 +892,7 @@ app.post("/api-keys/:id/revoke", requirePermission("settings.update"), async (c)
   }
 });
 
-app.get("/media/assets", requirePermission("media.read"), async (c) => {
+app.get("/api/admin/media/assets", requirePermission("media.read"), async (c) => {
   try {
     const assets = await listMediaAssets(c.env);
 
@@ -910,7 +910,7 @@ app.get("/media/assets", requirePermission("media.read"), async (c) => {
   }
 });
 
-app.post("/media/assets", requirePermission("media.upload"), async (c) => {
+app.post("/api/admin/media/assets", requirePermission("media.upload"), async (c) => {
   const contentType = c.req.header("content-type") ?? "";
 
   if (!contentType.toLowerCase().includes("multipart/form-data")) {
@@ -942,10 +942,10 @@ app.post("/media/assets", requirePermission("media.upload"), async (c) => {
   }
 });
 
-app.get("/media/object/*", async (c) => {
+app.get("/api/media/object/*", async (c) => {
   try {
     const requestPath = new URL(c.req.url).pathname;
-    const storageKeyPrefix = "/media/object/";
+    const storageKeyPrefix = "/api/media/object/";
     const storageKey = requestPath.startsWith(storageKeyPrefix)
       ? decodeURIComponent(requestPath.slice(storageKeyPrefix.length))
       : "";
@@ -979,7 +979,7 @@ app.get("/media/object/*", async (c) => {
   }
 });
 
-app.get("/collection-definitions", requirePermission("collections.read"), async (c) => {
+app.get("/api/admin/collection-definitions", requirePermission("collections.read"), async (c) => {
   try {
     const collections = await listCollectionDefinitions(c.env);
 
@@ -1007,7 +1007,7 @@ app.get("/collection-definitions", requirePermission("collections.read"), async 
   }
 });
 
-app.get("/collection-definitions/:name", requirePermission("collections.read"), async (c) => {
+app.get("/api/admin/collection-definitions/:name", requirePermission("collections.read"), async (c) => {
   try {
     const collection = await getCollectionDefinition(c.env, c.req.param("name"));
 
@@ -1039,7 +1039,7 @@ app.get("/collection-definitions/:name", requirePermission("collections.read"), 
   }
 });
 
-app.put("/collection-definitions/:name", requireSession, async (c) => {
+app.put("/api/admin/collection-definitions/:name", requireSession, async (c) => {
   let body: unknown;
 
   try {
@@ -1096,7 +1096,7 @@ app.put("/collection-definitions/:name", requireSession, async (c) => {
   }
 });
 
-app.get("/collections", requirePermission("collections.read"), async (c) => {
+app.get("/api/admin/collections", requirePermission("collections.read"), async (c) => {
   try {
     const collections = await listGeneratedCollectionCrudRoutes(c.env);
 
@@ -1120,7 +1120,7 @@ app.get("/collections", requirePermission("collections.read"), async (c) => {
   }
 });
 
-app.get("/collections/:name", requirePermission("collections.read"), async (c) => {
+app.get("/api/admin/collections/:name", requirePermission("collections.read"), async (c) => {
   try {
     const collection = await getCollectionDefinition(c.env, c.req.param("name"));
 
@@ -1154,7 +1154,7 @@ app.get("/collections/:name", requirePermission("collections.read"), async (c) =
 });
 
 app.get(
-  "/collections/:name/records",
+  "/api/admin/collections/:name/records",
   requireEveryPermission(["collections.read", "records.read"]),
   async (c) => {
     try {
@@ -1189,7 +1189,7 @@ app.get(
 );
 
 app.post(
-  "/collections/:name/records",
+  "/api/admin/collections/:name/records",
   requireEveryPermission(["collections.read", "records.create"]),
   async (c) => {
     let body: unknown;
@@ -1233,7 +1233,7 @@ app.post(
 );
 
 app.get(
-  "/collections/:name/records/:id",
+  "/api/admin/collections/:name/records/:id",
   requireEveryPermission(["collections.read", "records.read"]),
   async (c) => {
     try {
@@ -1268,7 +1268,7 @@ app.get(
 );
 
 app.put(
-  "/collections/:name/records/:id",
+  "/api/admin/collections/:name/records/:id",
   requireEveryPermission(["collections.read", "records.update"]),
   async (c) => {
     let body: unknown;
@@ -1317,7 +1317,7 @@ app.put(
 );
 
 app.delete(
-  "/collections/:name/records/:id",
+  "/api/admin/collections/:name/records/:id",
   requireEveryPermission(["collections.read", "records.delete"]),
   async (c) => {
     try {
@@ -1357,7 +1357,7 @@ app.delete(
 );
 
 app.get(
-  "/records/:name",
+  "/api/admin/records/:name",
   requireEveryPermission(["collections.read", "records.read"]),
   async (c) => {
     try {
@@ -1391,7 +1391,7 @@ app.get(
 );
 
 app.post(
-  "/records/:name",
+  "/api/admin/records/:name",
   requireEveryPermission(["collections.read", "records.create"]),
   async (c) => {
     let body: unknown;
@@ -1434,7 +1434,7 @@ app.post(
 );
 
 app.put(
-  "/records/:name/:id",
+  "/api/admin/records/:name/:id",
   requireEveryPermission(["collections.read", "records.update"]),
   async (c) => {
     let body: unknown;
@@ -1481,7 +1481,7 @@ app.put(
   },
 );
 
-app.get("/health", (c) => {
+app.get("/api/health", (c) => {
   const runtime = readApiRuntime(c.env);
 
   return c.json({

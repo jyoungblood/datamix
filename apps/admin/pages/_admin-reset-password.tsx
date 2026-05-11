@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CenteredCardPage } from "../components/centered-card-page";
 import { authClient } from "../lib/auth-client";
+import { buildDatamixAdminPath } from "../lib/runtime";
 
 function readResetParams() {
   if (typeof window === "undefined") {
@@ -79,8 +80,8 @@ export default function ResetPasswordPage() {
       ? "Set your password to finish joining this Datamix instance."
       : "Choose a new password for your Datamix account.";
   const loginHref = params.email
-    ? `/login?email=${encodeURIComponent(params.email)}`
-    : "/login";
+    ? `${buildDatamixAdminPath("/login")}?email=${encodeURIComponent(params.email)}`
+    : buildDatamixAdminPath("/login");
 
   return (
     <CenteredCardPage description={description} label="Authentication" title={heading}>
@@ -131,7 +132,7 @@ export default function ResetPasswordPage() {
 
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline">
-              <a href="/login">Back to login</a>
+              <a href={buildDatamixAdminPath("/login")}>Back to login</a>
             </Button>
             <Button disabled={isSubmitting} type="submit">
               {isSubmitting

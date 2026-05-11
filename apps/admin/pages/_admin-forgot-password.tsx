@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CenteredCardPage } from "../components/centered-card-page";
 import { authClient } from "../lib/auth-client";
+import { buildDatamixAdminPath } from "../lib/runtime";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -18,7 +19,8 @@ export default function ForgotPasswordPage() {
     setErrorMessage(null);
     setIsSubmitting(true);
 
-    const redirectTo = new URL("/reset-password", window.location.origin).toString();
+    const redirectTo = new URL(buildDatamixAdminPath("/reset-password"), window.location.origin)
+      .toString();
     const result = await authClient.requestPasswordReset(
       {
         email,
@@ -72,7 +74,7 @@ export default function ForgotPasswordPage() {
 
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline">
-              <a href="/login">Back to login</a>
+              <a href={buildDatamixAdminPath("/login")}>Back to login</a>
             </Button>
             <Button disabled={isSubmitting} type="submit">
               {isSubmitting ? "Sending..." : "Send reset link"}
