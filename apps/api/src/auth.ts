@@ -55,10 +55,10 @@ export function createAuthOptions(
   return {
     appName: datamixProduct.name,
     basePath: datamixAuthPath,
-    ...(options?.baseURL ? { baseURL: options.baseURL } : {}),
+    baseURL: options?.baseURL ?? env.APP_ORIGIN,
     secret: authRuntime.BETTER_AUTH_SECRET,
     database: env.DB,
-    trustedOrigins: [env.ADMIN_ORIGIN],
+    trustedOrigins: [env.APP_ORIGIN],
     emailAndPassword: {
       enabled: true,
       sendResetPassword: async ({ user, url }, request) => {

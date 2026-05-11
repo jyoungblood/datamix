@@ -1,6 +1,6 @@
 import type { DatamixAuthorizationSummary } from "@datamix/core";
 
-import { adminPublicEnv } from "./runtime";
+import { buildDatamixAppUrl } from "./runtime";
 
 type SessionAccessApiBody = {
   authorization?: DatamixAuthorizationSummary;
@@ -22,7 +22,7 @@ async function readApiBody<TValue>(response: Response) {
 }
 
 export async function loadSessionAccess() {
-  const response = await fetch(`${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/session`, {
+  const response = await fetch(buildDatamixAppUrl("/session"), {
     credentials: "include",
   });
   const body = await readApiBody<SessionAccessApiBody>(response);

@@ -3,7 +3,7 @@ import type {
   DatamixApiKeySummary,
 } from "@datamix/core";
 
-import { adminPublicEnv } from "./runtime";
+import { buildDatamixAppUrl } from "./runtime";
 
 export type PublicApiRuntimeSummary = {
   hasConfiguredReadKey: boolean;
@@ -39,7 +39,7 @@ function buildApiKeysUrl(apiKeyId?: string, action?: "revoke") {
       : `/api-keys/${encodeURIComponent(apiKeyId)}`
     : "/api-keys";
 
-  return `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}${pathname}`;
+  return buildDatamixAppUrl(pathname);
 }
 
 export async function listApiKeys() {

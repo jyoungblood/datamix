@@ -11,7 +11,7 @@ import {
 
 export type ApiBindings = Pick<
   Env,
-  | "ADMIN_ORIGIN"
+  | "APP_ORIGIN"
   | "APP_ENV"
   | "BETTER_AUTH_SECRET"
   | "DB"
@@ -34,6 +34,7 @@ export type ApiBindings = Pick<
   | "AUTH_SMTP_USERNAME"
   | "AUTH_SMTP_PASSWORD"
   | "AUTH_SMTP_TLS"
+  | "IMAGES"
   | "MEDIA_BUCKET"
 >;
 
@@ -176,7 +177,7 @@ function readEnumValue<TValue extends string>(
 
 export function readApiRuntime(env: ApiBindings): ApiRuntimeEnv {
   return {
-    ADMIN_ORIGIN: normalizeDatamixOrigin(env.ADMIN_ORIGIN, "ADMIN_ORIGIN"),
+    APP_ORIGIN: normalizeDatamixOrigin(env.APP_ORIGIN, "APP_ORIGIN"),
     APP_ENV: isDatamixEnvironment(env.APP_ENV)
       ? env.APP_ENV
       : defaultApiRuntimeEnv.APP_ENV,

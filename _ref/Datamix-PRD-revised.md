@@ -12,7 +12,7 @@ Provide this section verbatim to any LLM assisting with planning or implementati
 
 ### WHAT WE'RE BUILDING
 
-Datamix (DMX) is an open-source, edge-native headless content modeling studio that deploys in a single click to Cloudflare. It provides a JSON-first content delivery API, a fully managed admin UI for content modeling and editing, multi-user RBAC, and a media library - all running on Cloudflare Workers + D1 + R2 with zero local setup required. The admin is a client-rendered SPA (Vinext + shadcn) served from Cloudflare Pages. The backend is a Hono API on Cloudflare Workers. Auth is handled by better-auth. Client-side server state is managed with TanStack Query. Email (auth flows + form relay) uses an abstracted provider layer supporting SMTP, Resend, Mailgun, SendGrid, and Cloudflare Email interchangeably. The primary differentiator is that the entire lifecycle - provisioning, configuration, content management - happens in-browser with no code editor required.
+Datamix (DMX) is an open-source, edge-native headless content modeling studio that deploys in a single click to Cloudflare. It provides a JSON-first content delivery API, a fully managed admin UI for content modeling and editing, multi-user RBAC, and a media library - all running on Cloudflare Workers + D1 + R2 with zero local setup required. The admin is a client-rendered SPA (Vinext + shadcn) whose built assets are served by the same Cloudflare Worker app that exposes the Hono API. Auth is handled by better-auth. Client-side server state is managed with TanStack Query. Email (auth flows + form relay) uses an abstracted provider layer supporting SMTP, Resend, Mailgun, SendGrid, and Cloudflare Email interchangeably. The primary differentiator is that the entire lifecycle - provisioning, configuration, content management - happens in-browser with no code editor required.
 
 ### WHAT WE ARE NOT BUILDING (v0)
 
@@ -40,7 +40,7 @@ Write the simplest, most human-readable code possible. This is an open-source pr
 
 - Zero local setup: provisioning, configuration, and content management happen 100% in-browser
 - Genuinely good UX: feels complete, smooth, and intentional - not vibe-coded
-- Cloudflare-native: built for the platform, not bolted on - D1, R2, Workers, Pages
+- Cloudflare-native: built for the platform, not bolted on - D1, R2, and a single Worker app
 - Narrow, focused feature set: does fewer things and does them well
 - Human-readable codebase: optimized for open-source contribution, not performance tricks
 
@@ -58,7 +58,7 @@ Write the simplest, most human-readable code possible. This is an open-source pr
 | Auth | better-auth - full auth with password reset, persistent sessions | Required |
 | Query Building | Kysely - type-safe SQL query builder (adopt if/when query complexity warrants it) | Evaluate |
 | Data Fetching | TanStack Query - client-side server state, caching, and mutation management | Required |
-| Hosting | Cloudflare Pages (admin SPA) + Cloudflare Workers (API) | Required |
+| Hosting | Single Cloudflare Worker app serving admin SPA assets and API routes | Required |
 
 ### 3.2 Email - Abstracted Provider Layer
 
@@ -78,9 +78,9 @@ Email is required in v0 for two flows: auth (forgot password / account invites) 
 
 ### 3.3 Architecture Constraints
 
-- Client-rendered SPA admin - avoids Worker cold-start UX issues associated with server-rendered apps like SonicJS
+- Client-rendered SPA admin served by the same Worker app that exposes the API - avoids Worker cold-start UX issues associated with server-rendered apps like SonicJS while keeping one deployed surface
 - Separate package architecture - core package + optional extension packages under a shared npm org
-- All image processing (compression, resizing, cropping) via Cloudflare Worker routes for R2 - do NOT use Cloudflare Image Resizing service (keep manipulation and storage concerns separate)
+- All image processing (compression, resizing, cropping) must stay behind Cloudflare Worker routes for R2-managed assets
 - Built to receive security updates over time without breaking user customizations
 - No custom code where a maintained library exists
 
@@ -96,7 +96,7 @@ Everything in this section must ship before public launch. No exceptions.
 
 ### 4.1 1-Click Deploy & Init
 
-- Cloudflare Deploy Button integration - single click provisions Workers, D1, R2, Pages
+- Cloudflare Deploy Button integration - single click provisions the Worker app, D1, and R2
 - First-run setup flow: create admin user account from within the deployed app (no CLI step)
 - Environment credentials handled automatically during CF service provisioning
 - Instance is fully operational post-deploy with no local setup at all
@@ -176,7 +176,7 @@ These features are explicitly out of scope for v0 but are next in priority queue
 
 ### 5.4 CI / Build Trigger Integration
 
-- Trigger a Cloudflare Pages build (or external CI webhook) on content save
+- Trigger a Worker redeploy, static-asset rebuild, or external CI webhook on content save
 - Manual trigger button available in admin UI
 - Support for configurable webhook targets
 

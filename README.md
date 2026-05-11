@@ -1,6 +1,6 @@
 # Datamix
 
-Datamix is an edge-native, Cloudflare-only content modeling studio with a JSON-first API, a browser-first admin, and no separate non-Cloudflare runtime story in v0.
+Datamix is an edge-native, Cloudflare-only content modeling studio that ships as a single Cloudflare Worker app: one deployed domain that serves a browser-first admin and a JSON-first API.
 
 ## Start Here
 
@@ -16,8 +16,8 @@ Datamix is an edge-native, Cloudflare-only content modeling studio with a JSON-f
 
 ## Workspace Layout
 
-- `apps/admin`: Vinext admin SPA deployed to Cloudflare Pages
-- `apps/api`: Hono API Worker that owns auth, content, media, and platform bindings
+- `apps/admin`: Vinext admin source that builds the SPA assets served by the Worker
+- `apps/api`: Hono Worker that serves the admin assets, owns the JSON API, and binds auth, content, media, D1, and R2
 - `packages/core`: shared schema, RBAC, media, and API-key types/helpers
 - `packages/create-datamix`: secondary local-first scaffolder for new Datamix workspaces
 - `tests/smoke`: end-to-end smoke coverage for must-not-break flows
@@ -30,6 +30,7 @@ Datamix is an edge-native, Cloudflare-only content modeling studio with a JSON-f
 - `npm run check`
 - `npm run build`
 - `npm run smoke`
+- `npm run dev`
 - `npm run dev:admin`
 - `npm run dev:api`
 - `npm run typegen:api`
@@ -47,5 +48,5 @@ npx create-datamix@latest my-project --deploy
 
 - Preserve the Cloudflare-only deployment model in v0.
 - Keep the public surface JSON-first and session-aware.
-- Treat the API Worker as the only process that talks to D1 and R2.
+- Treat the Worker app as the only deployed process and the only runtime that talks to D1 and R2.
 - Prefer direct, readable code over extra layers or policy engines.

@@ -1,12 +1,12 @@
 # Architecture Overview
 
-Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a JSON-first API Worker, D1 for structured data, and R2 for media. This document is the contributor map for how those parts fit together today.
+Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a JSON-first Worker backend, D1 for structured data, and R2 for media. The admin and API ship together as one Worker app on one domain. This document is the contributor map for how those parts fit together today.
 
 ## Non-Negotiable Constraints
 
 - Cloudflare-only is the product shape, not a temporary implementation detail.
-- The admin is a browser-first SPA served from Cloudflare Pages.
-- The API Worker is the only runtime allowed to touch `D1` and `R2`.
+- The admin is a browser-first SPA built from `apps/admin` and served by the Worker.
+- The Worker runtime is the only code allowed to touch `D1` and `R2`.
 - Auth and session state live on the API origin and are consumed from the SPA with credentialed `fetch`.
 - Collection schema definition and record edit form generation are the same system.
 - Runtime contracts should stay stable unless a small enabling change is clearly worth it.
@@ -28,9 +28,9 @@ Datamix v0 is a Cloudflare-only content studio with a client-rendered admin, a J
 
 ## Runtime Shape
 
-1. The browser loads the admin SPA from `apps/admin`.
-2. The admin uses `NEXT_PUBLIC_API_ORIGIN` to talk to the API Worker over HTTP.
-3. The API Worker handles auth, collection definitions, record CRUD, media, users, roles, invites, and API keys.
+1. The browser loads the admin SPA assets that were built from `apps/admin` and are served by the Worker.
+2. The admin talks back to the same origin for auth, content, media, and setup routes.
+3. The Worker handles auth, collection definitions, record CRUD, media, users, roles, invites, and API keys.
 4. The Worker persists structured data in D1 and binary media in R2.
 5. Public content routes and media object routes still flow through the Worker so the browser never talks directly to D1 or R2.
 

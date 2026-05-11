@@ -11,6 +11,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "build:admin": "npm run build --workspace @datamix/admin",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "npm run typecheck",

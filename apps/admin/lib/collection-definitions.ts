@@ -3,7 +3,7 @@ import type {
   DatamixSchemaValidationIssue,
 } from "@datamix/core";
 
-import { adminPublicEnv } from "./runtime";
+import { buildDatamixAppUrl } from "./runtime";
 
 export type StoredCollectionDefinition = {
   createdAt: string;
@@ -54,7 +54,7 @@ function buildCollectionDefinitionsUrl(name?: string) {
     ? `/collection-definitions/${encodeURIComponent(name)}`
     : "/collection-definitions";
 
-  return `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}${pathname}`;
+  return buildDatamixAppUrl(pathname);
 }
 
 export async function listCollectionDefinitions() {

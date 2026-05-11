@@ -3,7 +3,7 @@ import type {
   DatamixSchemaValidationIssue,
 } from "@datamix/core";
 
-import { adminPublicEnv } from "./runtime";
+import { buildDatamixAppUrl } from "./runtime";
 
 type RolesApiBody = {
   error?: string;
@@ -30,7 +30,7 @@ async function readApiBody<TValue>(response: Response) {
 function buildRolesUrl(roleId?: string) {
   const pathname = roleId ? `/roles/${encodeURIComponent(roleId)}` : "/roles";
 
-  return `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}${pathname}`;
+  return buildDatamixAppUrl(pathname);
 }
 
 export async function listRoles() {

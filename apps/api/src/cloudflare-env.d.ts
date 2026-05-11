@@ -1,5 +1,6 @@
 declare global {
   interface Env {
+    APP_ORIGIN: string;
     BETTER_AUTH_SECRET: string;
     MEDIA_PUBLIC_ORIGIN?: string;
     PUBLIC_API_READ_ACCESS?: "public" | "api-key" | "disabled";
@@ -20,6 +21,7 @@ declare global {
     AUTH_SMTP_USERNAME?: string;
     AUTH_SMTP_PASSWORD?: string;
     AUTH_SMTP_TLS?: "implicit" | "starttls";
+    IMAGES: ImagesBinding;
   }
 }
 

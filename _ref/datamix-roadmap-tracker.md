@@ -1,6 +1,6 @@
 # Datamix v0 Roadmap and Progress Tracker
 
-Last updated: 2026-05-07
+Last updated: 2026-05-11
 Source of truth: [Datamix-PRD-revised.md](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.md)
 
 ## Summary
@@ -35,8 +35,8 @@ This section is the default technical source of truth for roadmap execution. Fut
 - Frontend runtime/framework: `Vinext`.
 - UI library/design system: `shadcn`.
 - Styling system: `Tailwind CSS`.
-- Backend/API framework: `Hono` on `Cloudflare Workers`.
-- Admin hosting target: `Cloudflare Pages`.
+- Backend/API framework: `Hono` on a single `Cloudflare Worker` app.
+- Admin hosting target: admin SPA assets built from `apps/admin` and served by that same Worker.
 - Database: `Cloudflare D1`.
 - Object storage/media origin: `Cloudflare R2`.
 - Auth library: `better-auth`.
@@ -62,7 +62,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 ### Infra and Integration Constraints
 
 - Media assets must be served from `R2` through Worker-managed routes.
-- Image transforms should be implemented in Worker routes; do not use `Cloudflare Image Resizing`.
+- Image transforms should be implemented inside the Worker runtime and stay behind Worker-managed routes.
 - Email delivery should go through an abstracted provider layer.
 - Supported email providers to design for are `SMTP`, `Resend`, `Mailgun`, `SendGrid`, and `Cloudflare Email`.
 
@@ -122,7 +122,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | M0-S2 | M0 | App and package scaffolds | Scaffold `apps/admin`, `apps/api`, and `packages/core` with clear boundaries | M0-S1 | Initial app/package directories and baseline entrypoints | Each app/package builds or typechecks with placeholder code and shared config | `planned` | Keep extraction minimal; avoid premature package sprawl |
 | M0-S3 | M0 | Cloudflare runtime conventions | Add Cloudflare dev/runtime config, env typing, and contributor conventions | M0-S1, M0-S2 | Config files, env contract, local dev instructions | Local development contract is documented and typed | `planned` | Treat Cloudflare-only as a feature, not a temporary constraint |
 | M0-S4 | M0 | CI quality gate | Add CI for install, lint, typecheck, and tests | M0-S1, M0-S2 | CI workflow files and passing baseline checks | PR-quality checks run automatically and pass on scaffolded repo | `planned` | Keep CI fast enough for contributors |
-| M1-S1 | M1 | Deploy/runtime contract | Define Pages, Worker, D1, and R2 deployment/runtime contract | M0-S3 | Deployment config and service boundary docs/config | One documented runtime contract covers admin, API, database, and storage | `planned` | This is the infrastructure backbone for all later slices |
+| M1-S1 | M1 | Deploy/runtime contract | Define the single-Worker, single-domain deployment/runtime contract across admin assets, API, D1, and R2 | M0-S3 | Deployment config and service boundary docs/config | One documented runtime contract covers admin, API, database, and storage | `done` | The Worker now serves both the admin assets and the API from one origin |
 | M1-S2 | M1 | Persistent auth integration | Integrate better-auth and protect admin routes | M0-S2, M1-S1 | Auth setup, session handling, protected routing | Login state persists and protected routes reject anonymous access | `planned` | Keep session behavior explicit and testable |
 | M1-S3 | M1 | First-run setup flow | Create initial admin account entirely in-browser | M1-S1, M1-S2 | Setup UI and backend initialization flow | Fresh instance reaches authenticated admin shell without CLI setup | `planned` | This is a core v0 success criterion |
 | M1-S4 | M1 | Auth email abstraction | Build auth email adapter and ship password reset + invite email flows with SMTP and Resend | M1-S2 | Email interface, SMTP provider, Resend provider, auth mail templates | Password reset and invite flows work through either provider without app code changes | `planned` | v0 email consumer is auth only |
@@ -193,7 +193,7 @@ The final launch-cut note lives at [docs/v0-cut-review.md](/Users/jy/Desktop/pro
 
 Review result:
 
-- The current v0 scope stays limited to the committed Cloudflare-only admin, API, media, auth, and contributor-readability surface.
+- The current v0 scope stays limited to the committed Cloudflare-only single-app admin, API, media, auth, and contributor-readability surface.
 - Documented v1 and future items remain deferred; they do not re-enter v0 without explicit roadmap review.
 - No additional slices were added to the v0 launch cut through this review.
 
@@ -201,6 +201,7 @@ Review result:
 
 - This tracker follows the revised PRD, including the clarification that schema definition and record edit form generation are the same feature.
 - The revised PRD still contains a stale line in section `3.2` mentioning form relay in v0 email scope. This tracker intentionally treats email as auth-only in v0 and reserves submission relay for v1.
+- Runtime contract note: as of 2026-05-11, Datamix runs as one Cloudflare Worker app on one domain. `apps/admin` remains a source directory, but its built SPA assets are served by the Worker rather than a separate Pages deployment.
 - The dedicated scope note for this clarification lives at [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1).
 - The broader deferred-epic list for v1 lives at [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1).
 - The final v0 scope boundary lives at [docs/v0-cut-review.md](/Users/jy/Desktop/projects/datamix/docs/v0-cut-review.md:1).

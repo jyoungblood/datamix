@@ -13,7 +13,6 @@ type CliOptions = {
 };
 
 type ProjectNames = {
-  adminPagesProjectName: string;
   apiDevName: string;
   apiPreviewName: string;
   apiProductionName: string;
@@ -139,7 +138,6 @@ function createProjectNames(projectDirName: string): ProjectNames {
   const projectSlug = rawSlug.length > 0 ? rawSlug : "datamix-project";
 
   return {
-    adminPagesProjectName: `${projectSlug}-admin`,
     apiDevName: `${projectSlug}-api-dev`,
     apiPreviewName: `${projectSlug}-api-preview`,
     apiProductionName: `${projectSlug}-api`,
@@ -219,22 +217,12 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
 
   await writeFile(apiWranglerPath, apiWranglerCustomized);
 
-  const pagesConfigPath = path.join(targetDir, "apps/admin/wrangler.pages.jsonc.example");
-  const pagesConfigSource = await readFile(pagesConfigPath, "utf8");
-  const pagesConfigCustomized = pagesConfigSource.replace(
-    '"name": "datamix-admin"',
-    `"name": "${names.adminPagesProjectName}"`,
-  );
-
-  await writeFile(pagesConfigPath, pagesConfigCustomized);
-
   const deployDocPath = path.join(targetDir, "docs/deploy-runtime-contract.md");
   const deployDocSource = await readFile(deployDocPath, "utf8");
   const deployDocCustomized = deployDocSource
-    .replace("- Pages project: `datamix-admin`", `- Pages project: \`${names.adminPagesProjectName}\``)
     .replace(
-      "- API Worker: `datamix-api` with local top-level config and named `preview` / `production` environments",
-      `- API Worker: \`${names.apiProductionName}\` with local top-level config and named \`preview\` / \`production\` environments`,
+      "- App Worker: `datamix-api` with local top-level config and named `preview` / `production` environments",
+      `- App Worker: \`${names.apiProductionName}\` with local top-level config and named \`preview\` / \`production\` environments`,
     )
     .replace("- Preview D1 database: `datamix-preview`", `- Preview D1 database: \`${names.d1PreviewName}\``)
     .replace(
@@ -328,8 +316,8 @@ function printSuccessMessage(input: {
     console.log(`  npx wrangler d1 create ${input.names.d1ProductionName}`);
     console.log(`  npx wrangler r2 bucket create ${input.names.mediaPreviewName}`);
     console.log(`  npx wrangler r2 bucket create ${input.names.mediaProductionName}`);
-    console.log("  Update apps/api/wrangler.jsonc with the returned IDs and real admin domains.");
-    console.log("  Set the matching Pages build env for NEXT_PUBLIC_API_ORIGIN.");
+    console.log("  Update apps/api/wrangler.jsonc with the returned IDs and real app domains.");
+    console.log("  Run npm run build --workspace @datamix/admin before wrangler deploy.");
     console.log("  Run npm run typegen:api after editing wrangler.jsonc.");
     console.log("");
     console.log("The browser-first deploy flow remains the primary v0 onboarding path.");

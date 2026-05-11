@@ -1,6 +1,6 @@
 import type { DatamixSchemaValidationIssue } from "@datamix/core";
 
-import { adminPublicEnv } from "./runtime";
+import { buildDatamixAppUrl } from "./runtime";
 
 export type PrimitiveRecordValue = boolean | number | string | string[] | null;
 
@@ -38,7 +38,7 @@ function buildRecordsUrl(collectionName: string, recordId?: string) {
   const basePath = `/collections/${encodeURIComponent(collectionName)}/records`;
   const pathname = recordId ? `${basePath}/${encodeURIComponent(recordId)}` : basePath;
 
-  return `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}${pathname}`;
+  return buildDatamixAppUrl(pathname);
 }
 
 export async function listCollectionRecords(collectionName: string) {

@@ -97,10 +97,8 @@ export default function HomePage() {
                     <Badge variant="secondary">{adminSurface?.status ?? "planned"}</Badge>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-muted-foreground">API origin</p>
-                    <p className="break-all font-medium">
-                      {adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}
-                    </p>
+                    <p className="text-muted-foreground">Runtime topology</p>
+                    <p className="font-medium">Single Worker app serving admin and API</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground">Runtime mode</p>

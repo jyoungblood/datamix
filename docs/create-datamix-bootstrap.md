@@ -27,7 +27,7 @@ node packages/create-datamix/dist/index.js my-project --deploy
 
 - Copies a clean Datamix workspace template without local build artifacts or machine-specific env files.
 - Stamps the root package name from the target directory name.
-- Rewrites Cloudflare resource names in `apps/api/wrangler.jsonc` and `apps/admin/wrangler.pages.jsonc.example` to match the new project slug.
+- Rewrites Cloudflare resource names in `apps/api/wrangler.jsonc` to match the new project slug.
 - Prints the next Cloudflare provisioning commands when `--deploy` is passed.
 
 ## What It Deliberately Does Not Do Yet

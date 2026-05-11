@@ -1,7 +1,7 @@
 import type { AuthSetupStatus, DatamixAuthRuntimeSummary } from "@datamix/core";
 import { useEffect, useState } from "react";
 
-import { adminPublicEnv } from "./runtime";
+import { buildDatamixAppUrl } from "./runtime";
 
 export type AuthSetupRuntime = {
   oauth: DatamixAuthRuntimeSummary;
@@ -32,7 +32,7 @@ export class SetupStatusError extends Error {
 }
 
 export async function fetchSetupRuntime() {
-  const response = await fetch(`${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/setup/status`, {
+  const response = await fetch(buildDatamixAppUrl("/setup/status"), {
     credentials: "include",
   });
 

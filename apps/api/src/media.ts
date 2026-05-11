@@ -8,10 +8,9 @@ import {
   type DatamixMediaTransformFormat,
   type DatamixMediaTransformRequest,
 } from "@datamix/core";
-import sharp from "sharp";
 
 import type { DatamixSession } from "./auth";
-import type { ApiBindings } from "./env";
+import { readApiRuntime, type ApiBindings } from "./env";
 
 type MediaAssetRow = {
   byte_size: number | string;
@@ -35,6 +34,13 @@ type MediaObjectResult = {
   contentLength: number;
   contentType: string;
   etag?: string;
+};
+
+type ImagesTrimOptions = {
+  height: number;
+  left: number;
+  top: number;
+  width: number;
 };
 
 export class MediaAssetError extends Error {
@@ -236,7 +242,9 @@ function resolveOutputFormat(
   }
 }
 
-function mapFormatToContentType(format: DatamixMediaTransformFormat) {
+function mapFormatToContentType(
+  format: DatamixMediaTransformFormat,
+): "image/avif" | "image/jpeg" | "image/png" | "image/webp" {
   switch (format) {
     case "avif":
       return "image/avif";
@@ -249,7 +257,35 @@ function mapFormatToContentType(format: DatamixMediaTransformFormat) {
   }
 }
 
+function mapResizeFitToImagesFit(fit?: DatamixMediaResizeFit) {
+  switch (fit) {
+    case "contain":
+      return "contain";
+    case "cover":
+      return "cover";
+    case "inside":
+      return "scale-down";
+    case "fill":
+    case undefined:
+      return undefined;
+  }
+}
+
+function createImagesTrimOptions(transform: DatamixMediaTransformRequest) {
+  if (!transform.crop) {
+    return undefined;
+  }
+
+  return {
+    height: transform.crop.height,
+    left: transform.crop.left,
+    top: transform.crop.top,
+    width: transform.crop.width,
+  } satisfies ImagesTrimOptions;
+}
+
 async function createTransformedMediaObject(
+  env: ApiBindings,
   object: R2ObjectBody,
   transform: DatamixMediaTransformRequest,
   sourceContentType: string,
@@ -260,57 +296,62 @@ async function createTransformedMediaObject(
     );
   }
 
-  const inputBuffer = Buffer.from(await object.arrayBuffer());
-  let pipeline = sharp(inputBuffer, { animated: true }).rotate();
-
-  if (transform.crop) {
-    pipeline = pipeline.extract(transform.crop);
+  if (!object.body) {
+    throw new MediaAssetError("Media asset body is unavailable.", 500);
   }
 
-  if (typeof transform.width === "number" || typeof transform.height === "number") {
-    pipeline = pipeline.resize({
-      fit: transform.fit ?? "cover",
-      height: transform.height,
-      width: transform.width,
-      withoutEnlargement: true,
-    });
+  const runtime = readApiRuntime(env);
+  const imagesTransform: Record<string, unknown> = {};
+
+  if (typeof transform.width === "number") {
+    imagesTransform.width = transform.width;
+  }
+
+  if (typeof transform.height === "number") {
+    imagesTransform.height = transform.height;
+  }
+
+  if (runtime.APP_ENV !== "development") {
+    const fit = mapResizeFitToImagesFit(transform.fit);
+    const trim = createImagesTrimOptions(transform);
+
+    if (fit) {
+      imagesTransform.fit = fit;
+    }
+
+    if (trim) {
+      imagesTransform.trim = trim;
+    }
   }
 
   const outputFormat = resolveOutputFormat(sourceContentType, transform.format);
-  const quality = transform.quality ?? 80;
+  const imagesOutput: {
+    format: ReturnType<typeof mapFormatToContentType>;
+    quality?: number;
+  } = {
+    format: mapFormatToContentType(outputFormat),
+  };
 
-  switch (outputFormat) {
-    case "avif":
-      pipeline = pipeline.avif({ quality });
-      break;
-    case "jpeg":
-      pipeline = pipeline.flatten({ background: "#ffffff" }).jpeg({
-        mozjpeg: true,
-        quality,
-      });
-      break;
-    case "png":
-      pipeline = pipeline.png({
-        compressionLevel: 9,
-        progressive: true,
-        quality,
-      });
-      break;
-    case "webp":
-      pipeline = pipeline.webp({ quality });
-      break;
+  if (runtime.APP_ENV !== "development" && typeof transform.quality === "number") {
+    imagesOutput.quality = transform.quality;
   }
 
-  const output = await pipeline.toBuffer();
-  const outputBytes = Uint8Array.from(output);
+  let image = env.IMAGES.input(object.body);
+
+  if (Object.keys(imagesTransform).length > 0) {
+    image = image.transform(imagesTransform);
+  }
+
+  const response = (await image.output(imagesOutput)).response();
+  const responseContentType =
+    response.headers.get("content-type") ?? mapFormatToContentType(outputFormat);
+  const responseContentLength = Number(response.headers.get("content-length") ?? 0);
 
   return {
-    body: new Blob([outputBytes], {
-      type: mapFormatToContentType(outputFormat),
-    }),
+    body: response.body ?? (await response.blob()),
     cacheControl: createMediaObjectCacheControl(),
-    contentLength: output.byteLength,
-    contentType: mapFormatToContentType(outputFormat),
+    contentLength: responseContentLength,
+    contentType: responseContentType,
   } satisfies MediaObjectResult;
 }
 
@@ -489,7 +530,7 @@ export async function getMediaObject(
   const transform = parseMediaTransformRequest(requestUrl);
 
   if (hasMediaTransformRequest(transform)) {
-    return createTransformedMediaObject(object, transform, contentType);
+    return createTransformedMediaObject(env, object, transform, contentType);
   }
 
   if (!object.body) {

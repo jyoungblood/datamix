@@ -4,28 +4,26 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate "g
 
 ## Current contract
 
-- `apps/api` runs through `wrangler dev` on `http://127.0.0.1:8787`
-- `apps/admin` runs through `vinext dev --port 3000` on `http://127.0.0.1:3000`
-- The admin talks to the API through `NEXT_PUBLIC_API_ORIGIN`
+- `npm run dev` starts one local Datamix app on `http://127.0.0.1:8787`
+- `apps/admin` is built to static assets and watched in the background
+- `apps/api` runs through `wrangler dev` and serves both the admin assets and the API
 - Preview and production topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1)
 
 ## First-time setup
 
 1. Run `npm install` from the repo root.
 2. Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars`.
-3. Copy `apps/admin/.env.example` to `apps/admin/.env.local`.
-4. Replace `BETTER_AUTH_SECRET` in `apps/api/.dev.vars` with a long random string.
-5. Run `npm run typegen:api` after changing `apps/api/wrangler.jsonc`.
-6. Start the apps and open `http://127.0.0.1:3000/setup` to create the first admin account in-browser.
+3. Replace `BETTER_AUTH_SECRET` in `apps/api/.dev.vars` with a long random string.
+4. Run `npm run typegen:api` after changing `apps/api/wrangler.jsonc`.
+5. Start the app and open `http://127.0.0.1:8787/setup` to create the first admin account in-browser.
 
 ## Daily workflow
 
-Use two terminals from the repo root:
+Use one terminal from the repo root:
 
-1. `npm run dev:api`
-2. `npm run dev:admin`
+1. `npm run dev`
 
-Then open `http://127.0.0.1:3000`.
+Then open `http://127.0.0.1:8787`.
 
 ## Verification workflow
 
@@ -35,12 +33,12 @@ Run these from the repo root before handing work back:
 2. `npm run build`
 3. `npm run smoke`
 
-The smoke harness starts its own local admin dev server and runs the API in-process through Miniflare, so it does not require a separate `npm run dev:api` session.
+The smoke harness starts the unified local app on its own, so it does not require a separate `npm run dev` session.
 
 ## Why the files live where they do
 
 - `apps/api/.dev.vars` belongs next to `apps/api/wrangler.jsonc` because Wrangler loads local Worker variables from the Worker directory.
-- `apps/admin/.env.local` belongs next to the Vinext app because the admin reads public browser-facing variables at build/dev time.
+- `apps/admin/.env.local` is optional now. The root dev script injects the local single-origin defaults automatically, and same-origin browser requests are resolved at runtime.
 
 ## Typed env expectations
 
@@ -55,7 +53,7 @@ The smoke harness starts its own local admin dev server and runs the API in-proc
 - `AUTH_EMAIL_FROM_EMAIL` is required for both providers.
 - `AUTH_RESEND_API_KEY` is required when `AUTH_EMAIL_PROVIDER=resend`.
 - `AUTH_SMTP_HOST`, `AUTH_SMTP_PORT`, `AUTH_SMTP_USERNAME`, `AUTH_SMTP_PASSWORD`, and `AUTH_SMTP_TLS` are required when `AUTH_EMAIL_PROVIDER=smtp`.
-- The admin auth client reuses `NEXT_PUBLIC_API_ORIGIN`; there is no separate public auth origin variable.
+- The admin auth client talks back to the current browser origin; there is no separate public auth origin variable in the single-app contract.
 - The API Worker prepares auth tables through the public first-run setup status route at `/setup/status`.
 
 For basic local UI and content work, only `BETTER_AUTH_SECRET` must be real. Configure the email provider values when you need to exercise password reset or invite delivery end to end.

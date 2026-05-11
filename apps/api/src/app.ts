@@ -203,7 +203,7 @@ function parseApiKeyRequest(input: unknown): ApiKeyRequest | null {
   };
 }
 
-function allowAdminBrowser(origin: string) {
+function allowAppBrowser(origin: string) {
   return cors({
     origin,
     allowMethods: ["GET", "POST", "OPTIONS"],
@@ -241,7 +241,7 @@ function formatPublicApiAccess(principal: PublicApiPrincipal) {
 }
 
 app.use("/api/auth/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/api/collections", async (c, next) => {
@@ -253,43 +253,43 @@ app.use("/api/collections/*", async (c, next) => {
 });
 
 app.use("/setup/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/invites", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/collection-definitions", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/collection-definitions/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/collections", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/collections/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/records", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/records/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/media/assets", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/media/assets/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/media/object/*", async (c, next) => {
@@ -298,7 +298,7 @@ app.use("/media/object/*", async (c, next) => {
 
 app.use("/session", async (c, next) => {
   const corsMiddleware = cors({
-    origin: c.env.ADMIN_ORIGIN,
+    origin: c.env.APP_ORIGIN,
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -308,27 +308,27 @@ app.use("/session", async (c, next) => {
 });
 
 app.use("/roles", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/roles/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/users", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/users/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/api-keys", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.use("/api-keys/*", async (c, next) => {
-  return allowAdminBrowser(c.env.ADMIN_ORIGIN)(c, next);
+  return allowAppBrowser(c.env.APP_ORIGIN)(c, next);
 });
 
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
@@ -944,7 +944,11 @@ app.post("/media/assets", requirePermission("media.upload"), async (c) => {
 
 app.get("/media/object/*", async (c) => {
   try {
-    const storageKey = c.req.param("*");
+    const requestPath = new URL(c.req.url).pathname;
+    const storageKeyPrefix = "/media/object/";
+    const storageKey = requestPath.startsWith(storageKeyPrefix)
+      ? decodeURIComponent(requestPath.slice(storageKeyPrefix.length))
+      : "";
 
     if (!storageKey) {
       return c.json({ error: "Media storage key is required." }, 400);

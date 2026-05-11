@@ -1,6 +1,6 @@
 import {
+  createMediaObjectPath,
   datamixApiKeyAccessLevels,
-  createMediaObjectUrl,
   datamixDefaultRoleAssignments,
   datamixFieldTypes,
   datamixPermissionResourceDefinitions,
@@ -66,7 +66,7 @@ import {
 import { TiptapRichTextEditor } from "./_components/TiptapRichTextEditor";
 
 const loginHref = "/login?next=/admin";
-const apiHealthHref = `${adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}/health`;
+const apiHealthHref = "/health";
 const fieldTypeOptions = [...datamixFieldTypes];
 const apiKeyAccessLevelOptions = [...datamixApiKeyAccessLevels];
 
@@ -2472,23 +2472,10 @@ export default function AdminPage() {
     ? filteredMediaAssets.find((asset) => asset.id === selectedMediaAsset.id) ?? null
     : null;
   const selectedMediaOriginalUrl = selectedFilteredMediaAsset
-    ? createMediaObjectUrl(
-        adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN,
-        selectedFilteredMediaAsset.storageKey,
-      )
+    ? createMediaObjectPath(selectedFilteredMediaAsset.storageKey)
     : null;
   const selectedMediaTransformUrl = selectedFilteredMediaAsset
-    ? createMediaObjectUrl(
-        adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN,
-        selectedFilteredMediaAsset.storageKey,
-        {
-          fit: "cover",
-          format: "webp",
-          height: 720,
-          quality: 80,
-          width: 1280,
-        },
-      )
+    ? `${createMediaObjectPath(selectedFilteredMediaAsset.storageKey)}?width=1280&height=720&format=webp`
     : null;
   const selectedRecord = selectedRecordId
     ? records.find((record) => record.id === selectedRecordId) ?? null
@@ -5433,16 +5420,12 @@ export default function AdminPage() {
                       <dd>{adminPublicEnv.NEXT_PUBLIC_APP_ENV}</dd>
                     </div>
                     <div>
-                      <dt>API origin</dt>
-                      <dd>{adminPublicEnv.NEXT_PUBLIC_API_ORIGIN}</dd>
-                    </div>
-                    <div>
-                      <dt>Media origin</dt>
-                      <dd>{adminPublicEnv.NEXT_PUBLIC_MEDIA_ORIGIN}</dd>
+                      <dt>Runtime topology</dt>
+                      <dd>Single Worker app serving admin assets and JSON routes</dd>
                     </div>
                     <div>
                       <dt>Auth posture</dt>
-                      <dd>Persisted better-auth session on the API Worker origin</dd>
+                      <dd>Persisted better-auth session on the same app origin</dd>
                     </div>
                   </dl>
 

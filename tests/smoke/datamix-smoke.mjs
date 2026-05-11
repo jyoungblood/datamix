@@ -1,20 +1,18 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { Miniflare } from "miniflare";
+import { access, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { setTimeout as delay } from "node:timers/promises";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
-const apiRoot = path.join(repoRoot, "apps/api");
-const adminRoot = path.join(repoRoot, "apps/admin");
-const apiPort = 8787;
-const adminPort = 3000;
-const apiOrigin = `http://127.0.0.1:${apiPort}`;
-const adminOrigin = `http://127.0.0.1:${adminPort}`;
-const authBaseUrl = `${apiOrigin}/api/auth`;
+const apiDevVarsPath = path.join(repoRoot, "apps/api/.dev.vars");
+const smokePersistPath = `/private/tmp/datamix-smoke-state-${Date.now()}`;
+const appPort = 8787;
+const appOrigin = `http://127.0.0.1:${appPort}`;
+const authBaseUrl = `${appOrigin}/api/auth`;
 
 class CookieJar {
   #cookies = new Map();
@@ -163,22 +161,6 @@ async function waitForUrl(url, options) {
     : new Error(`Timed out waiting for ${url}.`);
 }
 
-function createExecutionContext() {
-  const waitUntilPromises = [];
-
-  return {
-    passThroughOnException() {
-      return undefined;
-    },
-    async settle() {
-      await Promise.allSettled(waitUntilPromises);
-    },
-    waitUntil(promise) {
-      waitUntilPromises.push(Promise.resolve(promise));
-    },
-  };
-}
-
 async function readJsonResponse(response) {
   const body = (await response.json().catch(() => null)) ?? null;
 
@@ -213,14 +195,13 @@ async function request(url, options = {}) {
 }
 
 async function requestJson(url, options = {}) {
-  const requestImpl = options.requestImpl ?? request;
   const headers = new Headers(options.headers);
 
   if (options.body !== undefined && !(options.body instanceof FormData)) {
     headers.set("content-type", "application/json");
   }
 
-  const response = await requestImpl(url, {
+  const response = await request(url, {
     ...options,
     body:
       options.body === undefined || options.body instanceof FormData
@@ -233,71 +214,6 @@ async function requestJson(url, options = {}) {
   return {
     json,
     response,
-  };
-}
-
-async function createApiHarness() {
-  const [{ app }, { getMediaObject }, { Miniflare: RuntimeMiniflare }] = await Promise.all([
-    import(pathToFileURL(path.join(apiRoot, "src/app.ts")).href),
-    import(pathToFileURL(path.join(apiRoot, "src/media.ts")).href),
-    Promise.resolve({ Miniflare }),
-  ]);
-  const runtime = new RuntimeMiniflare({
-    compatibilityDate: "2026-05-06",
-    bindings: {
-      ADMIN_ORIGIN: adminOrigin,
-      APP_ENV: "development",
-      BETTER_AUTH_SECRET: "datamix-smoke-secret-0123456789-abcdefghijklmnopqrstuvwxyz",
-      MEDIA_PUBLIC_ORIGIN: apiOrigin,
-      PUBLIC_API_READ_ACCESS: "public",
-      PUBLIC_API_WRITE_ACCESS: "disabled",
-    },
-    d1Databases: ["DB"],
-    modules: true,
-    r2Buckets: ["MEDIA_BUCKET"],
-    script: `export default { fetch() { return new Response("miniflare"); } }`,
-  });
-  const env = await runtime.getBindings();
-
-  return {
-    async dispose() {
-      await runtime.dispose();
-    },
-    async readMediaObject(storageKey, url) {
-      return getMediaObject(env, storageKey, new URL(url));
-    },
-    async request(url, options = {}) {
-      const headers = new Headers(options.headers);
-
-      if (options.cookieJar) {
-        const cookieHeader = options.cookieJar.toHeader();
-
-        if (cookieHeader) {
-          headers.set("cookie", cookieHeader);
-        }
-      }
-
-      if (options.origin) {
-        headers.set("origin", options.origin);
-      }
-
-      const executionContext = createExecutionContext();
-      const response = await app.fetch(
-        new Request(url, {
-          body: options.body,
-          headers,
-          method: options.method ?? "GET",
-          redirect: "manual",
-        }),
-        env,
-        executionContext,
-      );
-
-      await executionContext.settle();
-      options.cookieJar?.capture(response);
-
-      return response;
-    },
   };
 }
 
@@ -316,35 +232,54 @@ function createFixtureImage() {
   );
 }
 
+function createMediaObjectUrlPath(storageKey) {
+  const encodedStorageKey = storageKey
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+  return `/media/object/${encodedStorageKey}`;
+}
+
 async function main() {
   const cookieJar = new CookieJar();
   const adminEmail = "smoke-admin@datamix.local";
   const adminPassword = "datamix-smoke-password";
-  const apiHarness = await createApiHarness();
-  let adminProcess = null;
+  const smokeAuthSecret =
+    process.env.BETTER_AUTH_SECRET ??
+    "datamix-smoke-secret-0123456789-abcdefghijklmnopqrstuvwxyz";
+  let createdSmokeDevVars = false;
+  let appProcess = null;
 
   try {
-    console.log("Starting local admin server for smoke coverage...");
-    adminProcess = createManagedProcess(
-      "npx",
-      ["vinext", "dev", "--port", String(adminPort), "--hostname", "127.0.0.1"],
+    try {
+      await access(apiDevVarsPath);
+    } catch {
+      await writeFile(apiDevVarsPath, `BETTER_AUTH_SECRET=${smokeAuthSecret}\n`);
+      createdSmokeDevVars = true;
+    }
+
+    console.log("Starting unified local Datamix app for smoke coverage...");
+    appProcess = createManagedProcess(
+      "npm",
+      ["run", "dev"],
       {
-        cwd: adminRoot,
+        cwd: repoRoot,
         env: {
           ...process.env,
-          NEXT_PUBLIC_API_ORIGIN: apiOrigin,
-          NEXT_PUBLIC_APP_ENV: "development",
-          NEXT_PUBLIC_MEDIA_ORIGIN: apiOrigin,
+          DATAMIX_PERSIST_TO: smokePersistPath,
+          DATAMIX_ADMIN_WATCH: "0",
         },
-        name: "admin",
+        name: "app",
       },
     );
 
-    await waitForUrl(adminOrigin, {
+    await waitForUrl(appOrigin, {
       timeoutMs: 120_000,
     });
 
-    const healthResponse = await apiHarness.request(`${apiOrigin}/health`);
+    const healthResponse = await request(`${appOrigin}/health`);
     assertOk(healthResponse, "Expected the in-process API health route to load.");
     const healthJson = await readJsonResponse(healthResponse);
 
@@ -353,12 +288,10 @@ async function main() {
 
     console.log("Checking first-run readiness...");
 
-    const homeResponse = await request(adminOrigin);
+    const homeResponse = await request(appOrigin);
     assertOk(homeResponse, "Expected the admin home page to load.");
 
-    const setupStatusBefore = await requestJson(`${apiOrigin}/setup/status`, {
-      requestImpl: apiHarness.request,
-    });
+    const setupStatusBefore = await requestJson(`${appOrigin}/setup/status`);
     assertOk(setupStatusBefore.response, "Expected /setup/status to load before setup.");
     assert.equal(setupStatusBefore.json?.auth?.setup?.setupRequired, true);
     assert.equal(setupStatusBefore.json?.auth?.setup?.userCount, 0);
@@ -374,23 +307,19 @@ async function main() {
       },
       cookieJar,
       method: "POST",
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(signUpResponse.response, "Expected the first admin sign-up flow to succeed.");
 
-    const sessionAfterSetup = await requestJson(`${apiOrigin}/session`, {
+    const sessionAfterSetup = await requestJson(`${appOrigin}/session`, {
       cookieJar,
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(sessionAfterSetup.response, "Expected the first admin session to be active.");
     assert.equal(sessionAfterSetup.json?.session?.user?.email, adminEmail);
     assert.equal(sessionAfterSetup.json?.authorization?.role?.id, "administrator");
 
-    const setupStatusAfter = await requestJson(`${apiOrigin}/setup/status`, {
-      requestImpl: apiHarness.request,
-    });
+    const setupStatusAfter = await requestJson(`${appOrigin}/setup/status`);
     assertOk(setupStatusAfter.response, "Expected /setup/status to load after setup.");
     assert.equal(setupStatusAfter.json?.auth?.setup?.setupRequired, false);
     assert.equal(setupStatusAfter.json?.auth?.setup?.canLogin, true);
@@ -398,18 +327,17 @@ async function main() {
     console.log("Verifying normal login after sign-out...");
 
     const signOutResponse = await requestJson(`${authBaseUrl}/sign-out`, {
+      body: {},
       cookieJar,
       method: "POST",
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(signOutResponse.response, "Expected sign-out to succeed.");
     cookieJar.clear();
 
-    const sessionAfterSignOut = await requestJson(`${apiOrigin}/session`, {
+    const sessionAfterSignOut = await requestJson(`${appOrigin}/session`, {
       cookieJar,
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assert.equal(sessionAfterSignOut.response.status, 401);
 
@@ -421,15 +349,13 @@ async function main() {
       },
       cookieJar,
       method: "POST",
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(signInResponse.response, "Expected email sign-in to succeed.");
 
-    const sessionAfterSignIn = await requestJson(`${apiOrigin}/session`, {
+    const sessionAfterSignIn = await requestJson(`${appOrigin}/session`, {
       cookieJar,
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(sessionAfterSignIn.response, "Expected the admin session to restore after login.");
     assert.equal(sessionAfterSignIn.json?.session?.user?.email, adminEmail);
@@ -462,31 +388,26 @@ async function main() {
       name: "smoke_articles",
     };
     const saveCollectionResponse = await requestJson(
-      `${apiOrigin}/collection-definitions/${collectionDefinition.name}`,
+      `${appOrigin}/collection-definitions/${collectionDefinition.name}`,
       {
         body: collectionDefinition,
         cookieJar,
         method: "PUT",
-        origin: adminOrigin,
-        requestImpl: apiHarness.request,
+        origin: appOrigin,
       },
     );
     assertOk(saveCollectionResponse.response, "Expected collection save to succeed.");
     assert.equal(saveCollectionResponse.json?.collection?.definition?.name, collectionDefinition.name);
 
-    const listCollectionsResponse = await requestJson(
-      `${apiOrigin}/collection-definitions`,
-      {
-        cookieJar,
-        origin: adminOrigin,
-        requestImpl: apiHarness.request,
-      },
-    );
+    const listCollectionsResponse = await requestJson(`${appOrigin}/collection-definitions`, {
+      cookieJar,
+      origin: appOrigin,
+    });
     assertOk(listCollectionsResponse.response, "Expected collection list to load.");
     assert.equal(listCollectionsResponse.json?.collections?.length, 1);
 
     const createRecordResponse = await requestJson(
-      `${apiOrigin}/collections/${collectionDefinition.name}/records`,
+      `${appOrigin}/collections/${collectionDefinition.name}/records`,
       {
         body: {
           values: {
@@ -496,8 +417,7 @@ async function main() {
         },
         cookieJar,
         method: "POST",
-        origin: adminOrigin,
-        requestImpl: apiHarness.request,
+        origin: appOrigin,
       },
     );
     assertOk(createRecordResponse.response, "Expected record creation to succeed.");
@@ -506,11 +426,10 @@ async function main() {
     assert.equal(typeof recordId, "string");
 
     const listRecordsResponse = await requestJson(
-      `${apiOrigin}/collections/${collectionDefinition.name}/records`,
+      `${appOrigin}/collections/${collectionDefinition.name}/records`,
       {
         cookieJar,
-        origin: adminOrigin,
-        requestImpl: apiHarness.request,
+        origin: appOrigin,
       },
     );
     assertOk(listRecordsResponse.response, "Expected record list to load.");
@@ -525,28 +444,26 @@ async function main() {
       new File([createFixtureImage()], "smoke.png", { type: "image/png" }),
     );
 
-    const uploadMediaResponse = await requestJson(`${apiOrigin}/media/assets`, {
+    const uploadMediaResponse = await requestJson(`${appOrigin}/media/assets`, {
       body: uploadForm,
       cookieJar,
       method: "POST",
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(uploadMediaResponse.response, "Expected media upload to succeed.");
     const uploadedAsset = uploadMediaResponse.json?.asset;
 
     assert.equal(uploadedAsset?.mimeType, "image/png");
 
-    const listMediaResponse = await requestJson(`${apiOrigin}/media/assets`, {
+    const listMediaResponse = await requestJson(`${appOrigin}/media/assets`, {
       cookieJar,
-      origin: adminOrigin,
-      requestImpl: apiHarness.request,
+      origin: appOrigin,
     });
     assertOk(listMediaResponse.response, "Expected media list to load.");
     assert.equal(listMediaResponse.json?.assets?.length, 1);
 
     const updateRecordResponse = await requestJson(
-      `${apiOrigin}/collections/${collectionDefinition.name}/records/${recordId}`,
+      `${appOrigin}/collections/${collectionDefinition.name}/records/${recordId}`,
       {
         body: {
           values: {
@@ -557,8 +474,7 @@ async function main() {
         },
         cookieJar,
         method: "PUT",
-        origin: adminOrigin,
-        requestImpl: apiHarness.request,
+        origin: appOrigin,
       },
     );
     assertOk(updateRecordResponse.response, "Expected record update to succeed.");
@@ -567,25 +483,23 @@ async function main() {
       uploadedAsset.storageKey,
     );
 
-    const originalMediaObject = await apiHarness.readMediaObject(
-      uploadedAsset.storageKey,
-      `${apiOrigin}/media/object/${uploadedAsset.storageKey}`,
+    const originalMediaObject = await request(
+      `${appOrigin}${createMediaObjectUrlPath(uploadedAsset.storageKey)}`,
     );
-    assert.equal(originalMediaObject.contentType, "image/png");
-    assert.ok(originalMediaObject.contentLength > 0);
+    assertOk(originalMediaObject, "Expected the original media object route to load.");
+    assert.equal(originalMediaObject.headers.get("content-type"), "image/png");
+    assert.ok((await originalMediaObject.arrayBuffer()).byteLength > 0);
 
-    const transformedMediaObject = await apiHarness.readMediaObject(
-      uploadedAsset.storageKey,
-      `${apiOrigin}/media/object/${uploadedAsset.storageKey}?width=1&format=webp`,
+    const transformedMediaObject = await request(
+      `${appOrigin}${createMediaObjectUrlPath(uploadedAsset.storageKey)}?width=1&format=webp`,
     );
-    assert.equal(transformedMediaObject.contentType, "image/webp");
-    assert.ok(transformedMediaObject.contentLength > 0);
+    assertOk(transformedMediaObject, "Expected the transformed media object route to load.");
+    assert.equal(transformedMediaObject.headers.get("content-type"), "image/webp");
+    assert.ok((await transformedMediaObject.arrayBuffer()).byteLength > 0);
 
     console.log("Checking the public JSON API surface...");
 
-    const publicCollectionsResponse = await requestJson(`${apiOrigin}/api/collections`, {
-      requestImpl: apiHarness.request,
-    });
+    const publicCollectionsResponse = await requestJson(`${appOrigin}/api/collections`);
     assertOk(
       publicCollectionsResponse.response,
       "Expected the public collections route to load.",
@@ -593,10 +507,7 @@ async function main() {
     assert.equal(publicCollectionsResponse.json?.collections?.length, 1);
 
     const publicCollectionResponse = await requestJson(
-      `${apiOrigin}/api/collections/${collectionDefinition.name}`,
-      {
-        requestImpl: apiHarness.request,
-      },
+      `${appOrigin}/api/collections/${collectionDefinition.name}`,
     );
     assertOk(
       publicCollectionResponse.response,
@@ -608,10 +519,7 @@ async function main() {
     );
 
     const publicRecordsResponse = await requestJson(
-      `${apiOrigin}/api/collections/${collectionDefinition.name}/records`,
-      {
-        requestImpl: apiHarness.request,
-      },
+      `${appOrigin}/api/collections/${collectionDefinition.name}/records`,
     );
     assertOk(
       publicRecordsResponse.response,
@@ -620,10 +528,7 @@ async function main() {
     assert.equal(publicRecordsResponse.json?.records?.length, 1);
 
     const publicRecordResponse = await requestJson(
-      `${apiOrigin}/api/collections/${collectionDefinition.name}/records/${recordId}`,
-      {
-        requestImpl: apiHarness.request,
-      },
+      `${appOrigin}/api/collections/${collectionDefinition.name}/records/${recordId}`,
     );
     assertOk(
       publicRecordResponse.response,
@@ -636,16 +541,19 @@ async function main() {
 
     console.log("Datamix smoke flow completed successfully.");
   } catch (error) {
-    if (adminProcess) {
-      console.error("\nAdmin log tail:\n" + adminProcess.tail());
+    if (appProcess) {
+      console.error("\nApp log tail:\n" + appProcess.tail());
     }
 
     throw error;
   } finally {
-    await Promise.allSettled([
-      adminProcess ? stopManagedProcess(adminProcess) : Promise.resolve(),
-      apiHarness.dispose(),
-    ]);
+    await Promise.allSettled([appProcess ? stopManagedProcess(appProcess) : Promise.resolve()]);
+
+    if (createdSmokeDevVars) {
+      await rm(apiDevVarsPath, { force: true });
+    }
+
+    await rm(smokePersistPath, { force: true, recursive: true });
   }
 }
 

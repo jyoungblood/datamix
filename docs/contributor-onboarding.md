@@ -28,32 +28,30 @@ From the repo root:
 ```bash
 npm install
 cp apps/api/.dev.vars.example apps/api/.dev.vars
-cp apps/admin/.env.example apps/admin/.env.local
 ```
 
 Then make the minimum local edits:
 
 - Replace `BETTER_AUTH_SECRET` in `apps/api/.dev.vars` with a long random string.
-- Keep `ADMIN_ORIGIN=http://127.0.0.1:3000` and `NEXT_PUBLIC_API_ORIGIN=http://127.0.0.1:8787` unless you intentionally change ports.
+- Keep `APP_ORIGIN=http://127.0.0.1:8787` unless you intentionally change ports.
 - Leave the email provider placeholders as-is unless you are actively working on invite or password-reset delivery. Basic setup and most UI work do not require real provider credentials.
 
 ## 10-20 Minutes: Run the App
 
-Use two terminals from the repo root:
+Use one terminal from the repo root:
 
-1. `npm run dev:api`
-2. `npm run dev:admin`
+1. `npm run dev`
 
 Then open:
 
-- `http://127.0.0.1:3000/setup` for the first-run admin bootstrap
-- `http://127.0.0.1:3000/login` after the first account exists
+- `http://127.0.0.1:8787/setup` for the first-run admin bootstrap
+- `http://127.0.0.1:8787/login` after the first account exists
 - `http://127.0.0.1:8787/health` to confirm the Worker is up
 
 What to notice:
 
 - First-run setup is browser-first and closes public sign-up after the first admin is created.
-- The admin always talks to the API origin for auth and data.
+- The admin and API share one origin locally and in deployment.
 - D1 and R2 stay behind the Worker boundary.
 
 ## 20-25 Minutes: Run the Confidence Checks
@@ -73,7 +71,7 @@ What each command tells you:
 - `npm run smoke` covers first-run setup, login, collection CRUD, record CRUD, media upload/object access, and public JSON routes.
 
 Smoke note:
-`npm run smoke` starts its own local admin dev server and runs the API in-process through Miniflare. You do not need a separate `npm run dev:api` session for that command.
+`npm run smoke` starts its own unified local app. You do not need a separate `npm run dev` session for that command.
 
 ## 25-30 Minutes: Learn the Main Seams
 
