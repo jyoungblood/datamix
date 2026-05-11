@@ -1,8 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "paths": {
+      "@/*": ["./*"]
+    },
     "rootDir": ".",
     "types": ["node"],
     "tsBuildInfoFile": "./tsconfig.tsbuildinfo"

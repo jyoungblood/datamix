@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CenteredCardPage } from "../components/centered-card-page";
 import { authClient } from "../lib/auth-client";
 
 function readResetParams() {
@@ -78,69 +83,66 @@ export default function ResetPasswordPage() {
     : "/login";
 
   return (
-    <main className="shell">
-      <div className="panel stack">
-        <p className="eyebrow">Authentication</p>
-        <h1 className="page-title">{heading}</h1>
-        <p className="body">{description}</p>
-
-        {isSubmitted ? (
-          <section className="surface-card stack">
-            <p className="surface-name">
-              {params.mode === "invite" ? "Invite accepted" : "Password updated"}
-            </p>
-            <p className="surface-description">
+    <CenteredCardPage description={description} label="Authentication" title={heading}>
+      {isSubmitted ? (
+        <>
+          <Alert className="border-emerald-200 bg-emerald-50 text-emerald-950">
+            <AlertDescription className="text-emerald-800">
               Sign in with your new password to continue.
-            </p>
-            <div className="actions">
-              <a className="button" href={loginHref}>
-                Go to login
-              </a>
-            </div>
-          </section>
-        ) : (
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <label className="field">
-              <span>New password</span>
-              <input
-                autoComplete="new-password"
-                minLength={8}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                type="password"
-                value={password}
-              />
-            </label>
+            </AlertDescription>
+          </Alert>
+          <Button asChild>
+            <a href={loginHref}>Go to login</a>
+          </Button>
+        </>
+      ) : (
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-2">
+            <Label htmlFor="new-password">New password</Label>
+            <Input
+              autoComplete="new-password"
+              id="new-password"
+              minLength={8}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              type="password"
+              value={password}
+            />
+          </div>
 
-            <label className="field">
-              <span>Confirm password</span>
-              <input
-                autoComplete="new-password"
-                minLength={8}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-                type="password"
-                value={confirmPassword}
-              />
-            </label>
+          <div className="grid gap-2">
+            <Label htmlFor="confirm-password">Confirm password</Label>
+            <Input
+              autoComplete="new-password"
+              id="confirm-password"
+              minLength={8}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              required
+              type="password"
+              value={confirmPassword}
+            />
+          </div>
 
-            {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
+          {errorMessage ? (
+            <Alert variant="destructive">
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          ) : null}
 
-            <div className="actions">
-              <a className="button button-secondary" href="/login">
-                Back to login
-              </a>
-              <button className="button" disabled={isSubmitting} type="submit">
-                {isSubmitting
-                  ? "Saving..."
-                  : params.mode === "invite"
-                    ? "Set password and continue"
-                    : "Reset password"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </main>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild variant="outline">
+              <a href="/login">Back to login</a>
+            </Button>
+            <Button disabled={isSubmitting} type="submit">
+              {isSubmitting
+                ? "Saving..."
+                : params.mode === "invite"
+                  ? "Set password and continue"
+                  : "Reset password"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </CenteredCardPage>
   );
 }

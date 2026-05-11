@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CenteredCardPage } from "../components/centered-card-page";
 import { authClient } from "../lib/auth-client";
 import { useSetupStatus } from "../lib/setup";
 
@@ -65,45 +70,37 @@ export default function SetupPage() {
 
   if (setupStatus.isPending || session.isPending) {
     return (
-      <main className="shell">
-        <div className="panel stack">
-          <p className="eyebrow">Setup</p>
-          <h1 className="page-title">Preparing your first-run setup</h1>
-          <p className="body">
-            Datamix is checking the auth tables and whether an admin account already exists.
-          </p>
-        </div>
-      </main>
+      <CenteredCardPage
+        description="Datamix is checking the auth tables and whether an admin account already exists."
+        label="Setup"
+        title="Preparing your first-run setup"
+      />
     );
   }
 
   if (setupStatus.errorMessage) {
     return (
-      <main className="shell">
-        <div className="panel stack">
-          <p className="eyebrow">Setup</p>
-          <h1 className="page-title">{setupStatusHeading}</h1>
-          <p className="body">{setupStatus.errorMessage}</p>
-          {setupStatus.statusCode === 503 ? (
-            <p className="body">
-              Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
-            </p>
-          ) : (
-            <p className="body">
-              Datamix could not confirm first-run setup status just now. Retry once the API
-              Worker is reachable again.
-            </p>
-          )}
-          <div className="actions">
-            <a className="button button-secondary" href="/">
-              Back home
-            </a>
-            <button className="button" onClick={setupStatus.reload} type="button">
-              Retry status
-            </button>
-          </div>
+      <CenteredCardPage
+        description={setupStatus.errorMessage}
+        label="Setup"
+        title={setupStatusHeading}
+      >
+        <Alert variant="destructive">
+          <AlertDescription>
+            {setupStatus.statusCode === 503
+              ? "Set BETTER_AUTH_SECRET on the API Worker, then reload this page."
+              : "Datamix could not confirm first-run setup just now. Retry once the API Worker is reachable again."}
+          </AlertDescription>
+        </Alert>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild variant="outline">
+            <a href="/">Back home</a>
+          </Button>
+          <Button onClick={setupStatus.reload} type="button">
+            Retry status
+          </Button>
         </div>
-      </main>
+      </CenteredCardPage>
     );
   }
 
@@ -112,74 +109,77 @@ export default function SetupPage() {
   }
 
   return (
-    <main className="shell">
-      <div className="panel stack">
-        <p className="eyebrow">First-run setup</p>
-        <h1 className="page-title">Create the first Datamix admin</h1>
-        <p className="body">
-          This account bootstraps the instance entirely in-browser. After it exists, public
-          sign-up is disabled and the normal login screen takes over.
-        </p>
+    <CenteredCardPage
+      description="Create the first admin account for this instance. After that, public sign-up is disabled and the normal login screen takes over."
+      label="First-run setup"
+      title="Create the first Datamix admin"
+    >
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div className="grid gap-2">
+          <Label htmlFor="name">Name</Label>
+          <Input
+            autoComplete="name"
+            id="name"
+            onChange={(event) => setName(event.target.value)}
+            required
+            type="text"
+            value={name}
+          />
+        </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label className="field">
-            <span>Name</span>
-            <input
-              autoComplete="name"
-              onChange={(event) => setName(event.target.value)}
-              required
-              type="text"
-              value={name}
-            />
-          </label>
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            autoComplete="email"
+            id="email"
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            type="email"
+            value={email}
+          />
+        </div>
 
-          <label className="field">
-            <span>Email</span>
-            <input
-              autoComplete="email"
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              type="email"
-              value={email}
-            />
-          </label>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            autoComplete="new-password"
+            id="password"
+            minLength={8}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type="password"
+            value={password}
+          />
+        </div>
 
-          <label className="field">
-            <span>Password</span>
-            <input
-              autoComplete="new-password"
-              minLength={8}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </label>
+        <div className="grid gap-2">
+          <Label htmlFor="confirm-password">Confirm password</Label>
+          <Input
+            autoComplete="new-password"
+            id="confirm-password"
+            minLength={8}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+            type="password"
+            value={confirmPassword}
+          />
+        </div>
 
-          <label className="field">
-            <span>Confirm password</span>
-            <input
-              autoComplete="new-password"
-              minLength={8}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-              type="password"
-              value={confirmPassword}
-            />
-          </label>
+        {errorMessage ? (
+          <Alert variant="destructive">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
 
-          {errorMessage ? <p className="form-error">{errorMessage}</p> : null}
-
-          <div className="actions">
-            <a className="button button-secondary" href="/">
-              Back home
-            </a>
-            <button className="button" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "Creating admin..." : "Create admin account"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </main>
+        <div className="flex flex-wrap gap-3">
+          <Button asChild variant="outline">
+            <a href="/">Back home</a>
+          </Button>
+          <Button disabled={isSubmitting} type="submit">
+            {isSubmitting ? "Creating admin..." : "Create admin account"}
+          </Button>
+        </div>
+      </form>
+    </CenteredCardPage>
   );
 }
