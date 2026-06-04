@@ -16,6 +16,8 @@
     "client-pages/**/*.tsx",
     "components/**/*.tsx",
     "lib/**/*.ts",
+    "server/**/*.d.ts",
+    "server/**/*.ts",
     "styles/**/*.css",
     "types/**/*.d.ts",
     "worker/**/*.ts",

@@ -12,7 +12,7 @@ Default strategy: keep each session shippable, with checks at the end of every s
 |---|---|---|---|
 | 1 | Create the new Vinext App Router shell | `apps/app` exists, admin pages render through App Router, no backend migration yet | Done |
 | 2 | Configure Cloudflare Worker runtime for Vinext | `apps/app` has Worker/Vite/Wrangler config, bindings type path, and local dev starts on `127.0.0.1:3000` | Done |
-| 3 | Move backend service modules without changing behavior | non-Hono service code is under `apps/app/server`, types compile, old Hono routes still present as reference | Not started |
+| 3 | Move backend service modules without changing behavior | non-Hono service code is under `apps/app/server`, types compile, old Hono routes still present as reference | Done |
 | 4 | Port API route handlers by category | auth, admin, public collections, media, and health routes work from Vinext route handlers | Not started |
 | 5 | Update smoke/dev/build/deploy scripts | root scripts target `@datamix/app`, smoke runs against port `3000`, `.dev.vars` moves to `apps/app` | Not started |
 | 6 | Remove old architecture and update docs | Hono and `apps/api` are removed, docs describe one Vinext Worker app, final check/build/smoke pass | Not started |
@@ -117,3 +117,5 @@ Default strategy: keep each session shippable, with checks at the end of every s
 - 2026-06-03: Completed Session 1. Added `apps/app` as `@datamix/app`, converted the admin shell to App Router routes, kept backend migration out of scope, and verified `typecheck`, `build`, and local browser renders for `/`, `/admin/setup`, `/admin/login`, `/admin/forgot-password`, `/admin/reset-password`, and unauthenticated `/admin` redirect behavior.
 - 2026-06-03: Started Session 2. Configuring `apps/app` for the Vinext Cloudflare Worker runtime while keeping `apps/api` as the backend reference.
 - 2026-06-03: Completed Session 2. Added app-local Cloudflare Vite plugin wiring, Wrangler config, Vinext Worker entrypoint, generated Worker binding types, and verified `typecheck`, `build`, local dev startup on `127.0.0.1:3000`, `/`, `/admin/setup`, `/admin/login`, and live client/style assets. Backend API route 404s remain expected until Session 4.
+- 2026-06-03: Started Session 3. Moving non-Hono backend service modules into `apps/app/server` while leaving the old Hono API routes intact as the behavioral reference.
+- 2026-06-03: Completed Session 3. Added `apps/app/server` with copied non-Hono auth, env, email, invite, API-key, role, user, collection, record, and media service modules; introduced `DatamixBindings` for the unified Worker; replaced the copied Better Auth background-task context with `vinext/shims/request-context`; added a Hono-free public API access resolver for future App Router handlers; kept `apps/api/src/app.ts` unchanged as the Hono behavior reference; verified `npm run typecheck --workspace @datamix/app` and `npm run build --workspace @datamix/app`.
