@@ -2,7 +2,7 @@
 
 ## Summary
 
-Migrate Datamix carefully over **six implementation sessions** from the current split `@datamix/admin` Vinext Pages app plus `@datamix/api` Hono Worker into one `@datamix/app` Vinext App Router Worker. Preserve the current public URL contract and response shapes while removing Hono only after parity is proven.
+Migrate Datamix carefully over **six implementation sessions** from the current split `@datamix/admin` Vinext Pages app plus `@datamix/api` Hono Worker into one `@datamix/web` Vinext App Router Worker. Preserve the current public URL contract and response shapes while removing Hono only after parity is proven.
 
 Default strategy: keep each session shippable, with checks at the end of every session. Do not delete the old API workspace until the new Vinext app passes equivalent smoke coverage.
 
@@ -10,19 +10,19 @@ Default strategy: keep each session shippable, with checks at the end of every s
 
 | Session | Goal | Done When | Status |
 |---|---|---|---|
-| 1 | Create the new Vinext App Router shell | `apps/app` exists, admin pages render through App Router, no backend migration yet | Not started |
-| 2 | Configure Cloudflare Worker runtime for Vinext | `apps/app` has Worker/Vite/Wrangler config, bindings type path, and local dev starts on `127.0.0.1:3000` | Not started |
-| 3 | Move backend service modules without changing behavior | non-Hono service code is under `apps/app/server`, types compile, old Hono routes still present as reference | Not started |
+| 1 | Create the new Vinext App Router shell | `apps/web` exists, admin pages render through App Router, no backend migration yet | Not started |
+| 2 | Configure Cloudflare Worker runtime for Vinext | `apps/web` has Worker/Vite/Wrangler config, bindings type path, and local dev starts on `127.0.0.1:3000` | Not started |
+| 3 | Move backend service modules without changing behavior | non-Hono service code is under `apps/web/server`, types compile, old Hono routes still present as reference | Not started |
 | 4 | Port API route handlers by category | auth, admin, public collections, media, and health routes work from Vinext route handlers | Not started |
-| 5 | Update smoke/dev/build/deploy scripts | root scripts target `@datamix/app`, smoke runs against port `3000`, `.dev.vars` moves to `apps/app` | Not started |
+| 5 | Update smoke/dev/build/deploy scripts | root scripts target `@datamix/web`, smoke runs against port `3000`, `.dev.vars` moves to `apps/web` | Not started |
 | 6 | Remove old architecture and update docs | Hono and `apps/api` are removed, docs describe one Vinext Worker app, final check/build/smoke pass | Not started |
 
 ## Key Changes
 
-- Create `apps/app` from the current admin app, rename package to `@datamix/app`, and convert Pages Router files into App Router equivalents.
+- Create `apps/web` from the current admin app, rename package to `@datamix/web`, and convert Pages Router files into App Router equivalents.
 - Move hook-heavy admin views into client components; keep `/admin/setup`, `/admin/login`, `/admin/reset-password`, `/admin/forgot-password`, and `/admin` behavior unchanged.
 - Configure Vinext App Router for Cloudflare Workers using the Cloudflare Vite plugin, Worker entrypoint, D1/R2/Images bindings, and `cloudflare:workers` env access.
-- Move reusable backend modules from the Hono API into `apps/app/server`; replace Hono context usage with plain request/env/session helpers.
+- Move reusable backend modules from the Hono API into `apps/web/server`; replace Hono context usage with plain request/env/session helpers.
 - Port routes to App Router handlers while preserving:
   - `/api/auth/*`
   - `/api/admin/*`
@@ -37,7 +37,7 @@ Default strategy: keep each session shippable, with checks at the end of every s
 
 **Session 1: App Router Shell**
 
-- Copy the current admin workspace into `apps/app` and update package identity.
+- Copy the current admin workspace into `apps/web` and update package identity.
 - Convert `pages/_app.tsx` into `app/layout.tsx` with global CSS imports.
 - Convert public splash page and admin route wrappers into App Router pages.
 - Mark only hook/browser-dependent admin screens as `"use client"`.
@@ -48,13 +48,13 @@ Default strategy: keep each session shippable, with checks at the end of every s
 
 - Replace the current admin Vite config with Vinext App Router plus Cloudflare Vite plugin config.
 - Add `wrangler.jsonc` for the unified app with existing `DB`, `MEDIA_BUCKET`, `IMAGES`, auth/email/public API vars, and `nodejs_compat`.
-- Add the Vinext Worker entrypoint under `apps/app/worker`.
+- Add the Vinext Worker entrypoint under `apps/web/worker`.
 - Set local defaults to `http://127.0.0.1:3000`.
 - Verify the app starts locally and serves `/`, `/admin/setup`, and static/client assets.
 
 **Session 3: Server Module Move**
 
-- Move backend service modules into `apps/app/server` while keeping the old `apps/api/src/app.ts` as the behavioral reference.
+- Move backend service modules into `apps/web/server` while keeping the old `apps/api/src/app.ts` as the behavioral reference.
 - Introduce a `DatamixBindings` type generated from Wrangler output.
 - Replace global/Hono env access with explicit env passing.
 - Replace `request-context` with `vinext/shims/request-context`.
@@ -72,8 +72,8 @@ Default strategy: keep each session shippable, with checks at the end of every s
 
 **Session 5: Scripts And Smoke**
 
-- Update root scripts so `dev`, `build`, `check`, `smoke`, deploy, and typegen target `@datamix/app`.
-- Update smoke harness to write `apps/app/.dev.vars`, start the unified app on port `3000`, and hit the same public paths.
+- Update root scripts so `dev`, `build`, `check`, `smoke`, deploy, and typegen target `@datamix/web`.
+- Update smoke harness to write `apps/web/.dev.vars`, start the unified app on port `3000`, and hit the same public paths.
 - Keep the smoke scenario coverage equivalent: setup, login/session, roles/users, API keys, collection definitions, records, public collections, media upload/object, and health.
 - Run `npm run check`, `npm run build`, and `npm run smoke`.
 

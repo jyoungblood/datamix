@@ -18,7 +18,7 @@ const rootFiles = [
 
 const rootDirectories = [
   ".github",
-  "apps/app",
+  "apps/web",
   "docs",
   "packages/core",
   "scripts",

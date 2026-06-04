@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
-const appDevVarsPath = path.join(repoRoot, "apps/app/.dev.vars");
+const appDevVarsPath = path.join(repoRoot, "apps/web/.dev.vars");
 const smokePersistPath = `/private/tmp/datamix-smoke-state-${Date.now()}`;
 const appPort = 3000;
 const appOrigin = `http://127.0.0.1:${appPort}`;

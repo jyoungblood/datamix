@@ -6,9 +6,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CenteredCardPage } from "../components/centered-card-page";
-import { authClient } from "../lib/auth-client";
-import { buildDatamixAdminPath } from "../lib/runtime";
+import { CenteredCardPage } from "@/components/centered-card-page";
+import { authClient } from "@/lib/auth-client";
+import { buildDatamixAdminPath } from "@/lib/runtime";
 
 function readResetParams() {
   if (typeof window === "undefined") {

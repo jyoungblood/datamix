@@ -27,12 +27,12 @@ From the repo root:
 
 ```bash
 npm install
-cp apps/app/.dev.vars.example apps/app/.dev.vars
+cp apps/web/.dev.vars.example apps/web/.dev.vars
 ```
 
 Then make the minimum local edits:
 
-- Replace `BETTER_AUTH_SECRET` in `apps/app/.dev.vars` with a long random string.
+- Replace `BETTER_AUTH_SECRET` in `apps/web/.dev.vars` with a long random string.
 - Keep `APP_ORIGIN=http://127.0.0.1:3000` unless you intentionally change ports.
 - Leave the email provider placeholders as-is unless you are actively working on invite or password-reset delivery. Basic setup and most UI work do not require real provider credentials.
 
@@ -77,13 +77,13 @@ Smoke note:
 ## 25-30 Minutes: Learn The Main Paths
 
 - If you are changing admin UI or client fetch behavior:
-  Start in [apps/app/client-pages/admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/app/client-pages/admin-dashboard.tsx:1) and the matching helper in `apps/app/lib/`.
+  Start in [apps/web/app/admin/_screens/dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/dashboard.tsx:1) and the matching helper in `apps/web/lib/`.
 - If you are changing auth or session behavior:
-  Start in [apps/app/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/auth.ts:1), [apps/app/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/auth-handlers.ts:1), [apps/app/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/admin-auth.ts:1), and [apps/app/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/session.ts:1).
+  Start in [apps/web/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/auth.ts:1), [apps/web/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/auth-handlers.ts:1), [apps/web/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-auth.ts:1), and [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1).
 - If you are changing collection schema or record behavior:
-  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/app/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/collections.ts:1), and [apps/app/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/records.ts:1).
+  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/collections.ts:1), and [apps/web/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/records.ts:1).
 - If you are changing media:
-  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/app/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/media.ts:1), [apps/app/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/media-handlers.ts:1), and [apps/app/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/media.ts:1).
+  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/web/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/media.ts:1), [apps/web/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/media-handlers.ts:1), and [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1).
 - If you are changing the secondary bootstrap path:
   Start in [packages/create-datamix/src/index.ts](/Users/jy/Desktop/projects/datamix/packages/create-datamix/src/index.ts:1) and [scripts/build-create-datamix-template.mjs](/Users/jy/Desktop/projects/datamix/scripts/build-create-datamix-template.mjs:1).
 

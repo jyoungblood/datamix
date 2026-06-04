@@ -26,28 +26,28 @@ import {
 } from "@datamix/core";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 
-import { authClient } from "../lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import {
   createApiKey,
   listApiKeys,
   revokeApiKey,
   updateApiKey,
   type PublicApiRuntimeSummary,
-} from "../lib/api-keys";
+} from "@/lib/api-keys";
 import {
   CollectionDefinitionRequestError,
   listCollectionDefinitions,
   saveCollectionDefinition,
   type SavedCollectionPlanSummary,
   type StoredCollectionDefinition,
-} from "../lib/collection-definitions";
-import { sendInvite } from "../lib/invite";
+} from "@/lib/collection-definitions";
+import { sendInvite } from "@/lib/invite";
 import {
   listMediaAssets,
   MediaAssetRequestError,
   uploadMediaAsset,
-} from "../lib/media";
-import { listRoles, saveRole, RoleRequestError } from "../lib/roles";
+} from "@/lib/media";
+import { listRoles, saveRole, RoleRequestError } from "@/lib/roles";
 import {
   CollectionRecordRequestError,
   createCollectionRecord,
@@ -55,18 +55,18 @@ import {
   updateCollectionRecord,
   type PrimitiveRecordValue,
   type StoredCollectionRecord,
-} from "../lib/records";
-import { adminPublicEnv } from "../lib/runtime";
-import { loadSessionAccess, SessionAccessError } from "../lib/session";
-import { useSetupStatus } from "../lib/setup";
+} from "@/lib/records";
+import { adminPublicEnv } from "@/lib/runtime";
+import { loadSessionAccess, SessionAccessError } from "@/lib/session";
+import { useSetupStatus } from "@/lib/setup";
 import {
   listUsers,
   updateUserRole,
   UserRequestError,
   type DatamixUserSummary,
-} from "../lib/users";
-import { buildDatamixAdminPath } from "../lib/runtime";
-import { TiptapRichTextEditor } from "./components/TiptapRichTextEditor";
+} from "@/lib/users";
+import { buildDatamixAdminPath } from "@/lib/runtime";
+import { TiptapRichTextEditor } from "../_components/TiptapRichTextEditor";
 
 const loginHref = `${buildDatamixAdminPath("/login")}?next=${encodeURIComponent(
   buildDatamixAdminPath(),

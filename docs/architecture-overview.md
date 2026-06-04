@@ -5,7 +5,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Non-Negotiable Constraints
 
 - Cloudflare-only is the product shape, not a temporary implementation detail.
-- `apps/app` is the only app workspace and the only deployed Worker runtime.
+- `apps/web` is the only app workspace and the only deployed Worker runtime.
 - The Worker runtime is the only code allowed to touch `D1` and `R2`.
 - Auth and session state live on the app origin and are consumed by same-origin browser requests.
 - Collection schema definition and record edit form generation are the same system.
@@ -13,8 +13,8 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 ## Workspace Map
 
-- `apps/app`
-  Unified Vinext App Router Worker. UI routes live under `app/**`, API route handlers live under `app/api/**`, shared server logic lives under `server/**`, browser admin screens live under `client-pages/**`, and client request helpers live under `lib/**`.
+- `apps/web`
+  Unified Vinext App Router Worker. UI routes live under `app/**`, API route handlers live under `app/api/**`, private admin screens live under `app/admin/_screens/**`, shared server logic lives under `server/**`, and client request helpers live under `lib/**`.
 - `packages/core`
   Shared domain vocabulary for collections, RBAC, media, API keys, and runtime helpers. This package exists to keep contracts consistent, not to centralize everything by default.
 - `packages/create-datamix`
@@ -26,7 +26,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 ## Runtime Shape
 
-1. The browser loads Vinext App Router pages from `apps/app`.
+1. The browser loads Vinext App Router pages from `apps/web`.
 2. The admin talks back to the same origin for auth, content, media, setup, users, roles, invites, and API keys.
 3. App Router route handlers under `app/api/**` call shared helpers under `server/routes/**`.
 4. Server modules under `server/**` persist structured data in D1 and binary media in R2.
@@ -35,25 +35,25 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Where To Start Reading
 
 - App entrypoints:
-  [apps/app/app/page.tsx](/Users/jy/Desktop/projects/datamix/apps/app/app/page.tsx:1),
-  [apps/app/app/admin/setup/page.tsx](/Users/jy/Desktop/projects/datamix/apps/app/app/admin/setup/page.tsx:1),
-  [apps/app/app/admin/page.tsx](/Users/jy/Desktop/projects/datamix/apps/app/app/admin/page.tsx:1),
-  [apps/app/client-pages/admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/app/client-pages/admin-dashboard.tsx:1)
+  [apps/web/app/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/page.tsx:1),
+  [apps/web/app/admin/setup/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/setup/page.tsx:1),
+  [apps/web/app/admin/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/page.tsx:1),
+  [apps/web/app/admin/_screens/dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/dashboard.tsx:1)
 - Admin client helpers:
-  [apps/app/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/session.ts:1),
-  [apps/app/lib/collection-definitions.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/collection-definitions.ts:1),
-  [apps/app/lib/records.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/records.ts:1),
-  [apps/app/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/media.ts:1)
+  [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1),
+  [apps/web/lib/collection-definitions.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/collection-definitions.ts:1),
+  [apps/web/lib/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/records.ts:1),
+  [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1)
 - API route handlers:
-  [apps/app/app/api/route.ts](/Users/jy/Desktop/projects/datamix/apps/app/app/api/route.ts:1),
-  [apps/app/app/api/health/route.ts](/Users/jy/Desktop/projects/datamix/apps/app/app/api/health/route.ts:1),
-  [apps/app/app/api/auth/[...auth]/route.ts](/Users/jy/Desktop/projects/datamix/apps/app/app/api/auth/[...auth]/route.ts:1),
-  [apps/app/app/api/collections/route.ts](/Users/jy/Desktop/projects/datamix/apps/app/app/api/collections/route.ts:1)
+  [apps/web/app/api/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/route.ts:1),
+  [apps/web/app/api/health/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/health/route.ts:1),
+  [apps/web/app/api/auth/[...auth]/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/auth/[...auth]/route.ts:1),
+  [apps/web/app/api/collections/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/collections/route.ts:1)
 - Server route helpers:
-  [apps/app/server/routes/http.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/http.ts:1),
-  [apps/app/server/routes/admin-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/admin-handlers.ts:1),
-  [apps/app/server/routes/public-collection-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/public-collection-handlers.ts:1),
-  [apps/app/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/media-handlers.ts:1)
+  [apps/web/server/routes/http.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/http.ts:1),
+  [apps/web/server/routes/admin-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-handlers.ts:1),
+  [apps/web/server/routes/public-collection-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/public-collection-handlers.ts:1),
+  [apps/web/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/media-handlers.ts:1)
 - Shared contracts:
   [packages/core/src/index.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/index.ts:1),
   [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1),
@@ -66,7 +66,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 - Auth and session flow:
   Better Auth is mounted under `/api/auth/*`. The admin checks session state through `/api/admin/*` routes and redirects between `/admin/setup`, `/admin/login`, and `/admin` based on those responses.
 - Collections and records:
-  Collection definitions are persisted once, then used to generate record editing and CRUD behavior. If a schema change affects stored shape, expect to touch `packages/core`, `apps/app/server/collections.ts`, `apps/app/server/records.ts`, and the admin request/render path together.
+  Collection definitions are persisted once, then used to generate record editing and CRUD behavior. If a schema change affects stored shape, expect to touch `packages/core`, `apps/web/server/collections.ts`, `apps/web/server/records.ts`, and the admin request/render path together.
 - Media:
   Uploads create D1 metadata and store bytes in R2. Object reads and image transform requests stay behind Worker routes.
 - RBAC and API keys:
@@ -75,18 +75,18 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Common Change Paths
 
 - Changing public or session auth behavior:
-  Start in [apps/app/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/auth.ts:1), [apps/app/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/auth-handlers.ts:1), [apps/app/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/admin-auth.ts:1), and [apps/app/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/session.ts:1).
+  Start in [apps/web/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/auth.ts:1), [apps/web/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/auth-handlers.ts:1), [apps/web/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-auth.ts:1), and [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1).
 - Changing collection schema or generated record behavior:
-  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/app/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/collections.ts:1), [apps/app/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/records.ts:1), and [apps/app/client-pages/admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/app/client-pages/admin-dashboard.tsx:1).
+  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/collections.ts:1), [apps/web/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/records.ts:1), and [apps/web/app/admin/_screens/dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/dashboard.tsx:1).
 - Changing media behavior:
-  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/app/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/media.ts:1), [apps/app/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/media-handlers.ts:1), and [apps/app/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/media.ts:1).
+  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/web/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/media.ts:1), [apps/web/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/media-handlers.ts:1), and [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1).
 - Changing roles, invites, users, or API keys:
-  Start in [packages/core/src/rbac.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/rbac.ts:1), [packages/core/src/api-keys.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/api-keys.ts:1), and the matching `apps/app/server/*` plus `apps/app/lib/*` modules.
+  Start in [packages/core/src/rbac.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/rbac.ts:1), [packages/core/src/api-keys.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/api-keys.ts:1), and the matching `apps/web/server/*` plus `apps/web/lib/*` modules.
 
 ## Code Shape Guidance
 
-- `apps/app/client-pages/admin-dashboard.tsx` is currently a large, direct composition point for the authenticated admin. Extract only when a smaller module makes the behavior easier to understand.
-- `apps/app/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/app/server/*.ts` modules.
+- `apps/web/app/admin/_screens/dashboard.tsx` is currently a large, direct composition point for the authenticated admin. Extract only when a smaller module makes the behavior easier to understand.
+- `apps/web/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 
 ## Verification Expectations

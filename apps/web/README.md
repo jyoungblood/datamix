@@ -1,11 +1,11 @@
-# `@datamix/app`
+# `@datamix/web`
 
 Unified Vinext App Router Worker for Datamix.
 
 This workspace serves the browser-first admin UI and every JSON/auth/media route from
 one Cloudflare Worker app. App Router route handlers live under `app/api/**`, shared
-server helpers live under `server/**`, and client admin screens live under
-`client-pages/**`.
+server helpers live under `server/**`, and private admin screen components live under
+`app/admin/_screens/**`.
 
-Use `npm run dev --workspace @datamix/app` for local development on
+Use `npm run dev --workspace @datamix/web` for local development on
 `http://127.0.0.1:3000`.

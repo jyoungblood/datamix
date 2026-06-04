@@ -99,7 +99,7 @@ async function stopChild(child) {
 async function main() {
   process.stdout.write(`Starting Datamix unified app at ${localAppOrigin}...\n`);
 
-  const appProcess = spawnManaged("app", "npm", ["run", "dev", "--workspace", "@datamix/app"], {
+  const appProcess = spawnManaged("app", "npm", ["run", "dev", "--workspace", "@datamix/web"], {
     ...process.env,
     APP_ENV: localAppEnv,
     APP_ORIGIN: localAppOrigin,

@@ -180,7 +180,7 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
 
   await writeFile(rootPackagePath, `${JSON.stringify(rootPackageJson, null, 2)}\n`);
 
-  const appWranglerPath = path.join(targetDir, "apps/app/wrangler.jsonc");
+  const appWranglerPath = path.join(targetDir, "apps/web/wrangler.jsonc");
   const appWranglerSource = await readFile(appWranglerPath, "utf8");
   const appWranglerCustomized = appWranglerSource
     .replace('"name": "datamix-app-dev"', `"name": "${names.appDevName}"`)
@@ -316,8 +316,8 @@ function printSuccessMessage(input: {
     console.log(`  npx wrangler d1 create ${input.names.d1ProductionName}`);
     console.log(`  npx wrangler r2 bucket create ${input.names.mediaPreviewName}`);
     console.log(`  npx wrangler r2 bucket create ${input.names.mediaProductionName}`);
-    console.log("  Update apps/app/wrangler.jsonc with the returned IDs and real app domains.");
-    console.log("  Run npm run typegen:app after editing wrangler.jsonc.");
+    console.log("  Update apps/web/wrangler.jsonc with the returned IDs and real app domains.");
+    console.log("  Run npm run typegen:web after editing wrangler.jsonc.");
     console.log("  Run npm run deploy:preview or npm run deploy:production when the config is ready.");
     console.log("");
     console.log("The browser-first deploy flow remains the primary v0 onboarding path.");

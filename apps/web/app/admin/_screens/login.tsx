@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 
-import { CenteredCardPage } from "../components/centered-card-page";
-import { authClient } from "../lib/auth-client";
-import { buildDatamixAdminPath } from "../lib/runtime";
-import { useSetupStatus } from "../lib/setup";
+import { CenteredCardPage } from "@/components/centered-card-page";
+import { authClient } from "@/lib/auth-client";
+import { buildDatamixAdminPath } from "@/lib/runtime";
+import { useSetupStatus } from "@/lib/setup";
 
 function readNextPath() {
   if (typeof window === "undefined") {

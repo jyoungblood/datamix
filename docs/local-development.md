@@ -5,16 +5,16 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 ## Current Contract
 
 - `npm run dev` starts one local Datamix app on `http://127.0.0.1:3000`.
-- `apps/app` runs through Vinext and the Cloudflare Vite plugin as the unified Worker app.
+- `apps/web` runs through Vinext and the Cloudflare Vite plugin as the unified Worker app.
 - The same app serves `/admin/*`, `/api/*`, auth, media object routes, D1, R2, and Cloudflare Images bindings.
 - Preview and production topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
 
 ## First-Time Setup
 
 1. Run `npm install` from the repo root.
-2. Copy `apps/app/.dev.vars.example` to `apps/app/.dev.vars`.
-3. Replace `BETTER_AUTH_SECRET` in `apps/app/.dev.vars` with a long random string.
-4. Run `npm run typegen:app` after changing `apps/app/wrangler.jsonc`.
+2. Copy `apps/web/.dev.vars.example` to `apps/web/.dev.vars`.
+3. Replace `BETTER_AUTH_SECRET` in `apps/web/.dev.vars` with a long random string.
+4. Run `npm run typegen:web` after changing `apps/web/wrangler.jsonc`.
 5. Start the app and open `http://127.0.0.1:3000/admin/setup` to create the first admin account in-browser.
 
 ## Daily Workflow
@@ -37,19 +37,19 @@ The smoke harness starts the unified local app on its own, so it does not requir
 
 ## Why The Files Live Where They Do
 
-- `apps/app/wrangler.jsonc` is the single Worker runtime config for local, preview, and production.
-- `apps/app/.dev.vars` belongs next to `apps/app/wrangler.jsonc` because Wrangler loads local Worker variables from the Worker directory.
-- `apps/app/.env.example` documents optional public Vinext values. The root dev script injects local single-origin defaults automatically.
+- `apps/web/wrangler.jsonc` is the single Worker runtime config for local, preview, and production.
+- `apps/web/.dev.vars` belongs next to `apps/web/wrangler.jsonc` because Wrangler loads local Worker variables from the Worker directory.
+- `apps/web/.env.example` documents optional public Vinext values. The root dev script injects local single-origin defaults automatically.
 
 ## Typed Env Expectations
 
-- Worker bindings and runtime types are generated into `apps/app/worker-configuration.d.ts` via `wrangler types`.
-- Public app env is typed in `apps/app/types/env.d.ts`.
+- Worker bindings and runtime types are generated into `apps/web/worker-configuration.d.ts` via `wrangler types`.
+- Public app env is typed in `apps/web/types/env.d.ts`.
 - Shared env shapes live in `packages/core` so server and client helpers reference the same vocabulary.
 
 ## Auth Env Expectations
 
-- `BETTER_AUTH_SECRET` is required in `apps/app/.dev.vars` and should be a long random string.
+- `BETTER_AUTH_SECRET` is required in `apps/web/.dev.vars` and should be a long random string.
 - `AUTH_EMAIL_PROVIDER` selects `smtp` or `resend` for auth-only mail delivery.
 - `AUTH_EMAIL_FROM_EMAIL` is required for both providers.
 - `AUTH_RESEND_API_KEY` is required when `AUTH_EMAIL_PROVIDER=resend`.
