@@ -18,8 +18,7 @@ const rootFiles = [
 
 const rootDirectories = [
   ".github",
-  "apps/admin",
-  "apps/api",
+  "apps/app",
   "docs",
   "packages/core",
   "scripts",
@@ -55,6 +54,10 @@ async function copyDirectory(sourceDir, targetDir) {
       }
 
       if (source.includes(`${path.sep}packages${path.sep}create-datamix`)) {
+        return false;
+      }
+
+      if (source.endsWith(`${path.sep}docs${path.sep}vinext-only-migration-tracker.md`)) {
         return false;
       }
 

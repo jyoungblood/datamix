@@ -177,7 +177,7 @@ export default function LoginPage() {
         <Alert variant="destructive">
           <AlertDescription>
             {setupStatus.statusCode === 503
-              ? "Set BETTER_AUTH_SECRET on the API Worker, then reload this page."
+              ? "Set BETTER_AUTH_SECRET on the Datamix Worker, then reload this page."
               : "Datamix will retry automatically when the tab regains focus or the network comes back. You can also retry now."}
           </AlertDescription>
         </Alert>

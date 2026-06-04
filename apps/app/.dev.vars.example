@@ -1,5 +1,6 @@
 APP_ENV=development
-APP_ORIGIN=http://127.0.0.1:8787
+APP_ORIGIN=http://127.0.0.1:3000
+MEDIA_PUBLIC_ORIGIN=http://127.0.0.1:3000
 BETTER_AUTH_SECRET=replace-with-a-long-random-string
 PUBLIC_API_READ_ACCESS=public
 PUBLIC_API_WRITE_ACCESS=disabled

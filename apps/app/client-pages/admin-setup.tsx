@@ -91,8 +91,8 @@ export default function SetupPage() {
         <Alert variant="destructive">
           <AlertDescription>
             {setupStatus.statusCode === 503
-              ? "Set BETTER_AUTH_SECRET on the API Worker, then reload this page."
-              : "Datamix could not confirm first-run setup just now. Retry once the API Worker is reachable again."}
+              ? "Set BETTER_AUTH_SECRET on the Datamix Worker, then reload this page."
+              : "Datamix could not confirm first-run setup just now. Retry once the Worker app is reachable again."}
           </AlertDescription>
         </Alert>
         <div className="flex flex-wrap gap-3">

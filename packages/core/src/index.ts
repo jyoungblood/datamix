@@ -23,7 +23,7 @@ export const datamixSurfaces = [
   {
     id: "api",
     label: "API",
-    description: "JSON-first backend surface built with Hono.",
+    description: "JSON-first route surface served by the Datamix Worker app.",
     status: "in_progress",
   },
   {

@@ -21,22 +21,22 @@ This guide is the fastest path from fresh clone to productive context in Datamix
 3. Keep two constraints in mind:
    Cloudflare-only is intentional, and the collection schema is also the record form contract.
 
-## 5-10 Minutes: Install and Configure
+## 5-10 Minutes: Install And Configure
 
 From the repo root:
 
 ```bash
 npm install
-cp apps/api/.dev.vars.example apps/api/.dev.vars
+cp apps/app/.dev.vars.example apps/app/.dev.vars
 ```
 
 Then make the minimum local edits:
 
-- Replace `BETTER_AUTH_SECRET` in `apps/api/.dev.vars` with a long random string.
-- Keep `APP_ORIGIN=http://127.0.0.1:8787` unless you intentionally change ports.
+- Replace `BETTER_AUTH_SECRET` in `apps/app/.dev.vars` with a long random string.
+- Keep `APP_ORIGIN=http://127.0.0.1:3000` unless you intentionally change ports.
 - Leave the email provider placeholders as-is unless you are actively working on invite or password-reset delivery. Basic setup and most UI work do not require real provider credentials.
 
-## 10-20 Minutes: Run the App
+## 10-20 Minutes: Run The App
 
 Use one terminal from the repo root:
 
@@ -44,10 +44,10 @@ Use one terminal from the repo root:
 
 Then open:
 
-- `http://127.0.0.1:8787/` for the splash page
-- `http://127.0.0.1:8787/admin/setup` for the first-run admin bootstrap
-- `http://127.0.0.1:8787/admin/login` after the first account exists
-- `http://127.0.0.1:8787/api/health` to confirm the Worker is up
+- `http://127.0.0.1:3000/` for the splash page
+- `http://127.0.0.1:3000/admin/setup` for the first-run admin bootstrap
+- `http://127.0.0.1:3000/admin/login` after the first account exists
+- `http://127.0.0.1:3000/api/health` to confirm the Worker is up
 
 What to notice:
 
@@ -55,7 +55,7 @@ What to notice:
 - The admin and API share one origin locally and in deployment.
 - D1 and R2 stay behind the Worker boundary.
 
-## 20-25 Minutes: Run the Confidence Checks
+## 20-25 Minutes: Run The Confidence Checks
 
 From the repo root:
 
@@ -67,27 +67,27 @@ npm run smoke
 
 What each command tells you:
 
-- `npm run check` verifies TypeScript across all workspaces.
-- `npm run build` confirms the admin and API still build cleanly.
+- `npm run check` verifies TypeScript for the unified app.
+- `npm run build` confirms the app builds cleanly.
 - `npm run smoke` covers first-run setup, login, collection CRUD, record CRUD, media upload/object access, and public JSON routes.
 
 Smoke note:
 `npm run smoke` starts its own unified local app. You do not need a separate `npm run dev` session for that command.
 
-## 25-30 Minutes: Learn the Main Seams
+## 25-30 Minutes: Learn The Main Paths
 
 - If you are changing admin UI or client fetch behavior:
-  Start in [apps/admin/pages/_admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/admin/pages/_admin-dashboard.tsx:1) and the matching helper in `apps/admin/lib/`.
+  Start in [apps/app/client-pages/admin-dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/app/client-pages/admin-dashboard.tsx:1) and the matching helper in `apps/app/lib/`.
 - If you are changing auth or session behavior:
-  Start in [apps/api/src/auth.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/auth.ts:1), [apps/api/src/auth-guard.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/auth-guard.ts:1), and [apps/admin/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/session.ts:1).
+  Start in [apps/app/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/auth.ts:1), [apps/app/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/auth-handlers.ts:1), [apps/app/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/admin-auth.ts:1), and [apps/app/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/session.ts:1).
 - If you are changing collection schema or record behavior:
-  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/api/src/collections.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/collections.ts:1), and [apps/api/src/records.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/records.ts:1).
+  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/app/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/collections.ts:1), and [apps/app/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/records.ts:1).
 - If you are changing media:
-  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/api/src/media.ts](/Users/jy/Desktop/projects/datamix/apps/api/src/media.ts:1), and [apps/admin/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/admin/lib/media.ts:1).
+  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/app/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/media.ts:1), [apps/app/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/app/server/routes/media-handlers.ts:1), and [apps/app/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/app/lib/media.ts:1).
 - If you are changing the secondary bootstrap path:
   Start in [packages/create-datamix/src/index.ts](/Users/jy/Desktop/projects/datamix/packages/create-datamix/src/index.ts:1) and [scripts/build-create-datamix-template.mjs](/Users/jy/Desktop/projects/datamix/scripts/build-create-datamix-template.mjs:1).
 
-## Working Rules for Contributions
+## Working Rules For Contributions
 
 - Preserve Cloudflare-only deployment and the current session/auth flow.
 - Avoid premature abstractions, generic policy engines, or cross-cutting rewrites.

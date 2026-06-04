@@ -16,8 +16,7 @@ Datamix is an edge-native, Cloudflare-only content modeling studio that ships as
 
 ## Workspace Layout
 
-- `apps/admin`: Vinext admin source that builds the SPA assets served by the Worker
-- `apps/api`: Hono Worker that serves the admin assets, owns the JSON API, and binds auth, content, media, D1, and R2
+- `apps/app`: unified Vinext App Router Worker that serves the admin UI, JSON API, auth, media routes, and Cloudflare bindings
 - `packages/core`: shared schema, RBAC, media, and API-key types/helpers
 - `packages/create-datamix`: secondary local-first scaffolder for new Datamix workspaces
 - `tests/smoke`: end-to-end smoke coverage for must-not-break flows
@@ -31,9 +30,8 @@ Datamix is an edge-native, Cloudflare-only content modeling studio that ships as
 - `npm run build`
 - `npm run smoke`
 - `npm run dev`
-- `npm run dev:admin`
-- `npm run dev:api`
-- `npm run typegen:api`
+- `npm run dev:app`
+- `npm run typegen:app`
 - `npm run clean`
 
 ## Secondary Bootstrap

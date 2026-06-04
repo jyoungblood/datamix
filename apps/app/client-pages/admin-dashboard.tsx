@@ -2362,8 +2362,8 @@ export default function AdminPage() {
           </h1>
           <p className="body">
             {session.data
-              ? "Datamix is resolving your current role and permissions from the API Worker."
-              : "Datamix is asking the API Worker whether this browser already has a valid session."}
+              ? "Datamix is resolving your current role and permissions from the Datamix Worker."
+              : "Datamix is asking the Datamix Worker whether this browser already has a valid session."}
           </p>
         </div>
       </main>
@@ -2379,7 +2379,7 @@ export default function AdminPage() {
           <p className="body">{setupStatus.errorMessage}</p>
           {setupStatus.statusCode === 503 ? (
             <p className="body">
-              Set `BETTER_AUTH_SECRET` on the API Worker, then reload this page.
+              Set `BETTER_AUTH_SECRET` on the Datamix Worker, then reload this page.
             </p>
           ) : (
             <p className="body">
@@ -2417,7 +2417,7 @@ export default function AdminPage() {
           {sessionAuthorizationStatusCode && sessionAuthorizationStatusCode >= 500 ? (
             <p className="body">
               The protected session route is reachable, but it could not finish resolving
-              your role just now. Retry once the API Worker settles.
+              your role just now. Retry once the Worker app settles.
             </p>
           ) : (
             <p className="body">
@@ -3420,7 +3420,7 @@ export default function AdminPage() {
       id: "admin-refresh-collections",
       keywords: ["reload", "refresh", "collections"],
       onSelect: handleRefreshCollections,
-      subtitle: "Fetch the latest saved collection definitions from the API Worker.",
+      subtitle: "Fetch the latest saved collection definitions from the Datamix Worker.",
       title: "Refresh collections",
     });
   }
@@ -3672,7 +3672,7 @@ export default function AdminPage() {
                 />
               ) : isInitialCollectionLoad ? (
                 <FlowStateBox
-                  body="Datamix is loading your saved collection definitions from the API Worker."
+                  body="Datamix is loading your saved collection definitions from the Datamix Worker."
                   compact
                   title="Loading collections"
                 />
@@ -5005,7 +5005,7 @@ export default function AdminPage() {
 
                   {isLoadingMediaAssets ? (
                     <FlowStateBox
-                      body="Loading recent media asset metadata from the API Worker."
+                      body="Loading recent media asset metadata from the Datamix Worker."
                       compact
                       title="Loading uploads"
                     />
@@ -5581,7 +5581,7 @@ export default function AdminPage() {
 
                     {isLoadingApiKeys && apiKeys.length === 0 ? (
                       <FlowStateBox
-                        body="Loading managed API keys from the API Worker."
+                        body="Loading managed API keys from the Datamix Worker."
                         compact
                         title="Loading API keys"
                       />
@@ -5736,7 +5736,7 @@ export default function AdminPage() {
                         />
                       ) : isLoadingRoles && availableRoles.length === 0 ? (
                         <FlowStateBox
-                          body="Loading role definitions from the API Worker."
+                          body="Loading role definitions from the Datamix Worker."
                           compact
                           title="Loading roles"
                         />

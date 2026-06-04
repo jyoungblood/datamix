@@ -13,9 +13,9 @@ type CliOptions = {
 };
 
 type ProjectNames = {
-  apiDevName: string;
-  apiPreviewName: string;
-  apiProductionName: string;
+  appDevName: string;
+  appPreviewName: string;
+  appProductionName: string;
   d1LocalName: string;
   d1PreviewName: string;
   d1ProductionName: string;
@@ -138,9 +138,9 @@ function createProjectNames(projectDirName: string): ProjectNames {
   const projectSlug = rawSlug.length > 0 ? rawSlug : "datamix-project";
 
   return {
-    apiDevName: `${projectSlug}-api-dev`,
-    apiPreviewName: `${projectSlug}-api-preview`,
-    apiProductionName: `${projectSlug}-api`,
+    appDevName: `${projectSlug}-app-dev`,
+    appPreviewName: `${projectSlug}-app-preview`,
+    appProductionName: `${projectSlug}-app`,
     d1LocalName: `${projectSlug}-local`,
     d1PreviewName: `${projectSlug}-preview`,
     d1ProductionName: `${projectSlug}-production`,
@@ -180,10 +180,10 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
 
   await writeFile(rootPackagePath, `${JSON.stringify(rootPackageJson, null, 2)}\n`);
 
-  const apiWranglerPath = path.join(targetDir, "apps/api/wrangler.jsonc");
-  const apiWranglerSource = await readFile(apiWranglerPath, "utf8");
-  const apiWranglerCustomized = apiWranglerSource
-    .replace('"name": "datamix-api-dev"', `"name": "${names.apiDevName}"`)
+  const appWranglerPath = path.join(targetDir, "apps/app/wrangler.jsonc");
+  const appWranglerSource = await readFile(appWranglerPath, "utf8");
+  const appWranglerCustomized = appWranglerSource
+    .replace('"name": "datamix-app-dev"', `"name": "${names.appDevName}"`)
     .replace('"database_name": "datamix-local"', `"database_name": "${names.d1LocalName}"`)
     .replace('"preview_database_id": "datamix-local"', `"preview_database_id": "${names.d1LocalName}"`)
     .replace('"bucket_name": "datamix-media-local"', `"bucket_name": "${names.mediaLocalName}"`)
@@ -191,7 +191,7 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
       '"preview_bucket_name": "datamix-media-local"',
       `"preview_bucket_name": "${names.mediaLocalName}"`,
     )
-    .replace('"name": "datamix-api-preview"', `"name": "${names.apiPreviewName}"`)
+    .replace('"name": "datamix-app-preview"', `"name": "${names.appPreviewName}"`)
     .replace('"database_name": "datamix-preview"', `"database_name": "${names.d1PreviewName}"`)
     .replace(
       '"bucket_name": "datamix-media-preview"',
@@ -201,7 +201,7 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
       '"preview_bucket_name": "datamix-media-preview"',
       `"preview_bucket_name": "${names.mediaPreviewName}"`,
     )
-    .replace('"name": "datamix-api"', `"name": "${names.apiProductionName}"`)
+    .replace('"name": "datamix-app"', `"name": "${names.appProductionName}"`)
     .replace(
       '"database_name": "datamix-production"',
       `"database_name": "${names.d1ProductionName}"`,
@@ -215,14 +215,14 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
       `"preview_bucket_name": "${names.mediaProductionName}"`,
     );
 
-  await writeFile(apiWranglerPath, apiWranglerCustomized);
+  await writeFile(appWranglerPath, appWranglerCustomized);
 
   const deployDocPath = path.join(targetDir, "docs/deploy-runtime-contract.md");
   const deployDocSource = await readFile(deployDocPath, "utf8");
   const deployDocCustomized = deployDocSource
     .replace(
-      "- App Worker: `datamix-api` with local top-level config and named `preview` / `production` environments",
-      `- App Worker: \`${names.apiProductionName}\` with local top-level config and named \`preview\` / \`production\` environments`,
+      "- App Worker: `datamix-app` with local top-level config and named `preview` / `production` environments",
+      `- App Worker: \`${names.appProductionName}\` with local top-level config and named \`preview\` / \`production\` environments`,
     )
     .replace("- Preview D1 database: `datamix-preview`", `- Preview D1 database: \`${names.d1PreviewName}\``)
     .replace(
@@ -316,9 +316,9 @@ function printSuccessMessage(input: {
     console.log(`  npx wrangler d1 create ${input.names.d1ProductionName}`);
     console.log(`  npx wrangler r2 bucket create ${input.names.mediaPreviewName}`);
     console.log(`  npx wrangler r2 bucket create ${input.names.mediaProductionName}`);
-    console.log("  Update apps/api/wrangler.jsonc with the returned IDs and real app domains.");
-    console.log("  Run npm run build --workspace @datamix/admin before wrangler deploy.");
-    console.log("  Run npm run typegen:api after editing wrangler.jsonc.");
+    console.log("  Update apps/app/wrangler.jsonc with the returned IDs and real app domains.");
+    console.log("  Run npm run typegen:app after editing wrangler.jsonc.");
+    console.log("  Run npm run deploy:preview or npm run deploy:production when the config is ready.");
     console.log("");
     console.log("The browser-first deploy flow remains the primary v0 onboarding path.");
   }
