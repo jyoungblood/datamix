@@ -8,9 +8,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
-const apiDevVarsPath = path.join(repoRoot, "apps/api/.dev.vars");
+const appDevVarsPath = path.join(repoRoot, "apps/app/.dev.vars");
 const smokePersistPath = `/private/tmp/datamix-smoke-state-${Date.now()}`;
-const appPort = 8787;
+const appPort = 3000;
 const appOrigin = `http://127.0.0.1:${appPort}`;
 const adminApiOrigin = `${appOrigin}/api/admin`;
 const authBaseUrl = `${appOrigin}/api/auth`;
@@ -255,9 +255,9 @@ async function main() {
 
   try {
     try {
-      await access(apiDevVarsPath);
+      await access(appDevVarsPath);
     } catch {
-      await writeFile(apiDevVarsPath, `BETTER_AUTH_SECRET=${smokeAuthSecret}\n`);
+      await writeFile(appDevVarsPath, `BETTER_AUTH_SECRET=${smokeAuthSecret}\n`);
       createdSmokeDevVars = true;
     }
 
@@ -269,8 +269,10 @@ async function main() {
         cwd: repoRoot,
         env: {
           ...process.env,
+          APP_ORIGIN: appOrigin,
           DATAMIX_PERSIST_TO: smokePersistPath,
-          DATAMIX_ADMIN_WATCH: "0",
+          MEDIA_PUBLIC_ORIGIN: appOrigin,
+          NEXT_PUBLIC_APP_ORIGIN: appOrigin,
         },
         name: "app",
       },
@@ -551,7 +553,7 @@ async function main() {
     await Promise.allSettled([appProcess ? stopManagedProcess(appProcess) : Promise.resolve()]);
 
     if (createdSmokeDevVars) {
-      await rm(apiDevVarsPath, { force: true });
+      await rm(appDevVarsPath, { force: true });
     }
 
     await rm(smokePersistPath, { force: true, recursive: true });

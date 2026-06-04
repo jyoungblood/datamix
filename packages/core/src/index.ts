@@ -85,12 +85,12 @@ export type DatamixAuthRuntimeSummary = {
 };
 
 export const defaultAdminPublicEnv: AdminPublicEnv = {
-  NEXT_PUBLIC_APP_ORIGIN: "http://127.0.0.1:8787",
+  NEXT_PUBLIC_APP_ORIGIN: "http://127.0.0.1:3000",
   NEXT_PUBLIC_APP_ENV: "development",
 };
 
 export const defaultApiRuntimeEnv: ApiRuntimeEnv = {
-  APP_ORIGIN: "http://127.0.0.1:8787",
+  APP_ORIGIN: "http://127.0.0.1:3000",
   APP_ENV: "development",
   MEDIA_PUBLIC_ORIGIN: null,
 };

@@ -1,10 +1,13 @@
 import path from "node:path";
+import process from "node:process";
 
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import rsc from "@vitejs/plugin-rsc";
 import { defineConfig } from "vite";
 import vinext from "vinext";
+
+const persistStatePath = process.env.DATAMIX_PERSIST_TO?.trim();
 
 export default defineConfig({
   plugins: [
@@ -17,6 +20,7 @@ export default defineConfig({
       },
     }),
     cloudflare({
+      persistState: persistStatePath ? { path: persistStatePath } : undefined,
       viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
     }),
     tailwindcss(),

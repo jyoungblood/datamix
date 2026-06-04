@@ -7,25 +7,28 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const localAppOrigin = process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://127.0.0.1:8787";
-const localAppEnv = process.env.NEXT_PUBLIC_APP_ENV ?? "development";
-const watchAdminAssets = process.env.DATAMIX_ADMIN_WATCH !== "0";
-const wranglerPersistTo = process.env.DATAMIX_PERSIST_TO?.trim();
-const localAppUrl = new URL(localAppOrigin);
-const appLinkOrigin =
-  localAppUrl.hostname === "127.0.0.1"
-    ? new URL(
-        `${localAppUrl.protocol}//localhost${localAppUrl.port ? `:${localAppUrl.port}` : ""}`,
-      ).toString()
-    : localAppOrigin;
-let adminShellRefresh = Promise.resolve();
+const localAppOrigin =
+  process.env.NEXT_PUBLIC_APP_ORIGIN ?? process.env.APP_ORIGIN ?? "http://127.0.0.1:3000";
+const localAppEnv = process.env.NEXT_PUBLIC_APP_ENV ?? process.env.APP_ENV ?? "development";
+const appLinkOrigin = toFriendlyLoopbackOrigin(localAppOrigin);
 
-function isWorkerReadyLine(line) {
-  return line.includes("Ready on http://") || line.includes("Local server updated and ready");
+function toFriendlyLoopbackOrigin(origin) {
+  const url = new URL(origin);
+
+  if (url.hostname !== "127.0.0.1") {
+    return origin;
+  }
+
+  return new URL(`${url.protocol}//localhost${url.port ? `:${url.port}` : ""}`).toString();
 }
 
-function isAdminBuildCompleteLine(line) {
-  return /built in \d+/i.test(line);
+function isAppReadyLine(line) {
+  return (
+    line.includes("Ready on http://") ||
+    line.includes("Local server updated and ready") ||
+    line.includes("http://127.0.0.1:3000") ||
+    line.includes("http://localhost:3000")
+  );
 }
 
 function prefixOutput(stream, label) {
@@ -41,20 +44,8 @@ function prefixOutput(stream, label) {
 
       process.stdout.write(`[${label}] ${line}\n`);
 
-      if (label === "worker" && isWorkerReadyLine(line)) {
+      if (isAppReadyLine(line)) {
         process.stdout.write(`[datamix] Open ${appLinkOrigin}\n`);
-      }
-
-      if (label === "admin-watch" && isAdminBuildCompleteLine(line)) {
-        adminShellRefresh = adminShellRefresh
-          .catch(() => undefined)
-          .then(() =>
-            runStep("admin-shell", "node", ["./scripts/generate-admin-spa-shell.mjs"], process.env),
-          )
-          .catch((error) => {
-            const message = error instanceof Error ? error.message : String(error);
-            process.stderr.write(`${message}\n`);
-          });
       }
     }
   });
@@ -85,15 +76,6 @@ function waitForExit(child) {
   });
 }
 
-async function runStep(label, command, args, env) {
-  const child = spawnManaged(label, command, args, env);
-  const result = await waitForExit(child);
-
-  if (result.code !== 0) {
-    throw new Error(`${label} exited with code ${String(result.code)}.`);
-  }
-}
-
 async function stopChild(child) {
   if (child.exitCode !== null) {
     return;
@@ -115,51 +97,22 @@ async function stopChild(child) {
 }
 
 async function main() {
-  const adminEnv = {
+  process.stdout.write(`Starting Datamix unified app at ${localAppOrigin}...\n`);
+
+  const appProcess = spawnManaged("app", "npm", ["run", "dev", "--workspace", "@datamix/app"], {
     ...process.env,
+    APP_ENV: localAppEnv,
+    APP_ORIGIN: localAppOrigin,
+    MEDIA_PUBLIC_ORIGIN: process.env.MEDIA_PUBLIC_ORIGIN ?? localAppOrigin,
     NEXT_PUBLIC_APP_ENV: localAppEnv,
     NEXT_PUBLIC_APP_ORIGIN: localAppOrigin,
-  };
-
-  process.stdout.write("Building the admin assets for the unified Worker...\n");
-  await runStep("admin-build", "npm", ["run", "build", "--workspace", "@datamix/admin"], adminEnv);
-
-  const childProcesses = [
-    spawnManaged(
-      "worker",
-      "npm",
-      [
-        "run",
-        "dev",
-        "--workspace",
-        "@datamix/api",
-        ...(wranglerPersistTo ? ["--", "--persist-to", wranglerPersistTo] : []),
-      ],
-      {
-        ...process.env,
-        APP_ORIGIN: localAppOrigin,
-      },
-    ),
-  ];
-
-  if (watchAdminAssets) {
-    childProcesses.unshift(
-      spawnManaged(
-        "admin-watch",
-        "npm",
-        ["exec", "--workspace", "@datamix/admin", "vite", "build", "--", "--watch", "--mode", "development"],
-        adminEnv,
-      ),
-    );
-  } else {
-    process.stdout.write("Admin asset watcher disabled for this run.\n");
-  }
-
-  const shutdown = async () => {
-    await Promise.allSettled(childProcesses.map((child) => stopChild(child)));
-  };
+  });
 
   let shuttingDown = false;
+
+  const shutdown = async () => {
+    await stopChild(appProcess);
+  };
 
   const handleSignal = (signal) => {
     if (shuttingDown) {
@@ -167,7 +120,7 @@ async function main() {
     }
 
     shuttingDown = true;
-    process.stdout.write(`\nShutting down unified local dev after ${signal}...\n`);
+    process.stdout.write(`\nShutting down Datamix unified app after ${signal}...\n`);
     void shutdown().finally(() => {
       process.exit(0);
     });
@@ -180,14 +133,13 @@ async function main() {
     handleSignal("SIGTERM");
   });
 
-  const results = await Promise.race(childProcesses.map((child) => waitForExit(child)));
+  const result = await waitForExit(appProcess);
 
   if (!shuttingDown) {
     shuttingDown = true;
-    await shutdown();
 
     const code =
-      typeof results.code === "number" && Number.isInteger(results.code) ? results.code : 1;
+      typeof result.code === "number" && Number.isInteger(result.code) ? result.code : 1;
 
     process.exit(code);
   }
