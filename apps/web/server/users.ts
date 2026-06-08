@@ -1,14 +1,15 @@
 import type { DatamixBindings } from "./env";
+import { getUserRow, listUserRows, updateUserRoleRow } from "./db/users";
 import { getAvailableRoleDefinition } from "./roles";
 
 type UserRow = {
-  createdAt: string;
+  createdAt: Date | number | string;
   email: string;
   emailVerified: number | boolean;
   id: string;
   name: string;
   role: string | null;
-  updatedAt: string;
+  updatedAt: Date | number | string;
 };
 
 export type DatamixUserSummary = {
@@ -31,10 +32,6 @@ export class DatamixUserError extends Error {
   }
 }
 
-function quoteIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
-
 function normalizeRoleId(roleId: string) {
   const normalizedRoleId = roleId.trim();
 
@@ -45,28 +42,32 @@ function normalizeRoleId(roleId: string) {
   return normalizedRoleId;
 }
 
+function formatAuthTimestamp(value: Date | number | string) {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "number") {
+    return new Date(value).toISOString();
+  }
+
+  return value;
+}
+
 function mapUserRow(row: UserRow): DatamixUserSummary {
   return {
-    createdAt: row.createdAt,
+    createdAt: formatAuthTimestamp(row.createdAt),
     email: row.email,
     emailVerified: row.emailVerified === true || row.emailVerified === 1,
     id: row.id,
     name: row.name,
     roleId: row.role,
-    updatedAt: row.updatedAt,
+    updatedAt: formatAuthTimestamp(row.updatedAt),
   };
 }
 
 export async function listDatamixUsers(env: DatamixBindings) {
-  const result = await env.DB.prepare(
-    `
-      SELECT id, name, email, emailVerified, role, createdAt, updatedAt
-      FROM ${quoteIdentifier("user")}
-      ORDER BY createdAt ASC, email ASC
-    `.trim(),
-  ).all<UserRow>();
-
-  return result.results.map(mapUserRow);
+  return (await listUserRows(env)).map(mapUserRow);
 }
 
 export async function updateDatamixUserRole(
@@ -81,33 +82,19 @@ export async function updateDatamixUserRole(
     throw new DatamixUserError(`Role "${normalizedRoleId}" does not exist.`, 404);
   }
 
-  const existingUser = await env.DB
-    .prepare(
-      `
-        SELECT id, name, email, emailVerified, role, createdAt, updatedAt
-        FROM ${quoteIdentifier("user")}
-        WHERE id = ?
-      `.trim(),
-    )
-    .bind(userId)
-    .first<UserRow>();
+  const existingUser = await getUserRow(env, userId);
 
   if (!existingUser) {
     throw new DatamixUserError("User not found.", 404);
   }
 
-  const nextUpdatedAt = new Date().toISOString();
+  const nextUpdatedAt = new Date();
 
-  await env.DB
-    .prepare(
-      `
-        UPDATE ${quoteIdentifier("user")}
-        SET role = ?, updatedAt = ?
-        WHERE id = ?
-      `.trim(),
-    )
-    .bind(role.id, nextUpdatedAt, userId)
-    .run();
+  await updateUserRoleRow(env, {
+    roleId: role.id,
+    updatedAt: nextUpdatedAt,
+    userId,
+  });
 
   return {
     ...mapUserRow({

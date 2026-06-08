@@ -13,8 +13,20 @@ import {
 } from "@datamix/core";
 
 import type { DatamixBindings } from "./env";
+import {
+  getCollectionDefinitionRow,
+  listCollectionDefinitionRows,
+  type CollectionDefinitionRow,
+} from "./db/collection-definitions";
+import {
+  createFirstPrimarySession,
+  quoteIdentifier,
+  readTableColumns,
+  type D1StatementRunner,
+  type D1TableColumnDescription,
+} from "./db/d1-dialect";
 
-type CollectionDefinitionRow = {
+type RawCollectionDefinitionRow = {
   created_at: string;
   description: string | null;
   label: string;
@@ -36,15 +48,6 @@ type SaveCollectionDefinitionResult = {
   plan: DatamixCollectionStoragePlan;
 };
 
-type D1StatementRunner = Pick<D1Database, "batch" | "prepare"> | Pick<D1DatabaseSession, "batch" | "prepare">;
-
-type ColumnDescription = {
-  name: string;
-  notnull: 0 | 1;
-  pk: 0 | 1;
-  type: string;
-};
-
 export class CollectionSchemaError extends Error {
   readonly issues: { message: string; path: string }[] | undefined;
   readonly statusCode: number;
@@ -63,26 +66,8 @@ export class CollectionSchemaError extends Error {
   }
 }
 
-function quoteIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
-
 function buildColumnSql(column: DatamixCollectionStorageColumn) {
   return `${quoteIdentifier(column.columnName)} ${column.sqliteType}`;
-}
-
-function buildCreateCollectionDefinitionsTableSql() {
-  return `
-    CREATE TABLE IF NOT EXISTS ${quoteIdentifier(datamixCollectionDefinitionsTableName)} (
-      "name" TEXT PRIMARY KEY,
-      "label" TEXT NOT NULL,
-      "description" TEXT,
-      "schema_json" TEXT NOT NULL,
-      "table_name" TEXT NOT NULL UNIQUE,
-      "created_at" TEXT NOT NULL,
-      "updated_at" TEXT NOT NULL
-    )
-  `.trim();
 }
 
 function buildCreateRecordTableSql(shape: DatamixCollectionStorageShape) {
@@ -109,19 +94,26 @@ function buildDropTableSql(tableName: string) {
   return `DROP TABLE IF EXISTS ${quoteIdentifier(tableName)}`;
 }
 
-function mapStoredRow(row: CollectionDefinitionRow): StoredCollectionDefinition {
-  const definition = assertCollectionDefinition(JSON.parse(row.schema_json) as unknown);
+function parseStoredDefinition(schemaJson: string) {
+  return assertCollectionDefinition(JSON.parse(schemaJson) as unknown);
+}
 
+function mapStoredRow(row: CollectionDefinitionRow): StoredCollectionDefinition {
   return {
-    createdAt: row.created_at,
-    definition,
-    tableName: row.table_name,
-    updatedAt: row.updated_at,
+    createdAt: row.createdAt,
+    definition: parseStoredDefinition(row.schemaJson),
+    tableName: row.tableName,
+    updatedAt: row.updatedAt,
   };
 }
 
-async function ensureCollectionDefinitionsTable(database: D1StatementRunner) {
-  await database.batch([database.prepare(buildCreateCollectionDefinitionsTableSql())]);
+function mapRawStoredRow(row: RawCollectionDefinitionRow): StoredCollectionDefinition {
+  return {
+    createdAt: row.created_at,
+    definition: parseStoredDefinition(row.schema_json),
+    tableName: row.table_name,
+    updatedAt: row.updated_at,
+  };
 }
 
 async function readStoredCollectionDefinition(
@@ -137,9 +129,9 @@ async function readStoredCollectionDefinition(
       `.trim(),
     )
     .bind(name)
-    .first<CollectionDefinitionRow>();
+    .first<RawCollectionDefinitionRow>();
 
-  return row ? mapStoredRow(row) : null;
+  return row ? mapRawStoredRow(row) : null;
 }
 
 async function countRecords(database: D1StatementRunner, tableName: string) {
@@ -150,14 +142,6 @@ async function countRecords(database: D1StatementRunner, tableName: string) {
   const countValue = result?.count ?? 0;
 
   return typeof countValue === "number" ? countValue : Number(countValue);
-}
-
-async function readTableColumns(database: D1StatementRunner, tableName: string) {
-  const rows = await database
-    .prepare(`PRAGMA table_info(${quoteIdentifier(tableName)})`)
-    .all<ColumnDescription>();
-
-  return rows.results;
 }
 
 async function createRecordTableIfMissing(
@@ -248,7 +232,7 @@ function createCollectionDiffSummary(plan: DatamixCollectionStoragePlan) {
 }
 
 function validateExistingTableShape(
-  columns: ColumnDescription[],
+  columns: D1TableColumnDescription[],
   definition: DatamixCollectionDefinition,
 ) {
   const expectedShape = createCollectionStorageShape(definition);
@@ -280,25 +264,13 @@ function validateExistingTableShape(
 }
 
 export async function listCollectionDefinitions(env: DatamixBindings) {
-  await ensureCollectionDefinitionsTable(env.DB);
-
-  const result = await env.DB
-    .prepare(
-      `
-        SELECT name, label, description, schema_json, table_name, created_at, updated_at
-        FROM ${quoteIdentifier(datamixCollectionDefinitionsTableName)}
-        ORDER BY label ASC, name ASC
-      `.trim(),
-    )
-    .all<CollectionDefinitionRow>();
-
-  return result.results.map(mapStoredRow);
+  return (await listCollectionDefinitionRows(env)).map(mapStoredRow);
 }
 
 export async function getCollectionDefinition(env: DatamixBindings, name: string) {
-  await ensureCollectionDefinitionsTable(env.DB);
+  const row = await getCollectionDefinitionRow(env, name);
 
-  return readStoredCollectionDefinition(env.DB, name);
+  return row ? mapStoredRow(row) : null;
 }
 
 export async function saveCollectionDefinition(
@@ -315,9 +287,7 @@ export async function saveCollectionDefinition(
   }
 
   const definition = validation.data;
-  const session = env.DB.withSession("first-primary");
-
-  await ensureCollectionDefinitionsTable(session);
+  const session = createFirstPrimarySession(env);
 
   const existing = await readStoredCollectionDefinition(session, definition.name);
   const plan = planCollectionStorageMutation(existing?.definition ?? null, definition);

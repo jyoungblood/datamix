@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780937252095,
+      "tag": "0000_violet_ultimatum",
+      "breakpoints": true
+    }
+  ]
+}

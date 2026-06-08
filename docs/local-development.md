@@ -15,7 +15,8 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 2. Copy `apps/web/.dev.vars.example` to `apps/web/.dev.vars`.
 3. Replace `BETTER_AUTH_SECRET` in `apps/web/.dev.vars` with a long random string.
 4. Run `npm run typegen:web` after changing `apps/web/wrangler.jsonc`.
-5. Start the app and open `http://127.0.0.1:3000/admin/setup` to create the first admin account in-browser.
+5. Run `npm run db:migrate:local` after changing checked-in fixed-schema migrations.
+6. Start the app and open `http://127.0.0.1:3000/admin/setup` to create the first admin account in-browser.
 
 ## Daily Workflow
 
@@ -24,6 +25,14 @@ Use one terminal from the repo root:
 1. `npm run dev`
 
 Then open `http://127.0.0.1:3000`.
+
+## D1 Schema Workflow
+
+- Fixed Datamix infrastructure tables and `better-auth` tables are defined in Drizzle under `apps/web/server/db/schema.ts`.
+- Generate checked-in D1 migration SQL with `npm run db:generate`.
+- Apply checked-in migrations to the local D1 database with `npm run db:migrate:local`.
+- Generated collection record tables still use raw SQL at runtime because collection fields and table names are admin-defined.
+- `/api/admin/setup/status` keeps a conservative fixed-schema bootstrap for browser-first local setup and smoke coverage, but checked-in migrations are the source of truth for schema changes.
 
 ## Verification Workflow
 
@@ -55,7 +64,7 @@ The smoke harness starts the unified local app on its own, so it does not requir
 - `AUTH_RESEND_API_KEY` is required when `AUTH_EMAIL_PROVIDER=resend`.
 - `AUTH_SMTP_HOST`, `AUTH_SMTP_PORT`, `AUTH_SMTP_USERNAME`, `AUTH_SMTP_PASSWORD`, and `AUTH_SMTP_TLS` are required when `AUTH_EMAIL_PROVIDER=smtp`.
 - The admin auth client talks back to the current browser origin; there is no separate public auth origin variable in the single-app contract.
-- The app prepares auth tables through the first-run admin status route at `/api/admin/setup/status`.
+- The app uses Better Auth's Drizzle adapter against the D1 `DB` binding. The first-run admin status route at `/api/admin/setup/status` verifies the fixed schema bootstrap before reporting setup state.
 
 For basic local UI and content work, only `BETTER_AUTH_SECRET` must be real. Configure the email provider values when you need to exercise password reset or invite delivery end to end.
 

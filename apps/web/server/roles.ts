@@ -1,6 +1,5 @@
 import {
   createDatamixRoleDefinition,
-  datamixRolesTableName,
   getDatamixRolePreset,
   isDatamixRolePresetId,
   listDatamixRoleDefinitions,
@@ -10,19 +9,12 @@ import {
 } from "@datamix/core";
 
 import type { DatamixBindings } from "./env";
-
-type D1StatementRunner =
-  | Pick<D1Database, "batch" | "prepare">
-  | Pick<D1DatabaseSession, "batch" | "prepare">;
-
-type RoleRow = {
-  created_at: string;
-  description: string;
-  id: string;
-  label: string;
-  permissions_json: string;
-  updated_at: string;
-};
+import {
+  getCustomRoleRow,
+  listCustomRoleRows,
+  upsertCustomRoleRow,
+  type DatamixRoleRow,
+} from "./db/roles";
 
 export class DatamixRoleError extends Error {
   readonly issues: DatamixSchemaValidationIssue[] | undefined;
@@ -42,27 +34,6 @@ export class DatamixRoleError extends Error {
   }
 }
 
-function quoteIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
-
-function buildCreateRolesTableSql() {
-  return `
-    CREATE TABLE IF NOT EXISTS ${quoteIdentifier(datamixRolesTableName)} (
-      "id" TEXT PRIMARY KEY,
-      "label" TEXT NOT NULL,
-      "description" TEXT NOT NULL,
-      "permissions_json" TEXT NOT NULL,
-      "created_at" TEXT NOT NULL,
-      "updated_at" TEXT NOT NULL
-    )
-  `.trim();
-}
-
-async function ensureRolesTable(database: D1StatementRunner) {
-  await database.batch([database.prepare(buildCreateRolesTableSql())]);
-}
-
 function parsePermissionsJson(rawValue: string) {
   try {
     const parsed = JSON.parse(rawValue) as unknown;
@@ -75,28 +46,18 @@ function parsePermissionsJson(rawValue: string) {
   }
 }
 
-function mapRoleRow(row: RoleRow): DatamixRoleDefinition {
+function mapRoleRow(row: DatamixRoleRow): DatamixRoleDefinition {
   return createDatamixRoleDefinition({
     description: row.description,
     id: row.id,
     label: row.label,
-    permissions: parsePermissionsJson(row.permissions_json),
+    permissions: parsePermissionsJson(row.permissionsJson),
     system: false,
   });
 }
 
 export async function listCustomRoleDefinitions(env: DatamixBindings) {
-  await ensureRolesTable(env.DB);
-
-  const result = await env.DB.prepare(
-    `
-      SELECT id, label, description, permissions_json, created_at, updated_at
-      FROM ${quoteIdentifier(datamixRolesTableName)}
-      ORDER BY label ASC, id ASC
-    `.trim(),
-  ).all<RoleRow>();
-
-  return result.results.map(mapRoleRow);
+  return (await listCustomRoleRows(env)).map(mapRoleRow);
 }
 
 export async function listAvailableRoleDefinitions(env: DatamixBindings) {
@@ -117,18 +78,7 @@ export async function getAvailableRoleDefinition(
     return getDatamixRolePreset(normalizedRoleId);
   }
 
-  await ensureRolesTable(env.DB);
-
-  const row = await env.DB
-    .prepare(
-      `
-        SELECT id, label, description, permissions_json, created_at, updated_at
-        FROM ${quoteIdentifier(datamixRolesTableName)}
-        WHERE id = ?
-      `.trim(),
-    )
-    .bind(normalizedRoleId)
-    .first<RoleRow>();
+  const row = await getCustomRoleRow(env, normalizedRoleId);
 
   return row ? mapRoleRow(row) : null;
 }
@@ -146,48 +96,17 @@ export async function saveCustomRoleDefinition(
     });
   }
 
-  await ensureRolesTable(env.DB);
-
   const now = new Date().toISOString();
-  const existingRow = await env.DB
-    .prepare(
-      `
-        SELECT created_at
-        FROM ${quoteIdentifier(datamixRolesTableName)}
-        WHERE id = ?
-      `.trim(),
-    )
-    .bind(parsed.data.id)
-    .first<{ created_at: string }>();
+  const existingRow = await getCustomRoleRow(env, parsed.data.id);
 
-  await env.DB.batch([
-    env.DB
-      .prepare(
-        `
-          INSERT INTO ${quoteIdentifier(datamixRolesTableName)} (
-            id,
-            label,
-            description,
-            permissions_json,
-            created_at,
-            updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET
-            label = excluded.label,
-            description = excluded.description,
-            permissions_json = excluded.permissions_json,
-            updated_at = excluded.updated_at
-        `.trim(),
-      )
-      .bind(
-        parsed.data.id,
-        parsed.data.label,
-        parsed.data.description,
-        JSON.stringify(parsed.data.permissions),
-        existingRow?.created_at ?? now,
-        now,
-      ),
-  ]);
+  await upsertCustomRoleRow(env, {
+    createdAt: existingRow?.createdAt ?? now,
+    description: parsed.data.description,
+    id: parsed.data.id,
+    label: parsed.data.label,
+    permissionsJson: JSON.stringify(parsed.data.permissions),
+    updatedAt: now,
+  });
 
   return parsed.data;
 }

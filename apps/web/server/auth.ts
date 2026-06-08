@@ -4,27 +4,27 @@ import {
   type BetterAuthOptions,
   type GenericEndpointContext,
 } from "better-auth";
+import { eq } from "drizzle-orm";
 import {
   createAuthSetupStatus,
   datamixDefaultRoleAssignments,
   datamixAuthPath,
   datamixProduct,
 } from "@datamix/core";
-import { getMigrations } from "better-auth/db/migration";
 import { getRequestExecutionContext } from "vinext/shims/request-context";
 
 import { sendAuthEmail } from "./email";
 import { readApiAuthRuntime, type DatamixBindings } from "./env";
+import { createAuthDatabaseAdapter } from "./db/auth";
+import { createDb } from "./db";
+import { bootstrapFixedSchema } from "./db/migrate";
+import { user as userTable } from "./db/schema";
 
 export type DatamixAuth = ReturnType<typeof createAuth>;
 export type DatamixSession = DatamixAuth["$Infer"]["Session"];
 
 async function countUsers(context: GenericEndpointContext<BetterAuthOptions>) {
   return context.context.internalAdapter.countTotalUsers();
-}
-
-function quoteIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 export function createAuthOptions(
@@ -57,7 +57,7 @@ export function createAuthOptions(
     basePath: datamixAuthPath,
     baseURL: options?.baseURL ?? env.APP_ORIGIN,
     secret: authRuntime.BETTER_AUTH_SECRET,
-    database: env.DB,
+    database: createAuthDatabaseAdapter(env),
     trustedOrigins: [env.APP_ORIGIN],
     emailAndPassword: {
       enabled: true,
@@ -85,16 +85,13 @@ export function createAuthOptions(
         );
       },
       onPasswordReset: async ({ user }) => {
-        await env.DB
-          .prepare(
-            `
-              UPDATE ${quoteIdentifier("user")}
-              SET emailVerified = 1, updatedAt = ?
-              WHERE id = ?
-            `.trim(),
-          )
-          .bind(new Date().toISOString(), user.id)
-          .run();
+        await createDb(env)
+          .update(userTable)
+          .set({
+            emailVerified: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(userTable.id, user.id));
       },
     },
     user: {
@@ -161,20 +158,9 @@ export function createAuth(
   return betterAuth(createAuthOptions(env, options));
 }
 
-export async function runAuthMigrations(env: DatamixBindings) {
-  const migrations = await getMigrations(createAuthOptions(env));
-
-  await migrations.runMigrations();
-
-  return {
-    createdTables: migrations.toBeCreated.map((table) => table.table),
-    alteredTables: migrations.toBeAdded.map((table) => table.table),
-  };
-}
-
 export async function getAuthSetupStatus(env: DatamixBindings) {
   const authRuntime = readApiAuthRuntime(env);
-  const migration = await runAuthMigrations(env);
+  const migration = await bootstrapFixedSchema(env);
   const auth = createAuth(env);
   const context = await auth.$context;
   const userCount = await context.internalAdapter.countTotalUsers();

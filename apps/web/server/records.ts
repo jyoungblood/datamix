@@ -10,6 +10,7 @@ import {
   listCollectionDefinitions,
   type StoredCollectionDefinition,
 } from "./collections";
+import { createFirstPrimarySession, quoteIdentifier } from "./db/d1-dialect";
 import type { DatamixBindings } from "./env";
 
 type StoredRecordValue = boolean | number | string | string[] | null;
@@ -54,10 +55,6 @@ export class CollectionRecordError extends Error {
     this.issues = options?.issues;
     this.statusCode = options?.statusCode ?? 400;
   }
-}
-
-function quoteIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 function createIssues() {
@@ -673,7 +670,7 @@ export async function createCollectionRecord(
     await resolveCollectionRecordContext(env, collectionName);
   assertPersistedCrudFields(persistedFields);
   const values = normalizePersistedRecordValues(persistedFields, input);
-  const session = env.DB.withSession("first-primary");
+  const session = createFirstPrimarySession(env);
   const write = createWriteStatement(session, collection.tableName, persistedFields, values);
 
   await session.batch([write.statement]);
@@ -703,7 +700,7 @@ export async function updateCollectionRecord(
     await resolveCollectionRecordContext(env, collectionName);
   assertPersistedCrudFields(persistedFields);
   const values = normalizePersistedRecordValues(persistedFields, input);
-  const session = env.DB.withSession("first-primary");
+  const session = createFirstPrimarySession(env);
   const existingRecord = await readStoredRecord(session, collection.tableName, persistedFields, recordId);
 
   if (!existingRecord) {
@@ -744,7 +741,7 @@ export async function deleteCollectionRecord(
 ) {
   const { collection, persistedFields, supportedFieldNames } =
     await resolveCollectionRecordContext(env, collectionName);
-  const session = env.DB.withSession("first-primary");
+  const session = createFirstPrimarySession(env);
   const existingRecord = await readStoredRecord(session, collection.tableName, persistedFields, recordId);
 
   if (!existingRecord) {

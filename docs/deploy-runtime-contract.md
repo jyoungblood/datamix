@@ -63,6 +63,9 @@ Suggested remote resource names:
   [apps/web/wrangler.jsonc](/Users/jy/Desktop/projects/datamix/apps/web/wrangler.jsonc:1)
 - Worker local env example:
   [apps/web/.dev.vars.example](/Users/jy/Desktop/projects/datamix/apps/web/.dev.vars.example:1)
+- Drizzle schema and generated D1 migrations:
+  [apps/web/server/db/schema.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/db/schema.ts:1),
+  [drizzle/d1](/Users/jy/Desktop/projects/datamix/drizzle/d1)
 - Optional public app env examples:
   [apps/web/.env.example](/Users/jy/Desktop/projects/datamix/apps/web/.env.example:1),
   [apps/web/.env.preview.example](/Users/jy/Desktop/projects/datamix/apps/web/.env.preview.example:1),
@@ -91,7 +94,8 @@ Suggested remote resource names:
 - `better-auth` is mounted at `/api/auth/*`.
 - Auth sessions persist as cookies on the same app origin and are consumed by same-origin credentialed `fetch`.
 - Protected admin pages must verify session state through Worker routes; the browser does not read D1 directly.
-- `GET /api/admin/setup/status` is the browser-first bootstrap route. It prepares auth tables if needed and reports whether the instance still needs its first admin user.
+- `GET /api/admin/setup/status` is the browser-first bootstrap route. It verifies the fixed-schema bootstrap and reports whether the instance still needs its first admin user.
+- Better Auth uses the Drizzle adapter against the D1 `DB` binding. Fixed-schema migrations are generated from `apps/web/server/db/schema.ts` into `drizzle/d1`.
 - Public email/password sign-up is only permitted for the very first account. After that, the sign-up route is blocked until a later invite/user-management slice expands it intentionally.
 - Auth email delivery is provider-swappable through env-only configuration:
   `AUTH_EMAIL_PROVIDER=resend` uses the Resend HTTPS API.
@@ -130,4 +134,7 @@ After provisioning:
 3. Rerun `npm run typegen:web`
 4. Set `BETTER_AUTH_SECRET` for the Worker in each environment
 5. Set the auth email provider secrets and sender identity vars for the chosen delivery mode
-6. Run `npm run deploy:preview` or `npm run deploy:production`
+6. Apply fixed-schema D1 migrations with `npm run db:migrate:preview` or `npm run db:migrate:production`
+7. Run `npm run deploy:preview` or `npm run deploy:production`
+
+When fixed-schema tables change, run `npm run db:generate`, review the generated SQL under `drizzle/d1`, then apply the matching D1 migration before deploying the Worker. Generated collection record tables are still created and changed by runtime raw SQL from admin-defined collection schemas.
