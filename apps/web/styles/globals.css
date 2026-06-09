@@ -217,6 +217,11 @@ textarea {
   letter-spacing: -0.03em;
 }
 
+.admin-page-title {
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  letter-spacing: -0.02em;
+}
+
 .lede,
 .body,
 .admin-brand-copy,
@@ -560,7 +565,7 @@ button.admin-nav-item,
   width: min(1280px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
   gap: 1.25rem;
   align-items: start;
 }
@@ -569,10 +574,14 @@ button.admin-nav-item,
   position: sticky;
   top: 1.25rem;
   display: grid;
-  gap: 1rem;
-  padding: 1.1rem;
-  border-radius: calc(var(--radius) + 0.5rem);
-  background: var(--sidebar);
+  min-width: 0;
+  gap: 0.85rem;
+  padding: 0.2rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow-wrap: anywhere;
 }
 
 .admin-brand-title {
@@ -587,12 +596,27 @@ button.admin-nav-item,
   gap: 0.75rem;
 }
 
-.admin-sidebar-card,
 .compact-box {
   padding: 0.9rem 1rem;
   border-radius: calc(var(--radius) + 0.2rem);
   border: 1px solid var(--border);
   background: var(--background);
+}
+
+.admin-sidebar-card {
+  min-width: 0;
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.admin-sidebar-card:first-of-type {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .admin-sidebar-user {
@@ -643,6 +667,7 @@ button.admin-nav-item,
 .status-pill {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   min-height: 1.75rem;
   padding: 0.2rem 0.65rem;
   border: 1px solid var(--border);
@@ -692,6 +717,70 @@ button.admin-nav-item,
 
 .admin-card-hero {
   background: var(--card);
+}
+
+.admin-sidebar .section-row {
+  min-width: 0;
+  align-items: center;
+}
+
+.admin-sidebar .actions {
+  gap: 0.45rem;
+}
+
+.admin-sidebar .mini-button {
+  min-height: 2rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.admin-sidebar .status-row {
+  gap: 0.35rem;
+}
+
+.admin-sidebar .status-pill {
+  min-height: 1.45rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+}
+
+.admin-sidebar .mini-list,
+.admin-sidebar .workspace-actions {
+  gap: 0.35rem;
+}
+
+.admin-sidebar .empty-state-box {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.admin-sidebar .admin-nav-item,
+.admin-sidebar .mini-list-item {
+  min-width: 0;
+  gap: 0.5rem;
+  padding: 0.55rem 0.6rem;
+  border: 0;
+  border-radius: calc(var(--radius) - 0.05rem);
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-sidebar .admin-nav-item.is-current,
+.admin-sidebar .mini-list-item.is-selected {
+  background: var(--accent);
+}
+
+.admin-sidebar .admin-nav-copy {
+  display: none;
+}
+
+.admin-sidebar .mini-list-content,
+.admin-sidebar .admin-nav-item > div,
+.admin-sidebar .section-row > div {
+  min-width: 0;
 }
 
 .next-step-list,

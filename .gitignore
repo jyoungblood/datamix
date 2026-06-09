@@ -8,3 +8,6 @@ coverage
 .env
 .env.local
 .env.*.local
+
+# Added by ggshield
+.cache_ggshield

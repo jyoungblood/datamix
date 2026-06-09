@@ -96,14 +96,6 @@ const adminUtilityItems = [
   },
 ] as const;
 
-const shellCapabilities = [
-  "Persistent browser session is active on the API origin.",
-  "First-run setup is complete and public sign-up is closed again.",
-  "Password reset and invite emails share the same auth email provider layer.",
-  "Saved collection schemas now generate a matching record editor in the admin.",
-  "Collections and their records now drive the sidebar navigation.",
-] as const;
-
 const rolePermissionSections = datamixPermissionResourceDefinitions.map((resource) => ({
   permissions: listDatamixPermissionsByResource(resource.id),
   resource,
@@ -1508,7 +1500,6 @@ function jumpToSection(sectionId: string) {
   }
 
   element.scrollIntoView({ behavior: "smooth", block: "start" });
-  window.history.replaceState(null, "", `#${sectionId}`);
 }
 
 function isNavigableSectionId(value: string): value is NavigableSectionId {
@@ -1663,6 +1654,7 @@ export default function AdminPage() {
     useState<CollectionWorkspaceSectionId>(collectionBuilderSectionId);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
+  const deferredCommandPaletteQuery = useDeferredValue(commandPaletteQuery);
   const [activeCommandPaletteIndex, setActiveCommandPaletteIndex] = useState(0);
   const [sessionAuthorization, setSessionAuthorization] =
     useState<DatamixAuthorizationSummary | null>(null);
@@ -2233,6 +2225,15 @@ export default function AdminPage() {
       return;
     }
 
+    if (hash === overviewSectionId) {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`,
+      );
+      return;
+    }
+
     setActiveSectionId(hash);
 
     if (hash === collectionBuilderSectionId || hash === recordEditorSectionId) {
@@ -2312,16 +2313,6 @@ export default function AdminPage() {
   }, [session.data, sessionAuthorization]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (window.location.hash !== `#${activeSectionId}`) {
-      window.history.replaceState(null, "", `#${activeSectionId}`);
-    }
-  }, [activeSectionId]);
-
-  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -2348,98 +2339,8 @@ export default function AdminPage() {
     };
   }, [isCommandPaletteOpen]);
 
-  if (
-    session.isPending ||
-    setupStatus.isPending ||
-    (session.data && isLoadingSessionAuthorization)
-  ) {
-    return (
-      <main className="shell">
-        <div className="panel stack">
-          <p className="eyebrow">Admin</p>
-          <h1 className="page-title">
-            {session.data ? "Loading access profile" : "Checking your session"}
-          </h1>
-          <p className="body">
-            {session.data
-              ? "Datamix is resolving your current role and permissions from the Datamix Worker."
-              : "Datamix is asking the Datamix Worker whether this browser already has a valid session."}
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (setupStatus.errorMessage) {
-    return (
-      <main className="shell">
-        <div className="panel stack">
-          <p className="eyebrow">Admin</p>
-          <h1 className="page-title">{setupStatusHeading}</h1>
-          <p className="body">{setupStatus.errorMessage}</p>
-          {setupStatus.statusCode === 503 ? (
-            <p className="body">
-              Set `BETTER_AUTH_SECRET` on the Datamix Worker, then reload this page.
-            </p>
-          ) : (
-            <p className="body">
-              Datamix will retry automatically when the network comes back or this tab
-              regains focus. You can also retry now.
-            </p>
-          )}
-          <div className="actions">
-            <a className="button button-secondary" href={buildDatamixAdminPath("/login")}>
-              Back home
-            </a>
-            <button className="button" onClick={setupStatus.reload} type="button">
-              Retry status
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (!session.data) {
-    return null;
-  }
-
-  if (sessionAuthorizationError || !sessionAuthorization) {
-    return (
-      <main className="shell">
-        <div className="panel stack">
-          <p className="eyebrow">Admin</p>
-          <h1 className="page-title">Access profile is unavailable</h1>
-          <p className="body">
-            {sessionAuthorizationError ??
-              "Datamix could not resolve the current role and permission summary."}
-          </p>
-          {sessionAuthorizationStatusCode && sessionAuthorizationStatusCode >= 500 ? (
-            <p className="body">
-              The protected session route is reachable, but it could not finish resolving
-              your role just now. Retry once the Worker app settles.
-            </p>
-          ) : (
-            <p className="body">
-              Datamix will retry automatically when the session stabilizes, and you can
-              manually retry without losing your browser state.
-            </p>
-          )}
-          <div className="actions">
-            <a className="button button-secondary" href={buildDatamixAdminPath("/login")}>
-              Back home
-            </a>
-            <button className="button" onClick={() => void loadSessionAuthorizationData()} type="button">
-              Retry access profile
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  const userLabel = session.data.user.name || session.data.user.email;
-  const currentSessionUserId = session.data.user.id;
+  const userLabel = session.data?.user.name || session.data?.user.email || "Admin user";
+  const currentSessionUserId = session.data?.user.id ?? null;
   const isEditingExistingCollection =
     selectedCollectionName !== null && !isCreatingCollection;
   const canSaveCurrentCollection = isEditingExistingCollection
@@ -2489,7 +2390,6 @@ export default function AdminPage() {
     ? null
     : availableRoles.find((role) => role.id === selectedRoleId) ?? null;
   const rolePreviewItems = availableRoles.length > 0 ? availableRoles : datamixRolePresets;
-  const deferredCommandPaletteQuery = useDeferredValue(commandPaletteQuery);
   const generatedRecordPayload = activeCollection
     ? createGeneratedRecordPayload(activeCollection.definition, recordDraft)
     : null;
@@ -3420,7 +3320,7 @@ export default function AdminPage() {
       id: "admin-refresh-collections",
       keywords: ["reload", "refresh", "collections"],
       onSelect: handleRefreshCollections,
-      subtitle: "Fetch the latest saved collection definitions from the Datamix Worker.",
+      subtitle: "Reload saved collections.",
       title: "Refresh collections",
     });
   }
@@ -3565,6 +3465,124 @@ export default function AdminPage() {
     });
   }, [filteredCommandPaletteItems.length, isCommandPaletteOpen]);
 
+  if (
+    session.isPending ||
+    setupStatus.isPending ||
+    (session.data && isLoadingSessionAuthorization)
+  ) {
+    return (
+      <main className="shell">
+        <div className="panel stack">
+          <p className="eyebrow">Admin</p>
+          <h1 className="page-title">
+            {session.data ? "Loading access profile" : "Checking your session"}
+          </h1>
+          <p className="body">
+            {session.data
+              ? "Loading your role and permissions."
+              : "Checking for an active admin session."}
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (setupStatus.errorMessage) {
+    return (
+      <main className="shell">
+        <div className="panel stack">
+          <p className="eyebrow">Admin</p>
+          <h1 className="page-title">{setupStatusHeading}</h1>
+          <p className="body">{setupStatus.errorMessage}</p>
+          {setupStatus.statusCode === 503 ? (
+            <p className="body">
+              Set `BETTER_AUTH_SECRET` on the Datamix Worker, then reload this page.
+            </p>
+          ) : (
+            <p className="body">
+              Datamix will retry automatically when the network comes back or this tab
+              regains focus. You can also retry now.
+            </p>
+          )}
+          <div className="actions">
+            <a className="button button-secondary" href={buildDatamixAdminPath("/login")}>
+              Back home
+            </a>
+            <button className="button" onClick={setupStatus.reload} type="button">
+              Retry status
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!session.data) {
+    const authRedirectHref = setupStatus.data?.setupRequired
+      ? buildDatamixAdminPath("/setup")
+      : loginHref;
+
+    return (
+      <main className="shell">
+        <div className="panel stack">
+          <p className="eyebrow">Admin</p>
+          <h1 className="page-title">
+            {setupStatus.data?.setupRequired
+              ? "Redirecting to setup"
+              : "Redirecting to sign in"}
+          </h1>
+          <p className="body">
+            Datamix did not find an active admin session in this browser. Use the
+            link below if the redirect does not start automatically.
+          </p>
+          <div className="actions">
+            <a className="button" href={authRedirectHref}>
+              Continue
+            </a>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (sessionAuthorizationError || !sessionAuthorization) {
+    return (
+      <main className="shell">
+        <div className="panel stack">
+          <p className="eyebrow">Admin</p>
+          <h1 className="page-title">Access profile is unavailable</h1>
+          <p className="body">
+            {sessionAuthorizationError ??
+              "Datamix could not resolve the current role and permission summary."}
+          </p>
+          {sessionAuthorizationStatusCode && sessionAuthorizationStatusCode >= 500 ? (
+            <p className="body">
+              The protected session route is reachable, but it could not finish resolving
+              your role just now. Retry in a moment.
+            </p>
+          ) : (
+            <p className="body">
+              Datamix will retry automatically when the session stabilizes, and you can
+              manually retry without losing your browser state.
+            </p>
+          )}
+          <div className="actions">
+            <a className="button button-secondary" href={buildDatamixAdminPath("/login")}>
+              Back home
+            </a>
+            <button
+              className="button"
+              onClick={() => void loadSessionAuthorizationData()}
+              type="button"
+            >
+              Retry access profile
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const handleMoveCommandPaletteSelection = (direction: -1 | 1) => {
     if (filteredCommandPaletteItems.length === 0) {
       return;
@@ -3620,20 +3638,14 @@ export default function AdminPage() {
           <div className="admin-brand">
             <p className="eyebrow">Datamix admin</p>
             <h1 className="admin-brand-title">Collections</h1>
-            <p className="admin-brand-copy">
-              Collection-first workspace for defining models, editing records, and moving
-              through content without leaving the browser.
-            </p>
           </div>
 
           <section className="admin-sidebar-card">
-            <p className="admin-sidebar-heading">Current session</p>
+            <p className="admin-sidebar-heading">Signed in</p>
             <p className="admin-sidebar-user">{userLabel}</p>
             <p className="admin-sidebar-copy">{session.data.user.email}</p>
             <div className="status-row">
-              <span className="status-pill">Setup complete</span>
               {sessionRole ? <span className="status-pill">{sessionRole.label}</span> : null}
-              <span className="status-pill">Collection builder live</span>
               <span className="status-pill status-pill-muted">
                 {adminPublicEnv.NEXT_PUBLIC_APP_ENV}
               </span>
@@ -3642,7 +3654,7 @@ export default function AdminPage() {
 
           <section className="admin-sidebar-card">
             <div className="section-row">
-              <p className="admin-sidebar-heading">Collection list</p>
+              <p className="admin-sidebar-heading">Collections</p>
               <div className="actions actions-compact">
                 <button
                   className="mini-button"
@@ -3672,7 +3684,7 @@ export default function AdminPage() {
                 />
               ) : isInitialCollectionLoad ? (
                 <FlowStateBox
-                  body="Datamix is loading your saved collection definitions from the Datamix Worker."
+                  body="Loading saved collections."
                   compact
                   title="Loading collections"
                 />
@@ -3688,10 +3700,10 @@ export default function AdminPage() {
               ) : collections.length === 0 ? (
                 <FlowStateBox
                   actionLabel="Start a collection"
-                  body="No saved collections yet. Start with a small model and add fields as the shape becomes clearer."
+                  body="Create the first content model."
                   compact
                   onAction={handleStartNewCollection}
-                  title="No collections saved yet"
+                  title="No collections"
                 />
               ) : (
                 <>
@@ -3744,8 +3756,8 @@ export default function AdminPage() {
                 <p className="admin-sidebar-heading">Collection workspace</p>
                 <p className="admin-sidebar-copy">
                   {activeCollection
-                    ? `${activeCollection.definition.label} • staying in ${preferredCollectionSectionId === recordEditorSectionId ? "records" : "schema"} mode`
-                    : "Select a collection to center the workspace on its schema and records."}
+                    ? `${activeCollection.definition.label} • ${preferredCollectionSectionId === recordEditorSectionId ? "records" : "schema"}`
+                    : "Select a collection to edit its schema and records."}
                 </p>
               </div>
               {activeCollection ? (
@@ -3807,7 +3819,7 @@ export default function AdminPage() {
             ) : (
               <FlowStateBox
                 actionLabel="Start a collection"
-                body="Pick a collection from the list above or start a new one."
+                body="Pick a collection or create one."
                 compact
                 onAction={handleStartNewCollection}
                 title="No collection selected"
@@ -3820,29 +3832,29 @@ export default function AdminPage() {
               <p className="admin-sidebar-heading">Saved records</p>
               {activeCollection ? (
                 <div className="actions actions-compact">
-	                  <button
-	                    className="mini-button"
-	                    disabled={!canRefreshRecords}
-	                    onClick={handleRefreshRecords}
-	                    type="button"
-	                  >
-	                    {isRefreshingRecords ? "Refreshing..." : "Refresh"}
-	                  </button>
-	                  <button
-	                    className="mini-button"
-	                    disabled={!canCreateRecords}
-	                    onClick={handleStartNewRecord}
-	                    type="button"
-	                  >
-	                    New
-	                  </button>
+                  <button
+                    className="mini-button"
+                    disabled={!canRefreshRecords}
+                    onClick={handleRefreshRecords}
+                    type="button"
+                  >
+                    {isRefreshingRecords ? "Refreshing..." : "Refresh"}
+                  </button>
+                  <button
+                    className="mini-button"
+                    disabled={!canCreateRecords}
+                    onClick={handleStartNewRecord}
+                    type="button"
+                  >
+                    New
+                  </button>
                 </div>
               ) : null}
             </div>
             <div className="mini-list">
               {!activeCollection ? (
                 <FlowStateBox
-                  body="Records appear here once a collection is selected."
+                  body="Select a collection to browse records."
                   compact
                   title="No collection selected"
                 />
@@ -3865,7 +3877,7 @@ export default function AdminPage() {
                 />
               ) : isInitialRecordLoad ? (
                 <FlowStateBox
-                  body={`Loading saved ${activeCollection.definition.label.toLowerCase()} records from the protected API route.`}
+                  body={`Loading saved ${activeCollection.definition.label.toLowerCase()} records.`}
                   compact
                   title="Loading records"
                 />
@@ -3952,19 +3964,10 @@ export default function AdminPage() {
                   >
                     <div>
                       <p className="admin-nav-label">{item.label}</p>
-                      <p className="admin-nav-copy">{item.description}</p>
                     </div>
-                    <span className="status-pill">
-                      {activeSectionId === item.id
-                        ? "Current"
-                        : item.id === "invite" && !canAccessTeamAccess
-                        ? "Restricted"
-                        : item.id === "media" && !canAccessMediaWorkspace
-                          ? "Restricted"
-                          : item.id === "settings" && !canAccessSettingsWorkspace
-                            ? "Restricted"
-                            : "Ready"}
-                    </span>
+                    {activeSectionId === item.id ? (
+                      <span className="status-pill">Current</span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -3975,7 +3978,6 @@ export default function AdminPage() {
         <div className="admin-main">
           <header className="admin-topbar">
             <div>
-              <p className="eyebrow">Collection-first shell</p>
               <h2 className="admin-page-title">
                 {activeCollection
                   ? activeCollection.definition.label
@@ -3983,15 +3985,12 @@ export default function AdminPage() {
               </h2>
               <p className="admin-page-copy">
                 {activeCollection
-                  ? "Move between schema and records from one collection workspace. The saved schema defines the editing surface, and the record list stays one click away."
-                  : "Collections now anchor the admin experience. Start a new collection or pick an existing one to open its schema and records."}
+                  ? "Edit this collection's schema and records."
+                  : "Create a collection or select one to edit schema and records."}
               </p>
               {sessionRole ? (
                 <p className="helper-text">
-                  Signed in as <strong>{sessionRole.label}</strong>. API middleware and the
-                  admin shell now read from the same shared permission model. Current focus:
-                  {" "}
-                  <strong>{activeSectionLabel}</strong>.
+                  {sessionRole.label} • {activeSectionLabel}
                 </p>
               ) : null}
             </div>
@@ -4005,26 +4004,30 @@ export default function AdminPage() {
                 Command palette
                 <span className="button-shortcut">Cmd+K</span>
               </button>
-              <button
-                className="button button-secondary"
-                disabled={!canAccessCollectionBuilder}
-                onClick={() =>
-                  handleOpenCollectionWorkspaceSection(collectionBuilderSectionId)
-                }
-                type="button"
-              >
-                Open schema
-              </button>
-              <button
-                className="button button-secondary"
-                disabled={!activeCollection || !canAccessRecordsWorkspace}
-                onClick={() =>
-                  handleOpenCollectionWorkspaceSection(recordEditorSectionId)
-                }
-                type="button"
-              >
-                Open records
-              </button>
+              {activeCollection ? (
+                <>
+                  <button
+                    className="button button-secondary"
+                    disabled={!canAccessCollectionBuilder}
+                    onClick={() =>
+                      handleOpenCollectionWorkspaceSection(collectionBuilderSectionId)
+                    }
+                    type="button"
+                  >
+                    Schema
+                  </button>
+                  <button
+                    className="button button-secondary"
+                    disabled={!canAccessRecordsWorkspace}
+                    onClick={() =>
+                      handleOpenCollectionWorkspaceSection(recordEditorSectionId)
+                    }
+                    type="button"
+                  >
+                    Records
+                  </button>
+                </>
+              ) : null}
               {activeCollection ? (
                 <button
                   className="button button-secondary"
@@ -4044,14 +4047,6 @@ export default function AdminPage() {
                   New collection
                 </button>
               )}
-              <a
-                className="button button-secondary"
-                href={apiHealthHref}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Check API health
-              </a>
               <button className="button" onClick={handleSignOut} type="button">
                 Sign out
               </button>
@@ -4060,25 +4055,17 @@ export default function AdminPage() {
 
           <section className="admin-grid" id={overviewSectionId}>
             <article className="admin-card admin-card-hero">
-              <p className="card-eyebrow">Collection workspace</p>
+              <p className="card-eyebrow">Collections</p>
               <h3 className="card-title">
                 {activeCollection
-                  ? `${activeCollection.definition.label} stays at the center`
-                  : "Collections now drive the shell"}
+                  ? activeCollection.definition.label
+                  : "Start with a content model"}
               </h3>
               <p className="card-copy">
                 {activeCollection
-                  ? `Use the sidebar or the command palette to switch between ${activeCollection.definition.label} records, schema changes, and admin actions without losing the collection context.`
-                  : "The sidebar now prioritizes collections first, and Cmd+K gives you a fast path into collections, records, and admin actions."}
+                  ? `${activeCollection.definition.fields.length} fields and ${records.length} records.`
+                  : "Define fields once, then use the generated editor to manage records."}
               </p>
-              <div className="status-row">
-                <span className="status-pill">Authenticated</span>
-                <span className="status-pill">Schema validation live</span>
-                <span className="status-pill">D1 planning live</span>
-                <span className="status-pill">Generated record editor live</span>
-                <span className="status-pill">Collection navigation live</span>
-                <span className="status-pill">Command palette live</span>
-              </div>
             </article>
 
             <article className="admin-card" id="collections">
@@ -4087,15 +4074,15 @@ export default function AdminPage() {
                 {activeCollection
                   ? `${activeCollection.definition.fields.length} field${activeCollection.definition.fields.length === 1 ? "" : "s"} • ${records.length} record${records.length === 1 ? "" : "s"}`
                   : collections.length === 0
-                    ? "No collections saved yet"
+                    ? "No collections"
                     : `${collections.length} collection${collections.length === 1 ? "" : "s"} saved`}
               </h3>
               <p className="card-copy">
                 {activeCollection
-                  ? `Currently centered on ${activeCollection.definition.label}. Open schema to adjust the model or open records to work directly with saved content.`
+                  ? "Open schema or records from the actions above."
                   : collections.length === 0
-                    ? "Start with a narrow content model and iterate. Additive field changes are the smoothest first path."
-                    : "Pick a collection from the sidebar to open its workspace, or start a fresh one to shape another content type."}
+                    ? "Create the first collection, then add fields and records."
+                    : "Select a collection from the sidebar to open it."}
               </p>
               <div className="actions">
                 <button
@@ -4635,14 +4622,14 @@ export default function AdminPage() {
 
             {!canAccessRecordsWorkspace ? (
               <FlowStateBox
-                body={`Your ${sessionRole?.label ?? "current"} role cannot access generated records.`}
+                body={`Your ${sessionRole?.label ?? "current"} role cannot access records.`}
                 title="Record access is restricted"
                 tone="warning"
               />
             ) : !activeCollection ? (
               <FlowStateBox
                 actionLabel="Create collection"
-                body="Save a collection from the builder, or choose one from the sidebar, to see its generated record editor."
+                body="Save a collection or choose one from the sidebar."
                 onAction={handleStartNewCollection}
                 title="No saved collection selected"
               />
@@ -4650,7 +4637,7 @@ export default function AdminPage() {
               <>
                 {!canViewRecords && canCreateRecords ? (
                   <FlowStateBox
-                    body="This role can create new records, but it cannot load the saved record list. New entries still save through the protected API route."
+                    body="This role can create records, but it cannot browse saved records."
                     compact
                     title="Record list is hidden for this role"
                     tone="warning"
@@ -4671,10 +4658,8 @@ export default function AdminPage() {
                   <div>
                     <p className="section-title">Current persistence support</p>
                     <p className="section-copy">
-                      This slice persists `text`, `number`, `boolean`, `date`, `select`,
-                      `relationship`, `richText`, `markdown`, `image`, and
-                      `imageGallery` fields. Gallery selection order now saves exactly as
-                      arranged in the editor.
+                      Records support text, numbers, booleans, dates, selects,
+                      relationships, rich text, markdown, images, and image galleries.
                     </p>
                   </div>
                   <div className="actions">
@@ -4759,14 +4744,14 @@ export default function AdminPage() {
                   </div>
 
                   <aside className="generated-record-preview">
-                    <p className="card-eyebrow">Persistence seam</p>
+                    <p className="card-eyebrow">Record data</p>
                     <h4 className="section-title">Supported fields</h4>
                     <p className="section-copy">
-                      API-backed in this slice: <strong>{recordSupportedFieldNames}</strong>
+                      Stored fields: <strong>{recordSupportedFieldNames}</strong>
                     </p>
                     {persistedRecordFields.length === 0 ? (
                       <FlowStateBox
-                        body="Add at least one `text`, `number`, `boolean`, `date`, `select`, `relationship`, `richText`, `markdown`, `image`, or `imageGallery` field to create records in this slice."
+                        body="Add a persisted field before creating records."
                         compact
                         title="No persisted fields yet"
                         tone="warning"
@@ -4868,18 +4853,13 @@ export default function AdminPage() {
 
                   <aside className="generated-record-preview">
                     <p className="card-eyebrow">Payload preview</p>
-                    <h4 className="section-title">Persisted save payload</h4>
+                    <h4 className="section-title">Save payload</h4>
                     <p className="section-copy">
-                      This is the JSON shape sent to the protected Worker route for this
-                      slice.
+                      Preview the data that will be saved for this record.
                     </p>
                     <pre className="code-block">
                       <code>{JSON.stringify(persistedRecordPayload, null, 2)}</code>
                     </pre>
-                    <p className="section-copy">
-                      Full local editor state still tracks the whole schema contract for
-                      `M2-S4`.
-                    </p>
                     <pre className="code-block">
                       <code>{JSON.stringify(generatedRecordPayload, null, 2)}</code>
                     </pre>
@@ -4889,33 +4869,20 @@ export default function AdminPage() {
             )}
           </section>
 
-          <section className="admin-grid" aria-label="Shell capabilities">
-            <article className="admin-card">
-              <p className="card-eyebrow">In place today</p>
-              <h3 className="card-title">This shell is already doing useful work</h3>
-              <ul className="feature-list">
-                {shellCapabilities.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
+          <section className="admin-card admin-card-wide" id="media">
+            <p className="card-eyebrow">Media</p>
+            <h3 className="card-title">Upload and inspect assets</h3>
+            <p className="card-copy">
+              Store originals, search the library, and copy storage keys for image fields.
+            </p>
 
-            <article className="admin-card" id="media">
-              <p className="card-eyebrow">Media library</p>
-              <h3 className="card-title">Upload, browse, and inspect stored assets</h3>
-              <p className="card-copy">
-                `M4-S2` turns the upload seam into a central library view. Originals still
-                land in R2, metadata still lands in D1, and image-field picker wiring stays
-                for the next slice.
-              </p>
-
-              {!canViewMedia && !canUploadMedia ? (
-                <FlowStateBox
-                  body={`Your ${sessionRole?.label ?? "current"} role cannot access the shared media library.`}
-                  title="Media access is restricted"
-                  tone="warning"
-                />
-              ) : (
+            {!canViewMedia && !canUploadMedia ? (
+              <FlowStateBox
+                body={`Your ${sessionRole?.label ?? "current"} role cannot access the shared media library.`}
+                title="Media access is restricted"
+                tone="warning"
+              />
+            ) : (
               <form className="auth-form" onSubmit={handleMediaUploadSubmit}>
                 <label className="field">
                   <span>Upload file</span>
@@ -4940,7 +4907,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <FlowStateBox
-                    body="Choose any file to upload the original into R2. The returned storage key can be used in image fields until picker flows arrive."
+                    body="Choose a file to store the original and create an asset record."
                     compact
                     title="No file selected"
                   />
@@ -4983,13 +4950,13 @@ export default function AdminPage() {
               </form>
               )}
 
-              {canViewMedia ? (
+            {canViewMedia ? (
               <div className="record-browser">
                 <div className="record-browser-list">
                   <div>
                     <p className="section-title">Library</p>
                     <p className="section-copy">
-                      Browse the current media index. Search can stay lightweight in v0.
+                      Browse uploaded assets.
                     </p>
                   </div>
 
@@ -5005,13 +4972,13 @@ export default function AdminPage() {
 
                   {isLoadingMediaAssets ? (
                     <FlowStateBox
-                      body="Loading recent media asset metadata from the Datamix Worker."
+                      body="Loading recent uploads."
                       compact
                       title="Loading uploads"
                     />
                   ) : mediaAssets.length === 0 ? (
                     <FlowStateBox
-                      body="No media assets uploaded yet. Use the form above to create the first asset row and R2 object."
+                      body="Upload a file to add it to the library."
                       compact
                       title="No uploads yet"
                     />
@@ -5055,11 +5022,7 @@ export default function AdminPage() {
                     <>
                       <h4 className="section-title">{selectedFilteredMediaAsset.fileName}</h4>
                       <p className="section-copy">
-                        Stored metadata and delivery URLs for the selected asset. The
-                        Worker route serves originals directly from R2 and can apply
-                        resize, crop, format, and compression parameters on demand.
-                        Datamix now points those URLs at the configured media origin
-                        when one is available.
+                        Metadata and delivery URLs for the selected asset.
                       </p>
                       <dl className="detail-list">
                         <div>
@@ -5140,17 +5103,15 @@ export default function AdminPage() {
                   )}
                 </aside>
               </div>
-              ) : null}
-            </article>
+            ) : null}
           </section>
 
-          <section className="admin-grid">
-            <article className="admin-card" id="invite">
+
+            <section className="admin-card admin-card-wide" id="invite">
               <p className="card-eyebrow">Team access</p>
               <h3 className="card-title">Users, invites, and assigned roles</h3>
               <p className="card-copy">
-                Keep invites and role assignment in one place so access stays understandable as
-                the instance grows.
+                Invite users and manage roles.
               </p>
 
               {!canAccessTeamAccess ? (
@@ -5165,8 +5126,7 @@ export default function AdminPage() {
                     <div>
                       <h4 className="section-title">Current users</h4>
                       <p className="section-copy">
-                        See who can sign in and adjust their assigned role when your access
-                        includes user management.
+                        Manage who can sign in.
                       </p>
                     </div>
                     {canViewUsers ? (
@@ -5193,7 +5153,7 @@ export default function AdminPage() {
                     </p>
                   ) : isLoadingUsers ? (
                     <FlowStateBox
-                      body="Loading the current Datamix user list from the protected API route."
+                      body="Loading users."
                       compact
                       title="Loading users"
                     />
@@ -5287,8 +5247,7 @@ export default function AdminPage() {
                     <div>
                       <h4 className="section-title">Invite a teammate</h4>
                       <p className="section-copy">
-                        Datamix emails a secure invite link and routes the recipient through
-                        password setup on first sign-in with the role you choose here.
+                        Send an invite and choose the starting role.
                       </p>
                     </div>
 
@@ -5358,8 +5317,7 @@ export default function AdminPage() {
                 <div>
                   <h4 className="section-title">Available roles</h4>
                   <p className="section-copy">
-                    Built-in presets stay readable, and custom roles now flow through the
-                    same shared permission model and protected API checks.
+                    Review built-in roles or create a custom one.
                   </p>
                 </div>
 
@@ -5394,11 +5352,11 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
-            </article>
+            </section>
 
-            <article className="admin-card" id="settings">
+            <section className="admin-card admin-card-wide" id="settings">
               <p className="card-eyebrow">Session, API, and roles</p>
-              <h3 className="card-title">Runtime posture, API keys, and role permissions</h3>
+              <h3 className="card-title">Settings</h3>
               {!canAccessSettingsWorkspace ? (
                 <FlowStateBox
                   body={`Your ${sessionRole?.label ?? "current"} role cannot access settings yet.`}
@@ -5425,12 +5383,12 @@ export default function AdminPage() {
                       <dd>{adminPublicEnv.NEXT_PUBLIC_APP_ENV}</dd>
                     </div>
                     <div>
-                      <dt>Runtime topology</dt>
-                      <dd>Single Worker app serving admin assets and JSON routes</dd>
+                      <dt>App</dt>
+                      <dd>Admin and API routes share this origin</dd>
                     </div>
                     <div>
-                      <dt>Auth posture</dt>
-                      <dd>Persisted better-auth session on the same app origin</dd>
+                      <dt>Auth</dt>
+                      <dd>Session cookie active</dd>
                     </div>
                   </dl>
 
@@ -5439,9 +5397,7 @@ export default function AdminPage() {
                       <div>
                         <h4 className="section-title">Optional OAuth sign-in</h4>
                         <p className="section-copy">
-                          GitHub and Google stay optional. Datamix only uses them for
-                          existing or invited users, so password auth remains the baseline
-                          sign-in path.
+                          Enable GitHub or Google for invited users.
                         </p>
                       </div>
 
@@ -5472,8 +5428,7 @@ export default function AdminPage() {
                       <div>
                         <h4 className="section-title">Public API keys</h4>
                         <p className="section-copy">
-                          Create read-only or write-capable keys for the generated JSON API.
-                          Datamix shows each secret once, then stores only a hashed form.
+                          Create read-only or write-capable API keys. Secrets are shown once.
                         </p>
                       </div>
                       <div className="actions actions-compact">
@@ -5516,7 +5471,7 @@ export default function AdminPage() {
                       <div className="type-specific-box">
                         <p className="section-title">Copy this secret now</p>
                         <p className="section-copy">
-                          Datamix will not show this raw API key again after you leave this state.
+                          This raw API key will not be shown again.
                         </p>
                         <code className="record-json-preview">{apiKeySecret}</code>
                         {apiKeySecretMessage ? (
@@ -5581,13 +5536,13 @@ export default function AdminPage() {
 
                     {isLoadingApiKeys && apiKeys.length === 0 ? (
                       <FlowStateBox
-                        body="Loading managed API keys from the Datamix Worker."
+                        body="Loading API keys."
                         compact
                         title="Loading API keys"
                       />
                     ) : apiKeys.length === 0 ? (
                       <FlowStateBox
-                        body="No managed API keys have been created yet. Env keys can still be active if they are configured on the Worker."
+                        body="No managed API keys have been created yet."
                         compact
                         title="No managed keys"
                       />
@@ -5736,7 +5691,7 @@ export default function AdminPage() {
                         />
                       ) : isLoadingRoles && availableRoles.length === 0 ? (
                         <FlowStateBox
-                          body="Loading role definitions from the Datamix Worker."
+                          body="Loading roles."
                           compact
                           title="Loading roles"
                         />
@@ -5802,7 +5757,7 @@ export default function AdminPage() {
                       {!isCreatingRole && selectedRole?.system ? (
                         <div className="section-stack">
                           <FlowStateBox
-                            body="Built-in presets stay locked so Datamix keeps a stable baseline. Create a custom copy when you want to tune permissions."
+                            body="Built-in roles are locked. Create a custom role to change permissions."
                             compact
                             title="Built-in role"
                           />
@@ -5938,8 +5893,8 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
-            </article>
-          </section>
+            </section>
+
         </div>
       </div>
     </main>
