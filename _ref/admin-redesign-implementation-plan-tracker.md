@@ -61,7 +61,7 @@
 - [x] Planning: handoff and current admin implementation reviewed; this tracker created.
 - [x] Slice 1: Theme, shadcn, and shared admin UI foundation.
 - [x] Slice 2: Extract pure helpers and reusable behavioral components without route changes.
-- [ ] Slice 3: Admin workspace shell, auth gate, route helpers, and safe route scaffolding.
+- [x] Slice 3: Admin workspace shell, auth gate, route helpers, and safe route scaffolding.
 - [ ] Slice 4: Schema overview and schema builder routes.
 - [ ] Slice 5: Content routes and generated content editor.
 - [ ] Slice 6: Media library route.
@@ -216,19 +216,19 @@ npm run build --workspace @datamix/web
 
 **Steps:**
 
-- [ ] Create `admin-routes.ts` with route builders for every route listed in "Route Plan".
-- [ ] Create `AdminWorkspaceProvider` that centralizes:
+- [x] Create `admin-routes.ts` with route builders for every route listed in "Route Plan".
+- [x] Create `AdminWorkspaceProvider` that centralizes:
   - Better Auth session lookup.
   - Setup-status redirects.
   - Session authorization lookup via `loadSessionAccess`.
   - Permission booleans currently computed in `dashboard.tsx`.
   - Shared sign-out action.
   - Loading and error shell rendering.
-- [ ] Create hooks in `admin-workspace-hooks.ts` for reading provider state and enforcing provider usage.
-- [ ] Create `AdminWorkspaceFrame` usage around route placeholders with persistent sidebar, brand, route-active nav, account card, and page content background from the handoff.
-- [ ] Add placeholder route screens that render a real route header and restricted/loading states through the provider.
-- [ ] Keep sidebar links pointing to the new routes inside the new shell only. Do not alter the old dashboard sidebar yet.
-- [ ] Keep `/admin` serving `dashboard.tsx` until all route screens are complete.
+- [x] Create hooks in `admin-workspace-hooks.ts` for reading provider state and enforcing provider usage.
+- [x] Create `AdminWorkspaceFrame` usage around route placeholders with persistent sidebar, brand, route-active nav, account card, and page content background from the handoff.
+- [x] Add placeholder route screens that render a real route header and restricted/loading states through the provider.
+- [x] Keep sidebar links pointing to the new routes inside the new shell only. Do not alter the old dashboard sidebar yet.
+- [x] Keep `/admin` serving `dashboard.tsx` until all route screens are complete.
 
 **Acceptance Criteria:**
 
@@ -242,6 +242,10 @@ npm run build --workspace @datamix/web
 npm run typecheck --workspace @datamix/web
 npm run build --workspace @datamix/web
 ```
+
+**Completion Notes:**
+
+- 2026-06-10: Completed Slice 3. Added route builders, shared auth/access provider, provider hooks, guarded placeholder shell, and direct placeholder routes for the full Route Plan while leaving `/admin` on the legacy dashboard. The exact typecheck command hit local Wrangler `.env` type drift; `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web` and `npm run build --workspace @datamix/web` passed.
 
 ---
 
