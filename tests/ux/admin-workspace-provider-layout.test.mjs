@@ -23,6 +23,10 @@ const workspaceRouteFrame = path.join(
   adminRoot,
   "_workspace/admin-workspace-route-frame.tsx",
 );
+const adminRoutesSourcePath = path.join(
+  adminRoot,
+  "_workspace/admin-routes.ts",
+);
 const settingsApiKeysScreen = path.join(
   adminRoot,
   "_screens/settings-api-keys.tsx",
@@ -126,6 +130,8 @@ const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
 const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
 const settingsApiKeysSource = readFileSync(settingsApiKeysScreen, "utf8");
 const userAccountSource = readFileSync(userAccountScreen, "utf8");
+const adminHomeSource = readFileSync(path.join(adminRoot, "_screens/admin-home.tsx"), "utf8");
+const adminRoutesSource = readFileSync(adminRoutesSourcePath, "utf8");
 
 for (const transientTitle of ["Checking your session", "Loading access profile"]) {
   assert(
@@ -156,6 +162,26 @@ assert(
     workspaceRouteFrameSource.includes("prefetchAdminRoute") &&
     workspaceRouteFrameSource.includes("onPrefetch"),
   "The workspace provider and route frame should expose route-aware data prefetching for sidebar hover/focus.",
+);
+
+assert(
+  adminRoutesSource.includes("// adminRoutes.home(),") &&
+    workspaceRouteFrameSource.includes('brandRoute={adminRoutes.home()}'),
+  "The admin home route should stay commented out of visible sidebar items while the brand link continues to prefetch the dashboard.",
+);
+
+assert(
+  providerSource.includes('route.section === "home"') &&
+    providerSource.includes("dashboardPrefetchTasks") &&
+    adminHomeSource.includes('void prefetchAdminRoute({ section: "home" })'),
+  "The admin dashboard should use the same route-aware data prefetcher for initial dashboard loads and sidebar hover/focus warmups.",
+);
+
+assert(
+  adminHomeSource.includes('from "next/link"') &&
+    adminHomeSource.includes("prefetch={item.route.section !== route.section}") &&
+    adminHomeSource.includes("prefetch={true}"),
+  "Dashboard navigation links should use Vinext/Next Link prefetching instead of plain anchors.",
 );
 
 assert(

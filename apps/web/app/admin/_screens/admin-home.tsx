@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   ArrowRight,
   Database,
@@ -179,14 +180,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     isLoadingUsers,
     isRefreshingCollections,
     isRefreshingMediaAssets,
-    loadApiKeyData,
-    loadAvailableRoles,
-    loadCollections,
-    loadMediaAssets,
-    loadUserList,
     mediaAssets,
     mediaLoadError,
     permissions,
+    prefetchAdminRoute,
     refreshApiKeyData,
     refreshAvailableRoles,
     refreshCollections,
@@ -197,25 +194,34 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     usersLoadError,
   } = workspace;
   const [isRefreshingOverview, setIsRefreshingOverview] = React.useState(false);
-  const contentReadyCount = collections.filter(
-    (collection) => collection.definition.fields.length > 0,
-  ).length;
-  const totalFieldCount = collections.reduce(
-    (count, collection) => count + collection.definition.fields.length,
-    0,
-  );
-  const activeApiKeyCount = apiKeys.filter((apiKey) => !apiKey.revokedAt).length;
-  const recentSchemas = [...collections]
-    .sort((firstCollection, secondCollection) => {
-      const firstTime = Date.parse(firstCollection.updatedAt);
-      const secondTime = Date.parse(secondCollection.updatedAt);
+  const { contentReadyCount, recentSchemas, totalFieldCount } = React.useMemo(() => {
+    const nextRecentSchemas = [...collections]
+      .sort((firstCollection, secondCollection) => {
+        const firstTime = Date.parse(firstCollection.updatedAt);
+        const secondTime = Date.parse(secondCollection.updatedAt);
 
-      return (
-        (Number.isNaN(secondTime) ? 0 : secondTime) -
-        (Number.isNaN(firstTime) ? 0 : firstTime)
-      );
-    })
-    .slice(0, 4);
+        return (
+          (Number.isNaN(secondTime) ? 0 : secondTime) -
+          (Number.isNaN(firstTime) ? 0 : firstTime)
+        );
+      })
+      .slice(0, 4);
+
+    return {
+      contentReadyCount: collections.filter(
+        (collection) => collection.definition.fields.length > 0,
+      ).length,
+      recentSchemas: nextRecentSchemas,
+      totalFieldCount: collections.reduce(
+        (count, collection) => count + collection.definition.fields.length,
+        0,
+      ),
+    };
+  }, [collections]);
+  const activeApiKeyCount = React.useMemo(
+    () => apiKeys.filter((apiKey) => !apiKey.revokedAt).length,
+    [apiKeys],
+  );
   const roleDataIsAllowed =
     permissions.canAccessTeamAccess || permissions.canAccessSettingsWorkspace;
   const collectionStatus = createDatasetStatus({
@@ -408,67 +414,8 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     !isRefreshingMediaAssets;
 
   React.useEffect(() => {
-    if (
-      !permissions.canViewCollections ||
-      hasLoadedCollections ||
-      isLoadingCollections
-    ) {
-      return;
-    }
-
-    void loadCollections();
-  }, [
-    hasLoadedCollections,
-    isLoadingCollections,
-    loadCollections,
-    permissions.canViewCollections,
-  ]);
-
-  React.useEffect(() => {
-    if (!permissions.canViewMedia || hasLoadedMediaAssets || isLoadingMediaAssets) {
-      return;
-    }
-
-    void loadMediaAssets();
-  }, [
-    hasLoadedMediaAssets,
-    isLoadingMediaAssets,
-    loadMediaAssets,
-    permissions.canViewMedia,
-  ]);
-
-  React.useEffect(() => {
-    if (!permissions.canViewUsers || hasLoadedUsers || isLoadingUsers) {
-      return;
-    }
-
-    void loadUserList();
-  }, [hasLoadedUsers, isLoadingUsers, loadUserList, permissions.canViewUsers]);
-
-  React.useEffect(() => {
-    if (!roleDataIsAllowed || hasLoadedRoles || isLoadingRoles) {
-      return;
-    }
-
-    void loadAvailableRoles();
-  }, [hasLoadedRoles, isLoadingRoles, loadAvailableRoles, roleDataIsAllowed]);
-
-  React.useEffect(() => {
-    if (
-      !permissions.canAccessSettingsWorkspace ||
-      hasLoadedApiKeys ||
-      isLoadingApiKeys
-    ) {
-      return;
-    }
-
-    void loadApiKeyData();
-  }, [
-    hasLoadedApiKeys,
-    isLoadingApiKeys,
-    loadApiKeyData,
-    permissions.canAccessSettingsWorkspace,
-  ]);
+    void prefetchAdminRoute({ section: "home" });
+  }, [prefetchAdminRoute]);
 
   const handleRefreshOverview = React.useCallback(async () => {
     setIsRefreshingOverview(true);
@@ -591,10 +538,11 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
           >
             <div className="grid gap-2">
               {routeItems.map((item) => (
-                <a
+                <Link
                   className="group grid gap-3 rounded-lg border border-border bg-white px-4 py-3 text-xs transition hover:bg-muted/60 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
                   href={item.route.href}
                   key={item.route.id}
+                  prefetch={item.route.section !== route.section}
                 >
                   <span className="flex size-9 items-center justify-center rounded-md border border-border bg-slate-50 text-slate-600">
                     <item.icon className="h-4 w-4" />
@@ -614,7 +562,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                     </Badge>
                     <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:text-slate-600" />
                   </span>
-                </a>
+                </Link>
               ))}
             </div>
           </AdminSectionCard>
@@ -650,7 +598,9 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
               action={
                 permissions.canCreateCollections ? (
                   <Button asChild size="sm">
-                    <a href={adminRoutes.schema.new().href}>New schema</a>
+                    <Link href={adminRoutes.schema.new().href} prefetch={true}>
+                      New schema
+                    </Link>
                   </Button>
                 ) : null
               }
@@ -697,10 +647,11 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
               ) : (
                 <div className="divide-y rounded-lg border border-border bg-white">
                   {recentSchemas.map((collection) => (
-                    <a
+                    <Link
                       className="grid gap-2 px-4 py-3 text-xs transition hover:bg-muted/60"
                       href={adminRoutes.schema.detail(collection.definition.name).href}
                       key={collection.definition.name}
+                      prefetch={true}
                     >
                       <span className="flex min-w-0 items-center justify-between gap-3">
                         <span className="truncate font-medium text-slate-950">
@@ -719,7 +670,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                           Updated {formatHomeTimestamp(collection.updatedAt)}
                         </span>
                       </span>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -742,9 +693,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                   {workspace.authorization.permissions.length} permissions granted.
                 </p>
               </div>
-              <a
+              <Link
                 className="rounded-lg border border-border bg-white p-4 transition hover:bg-muted/60"
                 href={adminRoutes.settings().href}
+                prefetch={true}
               >
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-950">
                   <KeyRound className="h-4 w-4 text-slate-500" />
@@ -761,10 +713,11 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
                   Active public API keys.
                 </p>
-              </a>
-              <a
+              </Link>
+              <Link
                 className="rounded-lg border border-border bg-white p-4 transition hover:bg-muted/60"
                 href={adminRoutes.team().href}
+                prefetch={true}
               >
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-950">
                   <Users className="h-4 w-4 text-slate-500" />
@@ -784,7 +737,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
                   Users visible to this role.
                 </p>
-              </a>
+              </Link>
             </div>
           </AdminSectionCard>
         ) : null}

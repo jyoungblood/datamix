@@ -1,6 +1,15 @@
 "use client";
 
-import { Database, FileText, Image, SlidersHorizontal, Users } from "lucide-react";
+import {
+  Blocks,
+  Database,
+  FileText,
+  Image,
+  SlidersHorizontal,
+  UserCircle,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { AdminFrame, DatamixSidebar } from "../_components/admin-frame";
@@ -17,8 +26,13 @@ type AdminWorkspaceRouteFrameProps = {
   route: AdminWorkspaceRoute;
 };
 
-const adminWorkspaceSidebarIcons = {
+const adminWorkspaceSidebarIcons: Record<
+  AdminWorkspaceRoute["section"],
+  LucideIcon
+> = {
+  account: UserCircle,
   content: FileText,
+  home: Blocks,
   media: Image,
   schema: Database,
   settings: SlidersHorizontal,
@@ -50,19 +64,11 @@ export function AdminWorkspaceRouteFrame({
         <DatamixSidebar
           account={sidebarAccount}
           activeItem={route.section}
+          brandRoute={adminRoutes.home()}
           brandHref={adminRoutes.home().href}
           items={adminWorkspaceSidebarRoutes.map((sidebarRoute) => ({
             ...sidebarRoute,
-            icon:
-              sidebarRoute.section === "schema"
-                ? adminWorkspaceSidebarIcons.schema
-                : sidebarRoute.section === "content"
-                  ? adminWorkspaceSidebarIcons.content
-                  : sidebarRoute.section === "media"
-                    ? adminWorkspaceSidebarIcons.media
-                    : sidebarRoute.section === "team"
-                      ? adminWorkspaceSidebarIcons.team
-                      : adminWorkspaceSidebarIcons.settings,
+            icon: adminWorkspaceSidebarIcons[sidebarRoute.section],
           }))}
           onPrefetch={prefetchSidebarRoute}
         />

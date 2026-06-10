@@ -190,6 +190,7 @@ export const adminRoutes = {
 } as const;
 
 export const adminWorkspaceSidebarRoutes = [
+  // adminRoutes.home(),
   adminRoutes.schema.index(),
   adminRoutes.content.index(),
   adminRoutes.media(),

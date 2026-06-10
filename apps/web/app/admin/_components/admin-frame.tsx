@@ -26,6 +26,11 @@ type DatamixSidebarItem = {
   section?: AdminWorkspaceRouteSection
 }
 
+type DatamixSidebarPrefetchItem = Pick<
+  DatamixSidebarItem,
+  "href" | "id" | "label" | "prefetch" | "section"
+>
+
 const defaultDatamixSidebarItems: DatamixSidebarItem[] = [
   { id: "schema", label: "Schema", icon: Database, activeIds: ["schema-builder"] },
   { id: "content", label: "Content", icon: FileText },
@@ -50,11 +55,12 @@ type DatamixSidebarProps = Omit<
   activeItem?: string
   brandHref?: string
   brandLabel?: string
+  brandRoute?: DatamixSidebarPrefetchItem
   items?: DatamixSidebarItem[]
   onAccountClick?: () => void
   onBrandClick?: () => void
   onNavigate?: (item: DatamixSidebarItem) => void
-  onPrefetch?: (item: DatamixSidebarItem) => void
+  onPrefetch?: (item: DatamixSidebarPrefetchItem) => void
 }
 
 function DatamixSidebar({
@@ -66,6 +72,7 @@ function DatamixSidebar({
   activeItem = "schema",
   brandHref,
   brandLabel = "DATAMIX",
+  brandRoute,
   className,
   items = defaultDatamixSidebarItems,
   onAccountClick,
@@ -74,6 +81,12 @@ function DatamixSidebar({
   onPrefetch,
   ...props
 }: DatamixSidebarProps) {
+  const resolvedBrandHref = brandRoute?.href ?? brandHref
+  const prefetchBrandRoute = () => {
+    if (brandRoute) {
+      onPrefetch?.(brandRoute)
+    }
+  }
   const brandClassName =
     "mb-8 flex items-center gap-2.5 border-0 bg-transparent p-0 text-left text-inherit"
   const brandContent = (
@@ -117,10 +130,17 @@ function DatamixSidebar({
       )}
       {...props}
     >
-      {brandHref ? (
-        <a className={brandClassName} href={brandHref}>
+      {resolvedBrandHref ? (
+        <Link
+          className={brandClassName}
+          href={resolvedBrandHref}
+          onClick={() => onBrandClick?.()}
+          onFocus={prefetchBrandRoute}
+          onMouseEnter={prefetchBrandRoute}
+          prefetch={brandRoute?.prefetch ?? true}
+        >
           {brandContent}
-        </a>
+        </Link>
       ) : onBrandClick ? (
         <button className={brandClassName} onClick={onBrandClick} type="button">
           {brandContent}

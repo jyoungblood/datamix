@@ -1014,6 +1014,48 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       prefetchedRouteSectionsRef.current.add(route.section);
 
       const prefetchTasks: Promise<void>[] = [];
+      const dashboardPrefetchTasks: Promise<void>[] = [];
+
+      if (route.section === "home" && permissions) {
+        if (
+          permissions.canViewCollections &&
+          !hasLoadedCollections &&
+          !isLoadingCollections
+        ) {
+          dashboardPrefetchTasks.push(loadCollections());
+        }
+
+        if (
+          permissions.canViewMedia &&
+          !hasLoadedMediaAssets &&
+          !isLoadingMediaAssets
+        ) {
+          dashboardPrefetchTasks.push(loadMediaAssets());
+        }
+
+        if (permissions.canViewUsers && !hasLoadedUsers && !isLoadingUsers) {
+          dashboardPrefetchTasks.push(loadUserList());
+        }
+
+        if (
+          (permissions.canAccessTeamAccess ||
+            permissions.canAccessSettingsWorkspace) &&
+          !hasLoadedRoles &&
+          !isLoadingRoles
+        ) {
+          dashboardPrefetchTasks.push(loadAvailableRoles());
+        }
+
+        if (
+          permissions.canAccessSettingsWorkspace &&
+          !hasLoadedApiKeys &&
+          !isLoadingApiKeys
+        ) {
+          dashboardPrefetchTasks.push(loadApiKeyData());
+        }
+      }
+
+      prefetchTasks.push(...dashboardPrefetchTasks);
 
       if (
         (route.section === "schema" || route.section === "content") &&
