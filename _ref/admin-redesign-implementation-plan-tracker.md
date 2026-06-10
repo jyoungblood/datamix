@@ -62,7 +62,7 @@
 - [x] Slice 1: Theme, shadcn, and shared admin UI foundation.
 - [x] Slice 2: Extract pure helpers and reusable behavioral components without route changes.
 - [x] Slice 3: Admin workspace shell, auth gate, route helpers, and safe route scaffolding.
-- [ ] Slice 4: Schema overview and schema builder routes.
+- [x] Slice 4: Schema overview and schema builder routes.
 - [ ] Slice 5: Content routes and generated content editor.
 - [ ] Slice 6: Media library route.
 - [ ] Slice 7: Team, roles, settings, API keys, account route, and profile update API.
@@ -264,7 +264,7 @@ npm run build --workspace @datamix/web
 
 **Steps:**
 
-- [ ] Add collection/schema state and loaders to `AdminWorkspaceProvider`:
+- [x] Add collection/schema state and loaders to `AdminWorkspaceProvider`:
   - `collections`
   - `hasLoadedCollections`
   - `isLoadingCollections`
@@ -272,14 +272,14 @@ npm run build --workspace @datamix/web
   - `collectionLoadError`
   - `loadCollections`
   - `refreshCollections`
-- [ ] Implement `/admin/schema` as Schema Overview:
+- [x] Implement `/admin/schema` as Schema Overview:
   - Metrics for schema count, record count when available, and draft/error state where available.
   - Table/list of saved schemas using `StoredCollectionDefinition`.
   - Primary action: `New schema` linking to `/admin/schema/new`.
   - Row action: open `/admin/schema/[schemaId]`.
-- [ ] Implement `/admin/schema/new` as create-mode Schema Builder using `createEmptyCollectionDraft`.
-- [ ] Implement `/admin/schema/[schemaId]` as edit-mode Schema Builder using `createDraftFromDefinition`.
-- [ ] Preserve current collection behavior:
+- [x] Implement `/admin/schema/new` as create-mode Schema Builder using `createEmptyCollectionDraft`.
+- [x] Implement `/admin/schema/[schemaId]` as edit-mode Schema Builder using `createDraftFromDefinition`.
+- [x] Preserve current collection behavior:
   - Existing schema names cannot be edited.
   - New schema names use lowercase letters, numbers, and underscores.
   - Field add/remove/move works.
@@ -287,7 +287,7 @@ npm run build --workspace @datamix/web
   - Select and relationship type-specific controls remain available.
   - Save uses `saveCollectionDefinition(serializeDraft(draft))`.
   - Validation issues display through `AdminStateBox` and issue list.
-- [ ] Replace user-facing "collection" wording with "schema" on these routes while keeping API names unchanged.
+- [x] Replace user-facing "collection" wording with "schema" on these routes while keeping API names unchanged.
 
 **Acceptance Criteria:**
 
@@ -303,6 +303,10 @@ npm run typecheck --workspace @datamix/web
 npm run build --workspace @datamix/web
 npm run smoke
 ```
+
+**Completion Notes:**
+
+- 2026-06-10: Completed Slice 4. Added shared schema collection loaders to `AdminWorkspaceProvider`, extracted the reusable routed admin frame from the placeholder shell, replaced `/admin/schema`, `/admin/schema/new`, and `/admin/schema/[schemaId]` placeholders with routed schema overview/create/edit screens, preserved schema draft field add/remove/move/type-specific controls and save behavior through `saveCollectionDefinition(serializeDraft(draft))`, kept `/admin` on the legacy dashboard, and did not implement Slice 5+ content behavior. The plain typecheck command hit the known local Wrangler `.env` type drift, so verification used `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web`, `npm run build --workspace @datamix/web`, and `git diff --check`.
 
 ---
 

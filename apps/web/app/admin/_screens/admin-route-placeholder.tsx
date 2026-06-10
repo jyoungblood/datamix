@@ -27,6 +27,10 @@ type AdminRoutePlaceholderProps = {
   route: AdminWorkspaceRoute;
 };
 
+type AdminWorkspaceRouteFrameProps = AdminRoutePlaceholderProps & {
+  children: React.ReactNode;
+};
+
 const adminWorkspaceSidebarIcons = {
   content: FileText,
   media: Image,
@@ -35,9 +39,11 @@ const adminWorkspaceSidebarIcons = {
   team: Users,
 };
 
-function AdminRoutePlaceholderContent({ route }: AdminRoutePlaceholderProps) {
+export function AdminWorkspaceRouteFrame({
+  children,
+  route,
+}: AdminWorkspaceRouteFrameProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
   const accountRoute = adminRoutes.account();
   const sidebarAccount = {
     emailRole: workspace.role.label,
@@ -70,6 +76,18 @@ function AdminRoutePlaceholderContent({ route }: AdminRoutePlaceholderProps) {
         />
       }
     >
+      {children}
+    </AdminFrame>
+  );
+}
+
+function AdminRoutePlaceholderContent({ route }: AdminRoutePlaceholderProps) {
+  const workspace = useAdminWorkspace();
+  const access = useAdminWorkspaceRouteAccess(route);
+  const accountRoute = adminRoutes.account();
+
+  return (
+    <AdminWorkspaceRouteFrame route={route}>
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           description={route.description}
@@ -121,7 +139,7 @@ function AdminRoutePlaceholderContent({ route }: AdminRoutePlaceholderProps) {
           </AdminSectionCard>
         </div>
       </div>
-    </AdminFrame>
+    </AdminWorkspaceRouteFrame>
   );
 }
 

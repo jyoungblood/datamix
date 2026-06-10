@@ -1,5 +1,4 @@
-import { AdminRoutePlaceholder } from "../../_screens/admin-route-placeholder";
-import { adminRoutes } from "../../_workspace/admin-routes";
+import { SchemaBuilderRoute } from "../../_screens/schema-builder";
 
 type AdminSchemaDetailPageProps = {
   params: {
@@ -10,5 +9,5 @@ type AdminSchemaDetailPageProps = {
 export default function AdminSchemaDetailPage({
   params,
 }: AdminSchemaDetailPageProps) {
-  return <AdminRoutePlaceholder route={adminRoutes.schema.detail(params.schemaId)} />;
+  return <SchemaBuilderRoute mode="edit" schemaId={params.schemaId} />;
 }

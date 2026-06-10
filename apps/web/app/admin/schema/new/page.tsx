@@ -1,6 +1,5 @@
-import { AdminRoutePlaceholder } from "../../_screens/admin-route-placeholder";
-import { adminRoutes } from "../../_workspace/admin-routes";
+import { SchemaBuilderRoute } from "../../_screens/schema-builder";
 
 export default function AdminNewSchemaPage() {
-  return <AdminRoutePlaceholder route={adminRoutes.schema.new()} />;
+  return <SchemaBuilderRoute mode="create" />;
 }

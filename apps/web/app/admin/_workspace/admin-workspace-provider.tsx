@@ -5,6 +5,10 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import {
+  listCollectionDefinitions,
+  type StoredCollectionDefinition,
+} from "@/lib/collection-definitions";
 import { buildDatamixAdminPath } from "@/lib/runtime";
 import { loadSessionAccess, SessionAccessError } from "@/lib/session";
 import { useSetupStatus } from "@/lib/setup";
@@ -40,8 +44,15 @@ export type AdminWorkspacePermissions = {
 
 export type AdminWorkspaceContextValue = {
   authorization: DatamixAuthorizationSummary;
+  collectionLoadError: string | null;
+  collections: StoredCollectionDefinition[];
+  hasLoadedCollections: boolean;
+  isLoadingCollections: boolean;
+  isRefreshingCollections: boolean;
+  loadCollections: (options?: { refresh?: boolean }) => Promise<void>;
   permissions: AdminWorkspacePermissions;
   refreshAccess: () => Promise<void>;
+  refreshCollections: () => Promise<void>;
   role: DatamixAuthorizationSummary["role"];
   signOut: () => Promise<void>;
   user: AdminWorkspaceUser;
@@ -176,6 +187,7 @@ function AdminWorkspaceGateShell({
 export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps) {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const collectionLoadRequestId = React.useRef(0);
   const [authorization, setAuthorization] =
     React.useState<DatamixAuthorizationSummary | null>(null);
   const [authorizationError, setAuthorizationError] = React.useState<string | null>(null);
@@ -183,6 +195,11 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     null,
   );
   const [isLoadingAuthorization, setIsLoadingAuthorization] = React.useState(false);
+  const [collections, setCollections] = React.useState<StoredCollectionDefinition[]>([]);
+  const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(null);
+  const [hasLoadedCollections, setHasLoadedCollections] = React.useState(false);
+  const [isLoadingCollections, setIsLoadingCollections] = React.useState(false);
+  const [isRefreshingCollections, setIsRefreshingCollections] = React.useState(false);
 
   const loginHref = createLoginHref();
   const setupStatusHeading =
@@ -219,6 +236,54 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
   }, []);
 
+  const loadCollections = React.useCallback(
+    async (options?: { refresh?: boolean }) => {
+      const requestId = collectionLoadRequestId.current + 1;
+      const isRefresh = options?.refresh === true && hasLoadedCollections;
+
+      collectionLoadRequestId.current = requestId;
+      setCollectionLoadError(null);
+
+      if (isRefresh) {
+        setIsRefreshingCollections(true);
+      } else {
+        setIsLoadingCollections(true);
+      }
+
+      try {
+        const nextCollections = await listCollectionDefinitions();
+
+        if (collectionLoadRequestId.current !== requestId) {
+          return;
+        }
+
+        setCollections(nextCollections);
+        setHasLoadedCollections(true);
+      } catch (error) {
+        if (collectionLoadRequestId.current !== requestId) {
+          return;
+        }
+
+        setCollectionLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load collection definitions.",
+        );
+      } finally {
+        if (collectionLoadRequestId.current === requestId) {
+          setIsLoadingCollections(false);
+          setIsRefreshingCollections(false);
+        }
+      }
+    },
+    [hasLoadedCollections],
+  );
+
+  const refreshCollections = React.useCallback(
+    () => loadCollections({ refresh: true }),
+    [loadCollections],
+  );
+
   const signOut = React.useCallback(async () => {
     await authClient.signOut();
     window.location.replace(buildDatamixAdminPath("/login"));
@@ -243,6 +308,12 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setAuthorizationError(null);
       setAuthorizationStatusCode(null);
       setIsLoadingAuthorization(false);
+      collectionLoadRequestId.current += 1;
+      setCollections([]);
+      setCollectionLoadError(null);
+      setHasLoadedCollections(false);
+      setIsLoadingCollections(false);
+      setIsRefreshingCollections(false);
       return;
     }
 
@@ -365,8 +436,15 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
 
   const value: AdminWorkspaceContextValue = {
     authorization,
+    collectionLoadError,
+    collections,
+    hasLoadedCollections,
+    isLoadingCollections,
+    isRefreshingCollections,
+    loadCollections,
     permissions: createAdminWorkspacePermissions(authorization),
     refreshAccess: loadSessionAuthorizationData,
+    refreshCollections,
     role: authorization.role,
     signOut,
     user: createWorkspaceUser(session.data),
