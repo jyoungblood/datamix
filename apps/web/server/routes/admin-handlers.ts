@@ -45,6 +45,7 @@ import {
 import {
   DatamixUserError,
   listDatamixUsers,
+  updateDatamixCurrentUserProfile,
   updateDatamixUserRole,
 } from "../users";
 import {
@@ -63,6 +64,7 @@ import {
 } from "./http";
 import {
   parseApiKeyRequest,
+  parseCurrentUserProfileRequest,
   parseInviteRequest,
   parseRoleDefinitionRequest,
   parseUserRoleRequest,
@@ -150,6 +152,56 @@ export async function getAdminSession(request: Request) {
       session: access.session,
     }),
   );
+}
+
+export async function updateAdminCurrentUserProfile(request: Request) {
+  const env = getDatamixEnv();
+  const access = await requireSession(request, env);
+
+  if (!access.success) {
+    return withAdminCors(request, access.response);
+  }
+
+  const parsedBody = await readJsonBody(
+    request,
+    "Profile payload must be valid JSON.",
+  );
+
+  if (!parsedBody.success) {
+    return withAdminCors(request, parsedBody.response);
+  }
+
+  const parsed = parseCurrentUserProfileRequest(parsedBody.body);
+
+  if (!parsed) {
+    return withAdminCors(
+      request,
+      jsonResponse({ error: "A valid profile name is required." }, 400),
+    );
+  }
+
+  try {
+    const user = await updateDatamixCurrentUserProfile(
+      env,
+      access.session.user.id,
+      parsed,
+    );
+
+    return withAdminCors(
+      request,
+      jsonResponse({
+        ...createServiceStatus("api"),
+        message: "Profile updated.",
+        user,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof DatamixUserError) {
+      return withAdminCors(request, jsonResponse({ error: error.message }, error.statusCode));
+    }
+
+    throw error;
+  }
 }
 
 export async function createAdminInvite(request: Request) {

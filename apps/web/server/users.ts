@@ -1,5 +1,10 @@
 import type { DatamixBindings } from "./env";
-import { getUserRow, listUserRows, updateUserRoleRow } from "./db/users";
+import {
+  getUserRow,
+  listUserRows,
+  updateUserProfileRow,
+  updateUserRoleRow,
+} from "./db/users";
 import { getAvailableRoleDefinition } from "./roles";
 
 type UserRow = {
@@ -7,6 +12,7 @@ type UserRow = {
   email: string;
   emailVerified: number | boolean;
   id: string;
+  image: string | null;
   name: string;
   role: string | null;
   updatedAt: Date | number | string;
@@ -17,9 +23,15 @@ export type DatamixUserSummary = {
   email: string;
   emailVerified: boolean;
   id: string;
+  image: string | null;
   name: string;
   roleId: string | null;
   updatedAt: string;
+};
+
+export type DatamixCurrentUserProfileUpdate = {
+  image: string | null;
+  name: string;
 };
 
 export class DatamixUserError extends Error {
@@ -60,6 +72,7 @@ function mapUserRow(row: UserRow): DatamixUserSummary {
     email: row.email,
     emailVerified: row.emailVerified === true || row.emailVerified === 1,
     id: row.id,
+    image: row.image,
     name: row.name,
     roleId: row.role,
     updatedAt: formatAuthTimestamp(row.updatedAt),
@@ -104,4 +117,38 @@ export async function updateDatamixUserRole(
     }),
     role,
   };
+}
+
+export async function updateDatamixCurrentUserProfile(
+  env: DatamixBindings,
+  userId: string,
+  input: DatamixCurrentUserProfileUpdate,
+) {
+  const name = input.name.trim();
+
+  if (!name) {
+    throw new DatamixUserError("Name is required.");
+  }
+
+  const existingUser = await getUserRow(env, userId);
+
+  if (!existingUser) {
+    throw new DatamixUserError("User not found.", 404);
+  }
+
+  const nextUpdatedAt = new Date();
+
+  await updateUserProfileRow(env, {
+    image: input.image,
+    name,
+    updatedAt: nextUpdatedAt,
+    userId,
+  });
+
+  return mapUserRow({
+    ...existingUser,
+    image: input.image,
+    name,
+    updatedAt: nextUpdatedAt,
+  });
 }

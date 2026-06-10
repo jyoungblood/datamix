@@ -1,5 +1,4 @@
-import { AdminRoutePlaceholder } from "../../../_screens/admin-route-placeholder";
-import { adminRoutes } from "../../../_workspace/admin-routes";
+import { ContentEditorRoute } from "../../../_screens/content-editor";
 
 type AdminNewRecordPageProps = {
   params: {
@@ -8,9 +7,5 @@ type AdminNewRecordPageProps = {
 };
 
 export default function AdminNewRecordPage({ params }: AdminNewRecordPageProps) {
-  return (
-    <AdminRoutePlaceholder
-      route={adminRoutes.content.newRecord(params.collection)}
-    />
-  );
+  return <ContentEditorRoute collectionName={params.collection} mode="create" />;
 }

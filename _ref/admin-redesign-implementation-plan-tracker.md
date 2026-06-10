@@ -63,9 +63,9 @@
 - [x] Slice 2: Extract pure helpers and reusable behavioral components without route changes.
 - [x] Slice 3: Admin workspace shell, auth gate, route helpers, and safe route scaffolding.
 - [x] Slice 4: Schema overview and schema builder routes.
-- [ ] Slice 5: Content routes and generated content editor.
-- [ ] Slice 6: Media library route.
-- [ ] Slice 7: Team, roles, settings, API keys, account route, and profile update API.
+- [x] Slice 5: Content routes and generated content editor.
+- [x] Slice 6: Media library route.
+- [x] Slice 7: Team, roles, settings, API keys, account route, and profile update API.
 - [ ] Slice 8: Command palette, `/admin` homepage placeholder cutover, cleanup, smoke verification, and documentation update.
 
 ---
@@ -327,7 +327,7 @@ npm run smoke
 
 **Steps:**
 
-- [ ] Add record state and loaders to `AdminWorkspaceProvider`, keyed by active schema name:
+- [x] Add record state and loaders to `AdminWorkspaceProvider`, keyed by active schema name:
   - `records`
   - `selectedRecord`
   - `recordDraft`
@@ -341,11 +341,11 @@ npm run smoke
   - `isSavingRecord`
   - `loadRecords`
   - `refreshRecords`
-- [ ] Implement `/admin/content` as a content picker with schema rows and links to `/admin/content/[collection]`.
-- [ ] Implement `/admin/content/[collection]` as record list plus primary action `New content` linking to `/admin/content/[collection]/new`.
-- [ ] Implement `/admin/content/[collection]/new` as create-mode content editor using `createGeneratedRecordFormState`.
-- [ ] Implement `/admin/content/[collection]/[recordId]` as edit-mode content editor using `createGeneratedRecordFormStateFromRecord`.
-- [ ] Preserve generated field behavior:
+- [x] Implement `/admin/content` as a content picker with schema rows and links to `/admin/content/[collection]`.
+- [x] Implement `/admin/content/[collection]` as record list plus primary action `New content` linking to `/admin/content/[collection]/new`.
+- [x] Implement `/admin/content/[collection]/new` as create-mode content editor using `createGeneratedRecordFormState`.
+- [x] Implement `/admin/content/[collection]/[recordId]` as edit-mode content editor using `createGeneratedRecordFormStateFromRecord`.
+- [x] Preserve generated field behavior:
   - Text, number, boolean, date, select, rich text, markdown, image, image gallery, and relationship inputs.
   - Markdown preview.
   - Rich text editor via `TiptapRichTextEditor`.
@@ -353,7 +353,7 @@ npm run smoke
   - Reset values restores selected record or empty create state.
   - Submit calls `createCollectionRecord` or `updateCollectionRecord`.
   - Payload preview remains available.
-- [ ] Replace user-facing "record" wording with "content" where it is navigation/header language. Use "record id" only for technical identifiers.
+- [x] Replace user-facing "record" wording with "content" where it is navigation/header language. Use "record id" only for technical identifiers.
 
 **Acceptance Criteria:**
 
@@ -371,6 +371,10 @@ npm run build --workspace @datamix/web
 npm run smoke
 ```
 
+**Completion Notes:**
+
+- 2026-06-10: Completed Slice 5. Added active-schema-keyed record state, selection, generated record draft state, load/refresh, and create/update helpers to `AdminWorkspaceProvider`; replaced `/admin/content`, `/admin/content/[collection]`, `/admin/content/[collection]/new`, and `/admin/content/[collection]/[recordId]` placeholders with routed Content picker, collection list, create editor, and edit editor screens; preserved generated field inputs, markdown preview, rich text editing, image/gallery media selection, reset, submit, and payload preview behavior; kept `/admin` on the existing legacy dashboard and did not implement Slice 6+ media behavior. The plain typecheck command hit the known local Wrangler `.env` type drift, so verification used `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web`, `npm run build --workspace @datamix/web`, and `git diff --check`.
+
 ---
 
 ## Slice 6: Media Library Route
@@ -385,7 +389,7 @@ npm run smoke
 
 **Steps:**
 
-- [ ] Add media state and loaders to `AdminWorkspaceProvider`:
+- [x] Add media state and loaders to `AdminWorkspaceProvider`:
   - `mediaAssets`
   - `mediaLoadError`
   - `mediaMessage`
@@ -400,11 +404,11 @@ npm run smoke
   - `refreshMediaAssets`
   - `uploadMediaAsset`
   - `copyMediaStorageKey`
-- [ ] Implement upload panel with file picker, file metadata, upload button, success state, and error state.
-- [ ] Implement library list with search over filename, MIME type, uploader email, and storage key.
-- [ ] Implement selected asset detail with storage key, MIME type, size, uploaded timestamp, uploader, asset id, original URL, transform URL example, and transform query contract.
-- [ ] Keep clipboard fallback messages from current dashboard.
-- [ ] Keep media permissions:
+- [x] Implement upload panel with file picker, file metadata, upload button, success state, and error state.
+- [x] Implement library list with search over filename, MIME type, uploader email, and storage key.
+- [x] Implement selected asset detail with storage key, MIME type, size, uploaded timestamp, uploader, asset id, original URL, transform URL example, and transform query contract.
+- [x] Keep clipboard fallback messages from current dashboard.
+- [x] Keep media permissions:
   - No access state when neither view nor upload is allowed.
   - Upload disabled when only view is allowed.
   - Library hidden when view is not allowed.
@@ -423,6 +427,8 @@ npm run typecheck --workspace @datamix/web
 npm run build --workspace @datamix/web
 npm run smoke
 ```
+
+- 2026-06-10: Completed Slice 6. Added shared media asset state, loading, upload, refresh, selection, search, and clipboard helpers to `AdminWorkspaceProvider`; replaced `/admin/media` placeholder with the routed Media Library screen using existing media APIs and URL formatting helpers; preserved upload success/error handling, asset browsing/filtering, selected asset detail, original/transform URL preview, clipboard fallback messages, and media permission behavior. `/admin` remains on the existing legacy dashboard, Content image fields still only navigate to `/admin/media`, and Slice 7+ behavior was not implemented. The plain typecheck command hit the known local Wrangler `.env` type drift, so verification used `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web`, `npm run build --workspace @datamix/web`, and `git diff --check`.
 
 ---
 
@@ -448,7 +454,7 @@ npm run smoke
 
 **Steps:**
 
-- [ ] Add team state and loaders to `AdminWorkspaceProvider`:
+- [x] Add team state and loaders to `AdminWorkspaceProvider`:
   - `users`
   - `usersLoadError`
   - `usersMessage`
@@ -464,7 +470,7 @@ npm run smoke
   - `loadUserList`
   - `sendInvite`
   - `updateUserRole`
-- [ ] Add role state and loaders:
+- [x] Add role state and loaders:
   - `availableRoles`
   - `rolesLoadError`
   - `rolesMessage`
@@ -476,7 +482,7 @@ npm run smoke
   - `roleDraft`
   - `loadAvailableRoles`
   - `saveRole`
-- [ ] Add API key state and loaders:
+- [x] Add API key state and loaders:
   - `apiKeys`
   - `apiKeyDraft`
   - `apiKeyDrafts`
@@ -494,7 +500,7 @@ npm run smoke
   - `updateApiKey`
   - `revokeApiKey`
   - `copyApiKeySecret`
-- [ ] Add a current-user profile update API:
+- [x] Add a current-user profile update API:
   - Add `updateUserProfileRow(env, { userId, name, image, updatedAt })` in `apps/web/server/db/users.ts`.
   - Add a profile update type and `updateDatamixCurrentUserProfile(env, userId, input)` in `apps/web/server/users.ts`.
   - Add `parseCurrentUserProfileRequest` in `apps/web/server/routes/validation.ts`.
@@ -503,20 +509,20 @@ npm run smoke
   - Create `apps/web/lib/account.ts` with `updateAccountProfile({ name, image })`.
   - Require only an authenticated session for this API; do not require `users.update`, because users must be able to edit their own profile without team-admin permissions.
   - Keep email display read-only in this slice. Email changes need a verified email-change flow and should not be bundled into the first profile API.
-- [ ] Implement `/admin/team`:
+- [x] Implement `/admin/team`:
   - Current users list.
   - User role assignment.
   - Invite form.
   - Available role previews.
   - Permission states for view/invite/update restrictions.
-- [ ] Implement `/admin/settings`:
+- [x] Implement `/admin/settings`:
   - Session details.
   - Optional OAuth provider status.
   - Public API runtime posture.
   - API key create/update/revoke/copy secret flows.
   - Role list and role editor.
   - Permission states for settings restrictions.
-- [ ] Implement `/admin/account`:
+- [x] Implement `/admin/account`:
   - Profile preview from current session user.
   - Sign out action using the existing `authClient.signOut`.
   - Editable name and avatar image URL fields matching the handoff layout.
@@ -541,6 +547,8 @@ npm run typecheck --workspace @datamix/web
 npm run build --workspace @datamix/web
 npm run smoke
 ```
+
+- 2026-06-10: Completed Slice 7. Added authenticated current-user profile update support at `/api/admin/account`, including DB/domain/validation/handler/client helper coverage and smoke assertions for unauthenticated rejection plus profile update/session refresh. Extended `AdminWorkspaceProvider` with routed team, role, API key, and account state/actions; implemented `/admin/team`, `/admin/settings`, and `/admin/account` as guarded routed screens preserving invite, user-role update, role editor, API key create/update/revoke/copy, sign-out, and profile-edit behavior. `/admin` remains on the existing legacy dashboard and Slice 8 behavior was not implemented. Verification used `npm run smoke`, `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web` during development, plus the final requested commands below.
 
 ---
 

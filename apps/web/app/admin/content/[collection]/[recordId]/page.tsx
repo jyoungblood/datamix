@@ -1,5 +1,4 @@
-import { AdminRoutePlaceholder } from "../../../_screens/admin-route-placeholder";
-import { adminRoutes } from "../../../_workspace/admin-routes";
+import { ContentEditorRoute } from "../../../_screens/content-editor";
 
 type AdminRecordDetailPageProps = {
   params: {
@@ -12,8 +11,10 @@ export default function AdminRecordDetailPage({
   params,
 }: AdminRecordDetailPageProps) {
   return (
-    <AdminRoutePlaceholder
-      route={adminRoutes.content.record(params.collection, params.recordId)}
+    <ContentEditorRoute
+      collectionName={params.collection}
+      mode="edit"
+      recordId={params.recordId}
     />
   );
 }

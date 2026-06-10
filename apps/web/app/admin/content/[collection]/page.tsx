@@ -1,5 +1,4 @@
-import { AdminRoutePlaceholder } from "../../_screens/admin-route-placeholder";
-import { adminRoutes } from "../../_workspace/admin-routes";
+import { ContentCollectionRoute } from "../../_screens/content-collection";
 
 type AdminCollectionPageProps = {
   params: {
@@ -8,9 +7,5 @@ type AdminCollectionPageProps = {
 };
 
 export default function AdminCollectionPage({ params }: AdminCollectionPageProps) {
-  return (
-    <AdminRoutePlaceholder
-      route={adminRoutes.content.collection(params.collection)}
-    />
-  );
+  return <ContentCollectionRoute collectionName={params.collection} />;
 }

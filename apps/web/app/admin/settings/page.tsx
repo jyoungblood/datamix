@@ -1,6 +1,5 @@
-import { AdminRoutePlaceholder } from "../_screens/admin-route-placeholder";
-import { adminRoutes } from "../_workspace/admin-routes";
+import { SettingsApiKeysRoute } from "../_screens/settings-api-keys";
 
 export default function AdminSettingsPage() {
-  return <AdminRoutePlaceholder route={adminRoutes.settings()} />;
+  return <SettingsApiKeysRoute />;
 }

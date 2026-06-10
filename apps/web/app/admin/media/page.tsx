@@ -1,6 +1,5 @@
-import { AdminRoutePlaceholder } from "../_screens/admin-route-placeholder";
-import { adminRoutes } from "../_workspace/admin-routes";
+import { MediaLibraryRoute } from "../_screens/media-library";
 
 export default function AdminMediaPage() {
-  return <AdminRoutePlaceholder route={adminRoutes.media()} />;
+  return <MediaLibraryRoute />;
 }

@@ -7,6 +7,7 @@ export type DatamixUserSummary = {
   email: string;
   emailVerified: boolean;
   id: string;
+  image: string | null;
   name: string;
   roleId: string | null;
   updatedAt: string;

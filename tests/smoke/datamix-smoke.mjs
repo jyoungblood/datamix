@@ -344,6 +344,17 @@ async function main() {
     });
     assert.equal(sessionAfterSignOut.response.status, 401);
 
+    const unauthorizedProfileUpdate = await requestJson(`${adminApiOrigin}/account`, {
+      body: {
+        image: "https://example.com/smoke-avatar.png",
+        name: "Smoke Admin Updated",
+      },
+      cookieJar,
+      method: "PUT",
+      origin: appOrigin,
+    });
+    assert.equal(unauthorizedProfileUpdate.response.status, 401);
+
     const signInResponse = await requestJson(`${authBaseUrl}/sign-in/email`, {
       body: {
         email: adminEmail,
@@ -362,6 +373,35 @@ async function main() {
     });
     assertOk(sessionAfterSignIn.response, "Expected the admin session to restore after login.");
     assert.equal(sessionAfterSignIn.json?.session?.user?.email, adminEmail);
+
+    const profileUpdateResponse = await requestJson(`${adminApiOrigin}/account`, {
+      body: {
+        image: "https://example.com/smoke-avatar.png",
+        name: "Smoke Admin Updated",
+      },
+      cookieJar,
+      method: "PUT",
+      origin: appOrigin,
+    });
+    assertOk(profileUpdateResponse.response, "Expected profile update to succeed.");
+    assert.equal(profileUpdateResponse.json?.user?.id, sessionAfterSignIn.json?.session?.user?.id);
+    assert.equal(profileUpdateResponse.json?.user?.email, adminEmail);
+    assert.equal(profileUpdateResponse.json?.user?.name, "Smoke Admin Updated");
+    assert.equal(profileUpdateResponse.json?.user?.image, "https://example.com/smoke-avatar.png");
+
+    const sessionAfterProfileUpdate = await requestJson(`${adminApiOrigin}/session`, {
+      cookieJar,
+      origin: appOrigin,
+    });
+    assertOk(
+      sessionAfterProfileUpdate.response,
+      "Expected session to remain active after profile update.",
+    );
+    assert.equal(sessionAfterProfileUpdate.json?.session?.user?.name, "Smoke Admin Updated");
+    assert.equal(
+      sessionAfterProfileUpdate.json?.session?.user?.image,
+      "https://example.com/smoke-avatar.png",
+    );
 
     console.log("Saving a smoke collection and record...");
 

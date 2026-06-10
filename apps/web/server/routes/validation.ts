@@ -20,6 +20,11 @@ export type ApiKeyRequest = {
   label: string;
 };
 
+export type CurrentUserProfileRequest = {
+  image: string | null;
+  name: string;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -133,5 +138,36 @@ export function parseApiKeyRequest(input: unknown): ApiKeyRequest | null {
   return {
     accessLevel,
     label,
+  };
+}
+
+export function parseCurrentUserProfileRequest(
+  input: unknown,
+): CurrentUserProfileRequest | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+
+  const name = readOptionalTrimmedString(input, "name", { maxLength: 120 });
+  const rawImage = input.image;
+
+  if (!name) {
+    return null;
+  }
+
+  if (rawImage === null || rawImage === undefined) {
+    return {
+      image: null,
+      name,
+    };
+  }
+
+  if (typeof rawImage !== "string" || rawImage.length > 2048) {
+    return null;
+  }
+
+  return {
+    image: rawImage.trim() || null,
+    name,
   };
 }

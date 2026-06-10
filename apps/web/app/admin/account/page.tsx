@@ -1,6 +1,5 @@
-import { AdminRoutePlaceholder } from "../_screens/admin-route-placeholder";
-import { adminRoutes } from "../_workspace/admin-routes";
+import { UserAccountRoute } from "../_screens/user-account";
 
 export default function AdminAccountPage() {
-  return <AdminRoutePlaceholder route={adminRoutes.account()} />;
+  return <UserAccountRoute />;
 }

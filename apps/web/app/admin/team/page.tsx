@@ -1,6 +1,5 @@
-import { AdminRoutePlaceholder } from "../_screens/admin-route-placeholder";
-import { adminRoutes } from "../_workspace/admin-routes";
+import { TeamAndRolesRoute } from "../_screens/team-and-roles";
 
 export default function AdminTeamPage() {
-  return <AdminRoutePlaceholder route={adminRoutes.team()} />;
+  return <TeamAndRolesRoute />;
 }

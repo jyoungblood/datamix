@@ -9,6 +9,7 @@ export type DatamixUserRow = {
   email: string;
   emailVerified: boolean;
   id: string;
+  image: string | null;
   name: string;
   role: string | null;
   updatedAt: Date;
@@ -21,6 +22,7 @@ export async function listUserRows(env: DatamixBindings) {
       email: user.email,
       emailVerified: user.emailVerified,
       id: user.id,
+      image: user.image,
       name: user.name,
       role: user.role,
       updatedAt: user.updatedAt,
@@ -36,6 +38,7 @@ export async function getUserRow(env: DatamixBindings, userId: string) {
       email: user.email,
       emailVerified: user.emailVerified,
       id: user.id,
+      image: user.image,
       name: user.name,
       role: user.role,
       updatedAt: user.updatedAt,
@@ -59,6 +62,25 @@ export async function updateUserRoleRow(
     .update(user)
     .set({
       role: input.roleId,
+      updatedAt: input.updatedAt,
+    })
+    .where(eq(user.id, input.userId));
+}
+
+export async function updateUserProfileRow(
+  env: DatamixBindings,
+  input: {
+    image: string | null;
+    name: string;
+    updatedAt: Date;
+    userId: string;
+  },
+) {
+  await createDb(env)
+    .update(user)
+    .set({
+      image: input.image,
+      name: input.name,
       updatedAt: input.updatedAt,
     })
     .where(eq(user.id, input.userId));
