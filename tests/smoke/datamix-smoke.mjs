@@ -422,8 +422,8 @@ async function main() {
     assertOk(adminHomePage.response, "Expected the routed admin home page to load.");
     assert.match(
       adminHomePage.text,
-      /data-admin-homepage="true"/,
-      "Expected /admin to render the redesigned admin homepage placeholder.",
+      /data-admin-homepage="overview-v1"/,
+      "Expected /admin to render the routed admin overview.",
     );
     assert.doesNotMatch(
       adminHomePage.text,

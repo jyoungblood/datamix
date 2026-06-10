@@ -21,7 +21,7 @@ The authenticated admin workspace is routed through the shared
 
 | Route | Screen |
 | --- | --- |
-| `/admin` | Placeholder admin home and route map |
+| `/admin` | Workspace overview and primary route map |
 | `/admin/schema` | Schema overview |
 | `/admin/schema/new` | New schema builder |
 | `/admin/schema/[schemaId]` | Existing schema builder |

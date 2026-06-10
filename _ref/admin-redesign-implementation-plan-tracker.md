@@ -67,6 +67,7 @@
 - [x] Slice 6: Media library route.
 - [x] Slice 7: Team, roles, settings, API keys, account route, and profile update API.
 - [x] Slice 8: Command palette, `/admin` homepage placeholder cutover, cleanup, smoke verification, and documentation update.
+- [x] Slice 9: Admin Home v1 routed workspace overview.
 
 ---
 
@@ -610,6 +611,47 @@ rg -n "_screens/dashboard|collections-builder|record-editor|inviteSectionId|over
 The final `rg` command should return no references to deleted dashboard code or old hash-section ids.
 
 - 2026-06-10: Completed Slice 8. Replaced `/admin` with `AdminHomeRoute`, deleted the legacy all-in-one dashboard, removed stale dashboard selectors/references, mounted the routed command palette trigger in the shared workspace frame, routed command palette navigation/refresh/actions through admin routes, expanded smoke coverage for the new `/admin` homepage marker plus routed admin pages, and updated admin/docs references. Follow-up cleanup moved the shared route frame from the old placeholder screen module into `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx` and removed the unused placeholder route wrapper.
+
+---
+
+## Slice 9: Admin Home v1 Routed Workspace Overview
+
+**Goal:** Replace the Slice 8 placeholder `/admin` route map with a useful routed workspace overview using existing provider state and existing provider load/refresh functions only.
+
+**Files:**
+
+- Modify: `apps/web/app/admin/page.tsx`
+- Modify: `apps/web/app/admin/_screens/admin-home.tsx`
+- Modify: `apps/web/README.md`
+- Modify: `tests/smoke/datamix-smoke.mjs`
+
+**Steps:**
+
+- [x] Update smoke coverage so `/admin` must render the v1 overview marker instead of the placeholder marker.
+- [x] Change `/admin` to advertise `data-admin-homepage="overview-v1"`.
+- [x] Add workspace overview metrics for schemas, content-ready schemas, media assets, and active API keys.
+- [x] Add primary workspace rows that reflect route availability and live provider counts/status.
+- [x] Add operational status rows for session, schema, content, media, team, and settings data.
+- [x] Add recent schema shortcuts and access posture cards without introducing new server APIs or route behavior.
+- [x] Load overview datasets with the same existing provider functions used by the routed screens, gated by existing permissions.
+
+**Acceptance Criteria:**
+
+- `/admin` is a v1 workspace overview, not placeholder copy.
+- No server API, schema, auth, permission, profile, media, role, team, settings, or route behavior changes are introduced.
+- Existing routed admin screens continue to own their detailed behavior.
+- Existing smoke coverage passes.
+
+**Verification:**
+
+```bash
+npm run smoke
+CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web
+npm run build --workspace @datamix/web
+git diff --check
+```
+
+- 2026-06-10: Completed Slice 9. Replaced the `/admin` placeholder route map with `AdminHomeRoute` overview v1, including permission-gated overview loads, metrics, route status rows, recent schemas, access posture, refresh overview action, and smoke coverage for the new page marker.
 
 ---
 
