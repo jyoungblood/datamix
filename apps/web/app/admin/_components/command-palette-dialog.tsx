@@ -71,16 +71,6 @@ export function CommandPaletteDialog({
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-
   return (
     <div
       aria-modal="true"
@@ -130,7 +120,6 @@ export function CommandPaletteDialog({
                 onClose();
               }
             }}
-            placeholder="Try media, settings, refresh, or a schema name"
             ref={inputRef}
             type="text"
             value={query}

@@ -6,6 +6,15 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const adminRoot = path.join(repoRoot, "apps/web/app/admin");
 const workspaceGroup = path.join(adminRoot, "(workspace)");
 const workspaceLayout = path.join(workspaceGroup, "layout.tsx");
+const adminFrame = path.join(adminRoot, "_components/admin-frame.tsx");
+const commandPaletteDialog = path.join(
+  adminRoot,
+  "_components/command-palette-dialog.tsx",
+);
+const adminCommandPalette = path.join(
+  adminRoot,
+  "_workspace/admin-command-palette.tsx",
+);
 const workspaceProvider = path.join(
   adminRoot,
   "_workspace/admin-workspace-provider.tsx",
@@ -89,6 +98,9 @@ for (const screenFile of screenFiles) {
 }
 
 const providerSource = readFileSync(workspaceProvider, "utf8");
+const adminFrameSource = readFileSync(adminFrame, "utf8");
+const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
+const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
 
 for (const transientTitle of ["Checking your session", "Loading access profile"]) {
   assert(
@@ -96,3 +108,29 @@ for (const transientTitle of ["Checking your session", "Loading access profile"]
     `Transient auth gate title should not be shown during admin navigation: ${transientTitle}.`,
   );
 }
+
+assert(
+  adminFrameSource.includes("sticky top-0") &&
+    adminFrameSource.includes("h-screen") &&
+    adminFrameSource.includes("overflow-y-auto"),
+  "The admin sidebar should stay pinned to the viewport so the account link remains visible on every admin screen.",
+);
+
+assert(
+  adminCommandPaletteSource.includes("<input") &&
+    adminCommandPaletteSource.includes("readOnly") &&
+    adminCommandPaletteSource.includes("⌘ + K") &&
+    !adminCommandPaletteSource.includes("Command palette</Button>"),
+  "The command palette trigger should be an input-like search field with a keyboard hint, not a text button.",
+);
+
+assert(
+  !adminCommandPaletteSource.includes("placeholder=") &&
+    !commandPaletteDialogSource.includes("placeholder="),
+  "The command palette trigger and dialog should not render placeholder text.",
+);
+
+assert(
+  !commandPaletteDialogSource.includes("document.body.style.overflow"),
+  "Opening the command palette should not remove page scrollbars or shift the admin layout.",
+);

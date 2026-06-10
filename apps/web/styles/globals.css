@@ -479,6 +479,63 @@ textarea {
   color: var(--muted-foreground);
 }
 
+.command-palette-trigger {
+  width: min(22rem, 100%);
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--input);
+  border-radius: calc(var(--radius) + 0.15rem);
+  background: var(--background);
+  color: var(--muted-foreground);
+  cursor: text;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    outline-color 150ms ease;
+}
+
+.command-palette-trigger:focus-within {
+  border-color: var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.command-palette-trigger-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+
+.command-palette-trigger-input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--foreground);
+  cursor: text;
+}
+
+.command-palette-trigger-shortcut {
+  min-height: 1.45rem;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 0.15rem);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .command-palette-overlay {
   position: fixed;
   inset: 0;

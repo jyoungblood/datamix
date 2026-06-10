@@ -12,8 +12,6 @@ import { summarizeRecord } from "../_lib/record-drafts";
 import { adminRoutes, type AdminWorkspaceRoute } from "./admin-routes";
 import { useAdminWorkspace } from "./admin-workspace-hooks";
 
-import { Button } from "@/components/ui/button";
-
 type AdminWorkspaceCommandPaletteProps = {
   route: AdminWorkspaceRoute;
 };
@@ -373,16 +371,21 @@ export function AdminWorkspaceCommandPalette({
 
   return (
     <>
-      <Button
-        aria-label="Open command palette"
-        onClick={openPalette}
-        size="sm"
-        type="button"
-        variant="outline"
-      >
-        <Search />
-        Command palette
-      </Button>
+      <label className="command-palette-trigger">
+        <Search aria-hidden="true" className="command-palette-trigger-icon" />
+        <input
+          aria-label="Open command palette"
+          className="command-palette-trigger-input"
+          onClick={openPalette}
+          onFocus={openPalette}
+          readOnly
+          type="text"
+          value=""
+        />
+        <span aria-hidden="true" className="command-palette-trigger-shortcut">
+          ⌘ + K
+        </span>
+      </label>
       {isOpen ? (
         <CommandPaletteDialog
           activeIndex={activeIndex}
