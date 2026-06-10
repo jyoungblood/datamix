@@ -4,7 +4,7 @@
 
 **Goal:** Implement the Pencil/shadcn admin redesign as focused admin screens with a persistent Datamix sidebar, preserving the existing working collection, record, media, team, role, API key, auth, and permission behavior.
 
-**Architecture:** Keep the existing collection, content, media, team, role, and API key server APIs unchanged. Extract the current single-file dashboard into shared admin workspace state, reusable admin UI primitives, and route-level screens under `/admin`, `/admin/schema`, `/admin/content`, `/admin/media`, `/admin/team`, `/admin/settings`, and `/admin/account`. Keep the current `/admin` dashboard working until route parity is complete, then replace it with a lightweight placeholder homepage dashboard that can be built out after the routed app is working.
+**Architecture:** Keep the existing collection, content, media, team, role, and API key server APIs unchanged. The former single-file dashboard has been replaced by shared admin workspace state, reusable admin UI primitives, and route-level screens under `/admin`, `/admin/schema`, `/admin/content`, `/admin/media`, `/admin/team`, `/admin/settings`, and `/admin/account`. `/admin` now renders the Admin Home v1 workspace overview, while the detailed routed screens own schema, content, media, team, settings, and account behavior.
 
 **Tech Stack:** React 19, Vinext app router, Tailwind CSS v4, local shadcn/ui primitives, `lucide-react`, Better Auth, Datamix admin client libraries.
 
@@ -22,21 +22,23 @@
   - `_ref/pencil-base-shadcn-handoff/assets/K1eiv.png` - User settings
   - `_ref/pencil-base-shadcn-handoff/assets/aCIZb.png` - Supporting screens overview
 
-## Current Repo Facts
+## Final Repo Facts
 
 - Current admin entry: `apps/web/app/admin/page.tsx`
-- Current dashboard implementation: `apps/web/app/admin/_screens/dashboard.tsx`
-- Current dashboard size: 5,902 lines
-- Current dashboard shape: one client component containing auth gates, loading/error shells, collection builder, record editor, media library, team access, settings, roles, API keys, command palette, and all related helpers.
+- Current admin home implementation: `apps/web/app/admin/_screens/admin-home.tsx`
+- Shared routed workspace frame: `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx`
+- Shared routed workspace state: `apps/web/app/admin/_workspace/admin-workspace-provider.tsx`
+- Legacy dashboard implementation: deleted after routed parity.
+- Current admin shape: focused routed screens with persistent sidebar, shared auth/access gate, shared command palette, and provider-backed schema, content, media, team, settings, account, and home overview state.
 - Existing shadcn/ui files: `alert`, `badge`, `button`, `card`, `input`, `label`, `separator`, `textarea`.
 - Missing handoff shadcn/ui file: `avatar`.
 - Existing tests: API-level smoke test at `tests/smoke/datamix-smoke.mjs`; no local React component test harness exists.
 - Existing global styles already use Tailwind v4 and Inter; design tokens need to be merged carefully into `apps/web/styles/globals.css`.
 - User instruction for this repo: do not use the Browser skill unless explicitly asked for web lookup. Use local files, commands, and reasoning for verification.
 
-## Route Plan
+## Final Route Plan
 
-- `/admin` - keep current dashboard until Slice 8, then replace it with a placeholder homepage dashboard route.
+- `/admin` - Admin Home v1 workspace overview and primary route map.
 - `/admin/schema` - Schema overview.
 - `/admin/schema/new` - Schema builder in create mode.
 - `/admin/schema/[schemaId]` - Schema builder for an existing schema.
@@ -66,7 +68,7 @@
 - [x] Slice 5: Content routes and generated content editor.
 - [x] Slice 6: Media library route.
 - [x] Slice 7: Team, roles, settings, API keys, account route, and profile update API.
-- [x] Slice 8: Command palette, `/admin` homepage placeholder cutover, cleanup, smoke verification, and documentation update.
+- [x] Slice 8: Command palette, `/admin` homepage cutover, cleanup, smoke verification, and documentation update.
 - [x] Slice 9: Admin Home v1 routed workspace overview.
 
 ---
@@ -555,7 +557,7 @@ npm run smoke
 
 ## Slice 8: Command Palette, `/admin` Homepage Placeholder Cutover, Cleanup, and Final Verification
 
-**Goal:** Finish the migration from a one-page dashboard to routed screens, keep `/admin` as a placeholder homepage dashboard route, then remove obsolete single-page dashboard code.
+**Goal:** Finish the migration from a one-page dashboard to routed screens, cut `/admin` over to the new homepage route, then remove obsolete single-page dashboard code.
 
 **Files:**
 
@@ -585,7 +587,7 @@ npm run smoke
   - Sign out.
   - Check API health.
 - [x] Add command palette trigger to `AdminWorkspaceFrame`.
-- [x] Create `AdminHomeScreen` as a placeholder homepage dashboard with the persistent sidebar, a page header, route cards for Schema, Content, Media, Team, Settings, and Account, and clear copy that this dashboard will be expanded after the routed app is working.
+- [x] Create `AdminHomeScreen` as the initial homepage dashboard with the persistent sidebar, a page header, route cards for Schema, Content, Media, Team, Settings, and Account.
 - [x] Change `apps/web/app/admin/page.tsx` to render `AdminHomeScreen` instead of the legacy one-page dashboard.
 - [x] Remove `dashboard.tsx` only after every route from this plan has working parity.
 - [x] Remove old dashboard-only CSS selectors from `apps/web/styles/globals.css` when no screen imports them.
@@ -593,7 +595,7 @@ npm run smoke
 
 **Acceptance Criteria:**
 
-- `/admin` lands on the redesigned placeholder homepage dashboard, not the legacy one-page dashboard.
+- `/admin` lands on the redesigned routed homepage dashboard, not the legacy one-page dashboard.
 - All sidebar routes work.
 - Command palette opens with Cmd+K and routes to separate screens.
 - Existing smoke test still passes.
@@ -610,7 +612,7 @@ rg -n "_screens/dashboard|collections-builder|record-editor|inviteSectionId|over
 
 The final `rg` command should return no references to deleted dashboard code or old hash-section ids.
 
-- 2026-06-10: Completed Slice 8. Replaced `/admin` with `AdminHomeRoute`, deleted the legacy all-in-one dashboard, removed stale dashboard selectors/references, mounted the routed command palette trigger in the shared workspace frame, routed command palette navigation/refresh/actions through admin routes, expanded smoke coverage for the new `/admin` homepage marker plus routed admin pages, and updated admin/docs references. Follow-up cleanup moved the shared route frame from the old placeholder screen module into `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx` and removed the unused placeholder route wrapper.
+- 2026-06-10: Completed Slice 8. Replaced `/admin` with `AdminHomeRoute`, deleted the legacy all-in-one dashboard, removed stale dashboard selectors/references, mounted the routed command palette trigger in the shared workspace frame, routed command palette navigation/refresh/actions through admin routes, expanded smoke coverage for the new `/admin` homepage marker plus routed admin pages, and updated admin/docs references. Follow-up cleanup moved the shared route frame into `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx` and removed the unused route wrapper.
 
 ---
 
@@ -658,7 +660,7 @@ git diff --check
 ## Cross-Slice Guardrails
 
 - Do not rename server APIs or storage concepts in the implementation. Keep UI naming changes at the presentation layer.
-- Do not remove current `/admin` dashboard until the new route screens have parity.
+- Keep server APIs and route behavior stable while changing admin presentation.
 - Do not use the Browser skill under the current repo instruction. Verification for each slice is local command output plus code review.
 - Prefer local shadcn-compatible components over network installs when a missing primitive is small, as with `Avatar`.
 - Run `npm run typecheck --workspace @datamix/web` before considering a slice complete.
@@ -668,4 +670,4 @@ git diff --check
 ## Resolved Implementation Decisions
 
 - Slice 7 adds a current-user profile update API for name and avatar image URL.
-- `/admin` remains a homepage dashboard route. Slice 8 replaces the legacy one-page dashboard with a placeholder homepage dashboard instead of redirecting to `/admin/schema`.
+- `/admin` remains a homepage dashboard route. Slice 8 replaced the legacy one-page dashboard with the routed homepage, and Slice 9 expanded it into Admin Home v1 instead of redirecting to `/admin/schema`.
