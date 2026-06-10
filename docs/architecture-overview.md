@@ -85,7 +85,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 ## Code Shape Guidance
 
-- Routed admin screens share `apps/web/app/admin/_workspace/admin-workspace-provider.tsx` and `apps/web/app/admin/_screens/admin-route-placeholder.tsx`; keep shared session, permission, refresh, and navigation behavior there instead of duplicating it in individual screens.
+- Routed admin screens share `apps/web/app/admin/_workspace/admin-workspace-provider.tsx` and `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx`; keep shared session, permission, refresh, and navigation behavior there instead of duplicating it in individual screens.
 - `apps/web/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 

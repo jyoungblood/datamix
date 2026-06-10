@@ -15,7 +15,7 @@ import {
 } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
-import { AdminWorkspaceRouteFrame } from "./admin-route-placeholder";
+import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,

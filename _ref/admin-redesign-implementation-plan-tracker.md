@@ -66,7 +66,7 @@
 - [x] Slice 5: Content routes and generated content editor.
 - [x] Slice 6: Media library route.
 - [x] Slice 7: Team, roles, settings, API keys, account route, and profile update API.
-- [ ] Slice 8: Command palette, `/admin` homepage placeholder cutover, cleanup, smoke verification, and documentation update.
+- [x] Slice 8: Command palette, `/admin` homepage placeholder cutover, cleanup, smoke verification, and documentation update.
 
 ---
 
@@ -201,7 +201,7 @@ npm run build --workspace @datamix/web
 - Create: `apps/web/app/admin/_workspace/admin-workspace-provider.tsx`
 - Create: `apps/web/app/admin/_workspace/admin-workspace-hooks.ts`
 - Create: `apps/web/app/admin/_workspace/admin-routes.ts`
-- Create: `apps/web/app/admin/_screens/admin-route-placeholder.tsx`
+- Create: `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx`
 - Create: `apps/web/app/admin/schema/page.tsx`
 - Create: `apps/web/app/admin/schema/new/page.tsx`
 - Create: `apps/web/app/admin/schema/[schemaId]/page.tsx`
@@ -245,7 +245,7 @@ npm run build --workspace @datamix/web
 
 **Completion Notes:**
 
-- 2026-06-10: Completed Slice 3. Added route builders, shared auth/access provider, provider hooks, guarded placeholder shell, and direct placeholder routes for the full Route Plan while leaving `/admin` on the legacy dashboard. The exact typecheck command hit local Wrangler `.env` type drift; `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web` and `npm run build --workspace @datamix/web` passed.
+- 2026-06-10: Completed Slice 3. Added route builders, shared auth/access provider, provider hooks, guarded route shell, and direct placeholder routes for the full Route Plan while leaving `/admin` on the legacy dashboard. The exact typecheck command hit local Wrangler `.env` type drift; `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web` and `npm run build --workspace @datamix/web` passed.
 
 ---
 
@@ -560,6 +560,7 @@ npm run smoke
 
 - Modify: `apps/web/app/admin/page.tsx`
 - Modify: `apps/web/app/admin/_workspace/admin-workspace-provider.tsx`
+- Create: `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx`
 - Modify: `apps/web/app/admin/_components/command-palette-dialog.tsx`
 - Modify: `apps/web/app/admin/_components/admin-frame.tsx`
 - Create: `apps/web/app/admin/_screens/admin-home.tsx`
@@ -569,7 +570,7 @@ npm run smoke
 
 **Steps:**
 
-- [ ] Rebuild command palette items around route navigation:
+- [x] Rebuild command palette items around route navigation:
   - Open homepage dashboard.
   - Open schema overview.
   - Create new schema.
@@ -582,12 +583,12 @@ npm run smoke
   - Refresh schemas, content, media, users, roles, and API keys when the relevant screen state is loaded.
   - Sign out.
   - Check API health.
-- [ ] Add command palette trigger to `AdminWorkspaceFrame`.
-- [ ] Create `AdminHomeScreen` as a placeholder homepage dashboard with the persistent sidebar, a page header, route cards for Schema, Content, Media, Team, Settings, and Account, and clear copy that this dashboard will be expanded after the routed app is working.
-- [ ] Change `apps/web/app/admin/page.tsx` to render `AdminHomeScreen` instead of the legacy one-page dashboard.
-- [ ] Remove `dashboard.tsx` only after every route from this plan has working parity.
-- [ ] Remove old dashboard-only CSS selectors from `apps/web/styles/globals.css` when no screen imports them.
-- [ ] Update `apps/web/README.md` with the new admin route map and local verification commands.
+- [x] Add command palette trigger to `AdminWorkspaceFrame`.
+- [x] Create `AdminHomeScreen` as a placeholder homepage dashboard with the persistent sidebar, a page header, route cards for Schema, Content, Media, Team, Settings, and Account, and clear copy that this dashboard will be expanded after the routed app is working.
+- [x] Change `apps/web/app/admin/page.tsx` to render `AdminHomeScreen` instead of the legacy one-page dashboard.
+- [x] Remove `dashboard.tsx` only after every route from this plan has working parity.
+- [x] Remove old dashboard-only CSS selectors from `apps/web/styles/globals.css` when no screen imports them.
+- [x] Update `apps/web/README.md` with the new admin route map and local verification commands.
 
 **Acceptance Criteria:**
 
@@ -607,6 +608,8 @@ rg -n "_screens/dashboard|collections-builder|record-editor|inviteSectionId|over
 ```
 
 The final `rg` command should return no references to deleted dashboard code or old hash-section ids.
+
+- 2026-06-10: Completed Slice 8. Replaced `/admin` with `AdminHomeRoute`, deleted the legacy all-in-one dashboard, removed stale dashboard selectors/references, mounted the routed command palette trigger in the shared workspace frame, routed command palette navigation/refresh/actions through admin routes, expanded smoke coverage for the new `/admin` homepage marker plus routed admin pages, and updated admin/docs references. Follow-up cleanup moved the shared route frame from the old placeholder screen module into `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx` and removed the unused placeholder route wrapper.
 
 ---
 

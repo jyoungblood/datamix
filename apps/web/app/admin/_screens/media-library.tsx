@@ -16,7 +16,7 @@ import {
   formatByteSize,
   formatRecordTimestamp,
 } from "../_lib/media-formatting";
-import { AdminWorkspaceRouteFrame } from "./admin-route-placeholder";
+import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,

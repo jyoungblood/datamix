@@ -56,9 +56,9 @@ export function useAdminWorkspaceRouteAccess(
 
   if (isAllowed) {
     return {
-      body: "This route is scaffolded and ready for the next implementation slice.",
+      body: "This route is available for the current role.",
       isAllowed: true,
-      title: "Route scaffold is ready",
+      title: "Route is available",
     };
   }
 

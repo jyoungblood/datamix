@@ -9,7 +9,7 @@ import {
   AdminSectionCard,
 } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
-import { AdminWorkspaceRouteFrame } from "./admin-route-placeholder";
+import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import { useAdminWorkspace } from "../_workspace/admin-workspace-hooks";
 import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";

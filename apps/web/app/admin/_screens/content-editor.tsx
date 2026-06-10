@@ -22,7 +22,7 @@ import {
   summarizeRecord,
 } from "../_lib/record-drafts";
 import { formatIssuePath } from "../_lib/schema-drafts";
-import { AdminWorkspaceRouteFrame } from "./admin-route-placeholder";
+import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
   adminRoutes,
   type AdminWorkspaceRoute,
