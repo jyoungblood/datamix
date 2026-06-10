@@ -5,7 +5,7 @@ import {
   datamixRolePresets,
   type DatamixApiKeySummary,
 } from "@datamix/core";
-import { Copy, KeyRound, Plus, RefreshCcw, Save, Shield, Trash2 } from "lucide-react";
+import { Copy, KeyRound, Plus, Save, Shield, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -14,6 +14,11 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import {
+  AdminDetailListSkeleton,
+  AdminMetricSkeleton,
+  AdminMiniListSkeleton,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import {
   createApiKeyDraftFromApiKey,
@@ -160,7 +165,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
     loadAvailableRoles,
     permissions,
     publicApiRuntime,
-    refreshApiKeyData,
     refreshAvailableRoles,
     resetRoleDraft,
     role,
@@ -180,14 +184,10 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
   const selectedRole = isCreatingRole
     ? null
     : availableRoles.find((availableRole) => availableRole.id === selectedRoleId) ?? null;
-  const canRefreshApiKeys =
-    permissions.canAccessSettingsWorkspace &&
-    !isLoadingApiKeys &&
-    !isCreatingApiKey &&
-    !workspace.savingApiKeyId &&
-    !workspace.revokingApiKeyId;
-  const canRefreshRoles =
-    permissions.canAccessSettingsWorkspace && !isLoadingRoles && !isSavingRole;
+  const isInitialApiKeyLoad =
+    permissions.canAccessSettingsWorkspace && !hasLoadedApiKeys && !apiKeysLoadError;
+  const isInitialRoleLoad =
+    permissions.canAccessSettingsWorkspace && !hasLoadedRoles && !rolesLoadError;
 
   React.useEffect(() => {
     if (
@@ -242,23 +242,31 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
           title="Settings"
         />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description="Role assigned to this session."
-            label="Current role"
-            value={role.label}
-          />
-          <AdminMetric
-            description="Managed keys in the database."
-            label="API keys"
-            value={permissions.canAccessSettingsWorkspace ? apiKeys.length : "Restricted"}
-          />
-          <AdminMetric
-            description="Custom role editor permission."
-            label="Role editor"
-            value={permissions.canUpdateSettings ? "Writable" : "Read only"}
-          />
-        </div>
+        {isInitialApiKeyLoad || isInitialRoleLoad ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetric
+              description="Role assigned to this session."
+              label="Current role"
+              value={role.label}
+            />
+            <AdminMetric
+              description="Managed keys in the database."
+              label="API keys"
+              value={permissions.canAccessSettingsWorkspace ? apiKeys.length : "Restricted"}
+            />
+            <AdminMetric
+              description="Custom role editor permission."
+              label="Role editor"
+              value={permissions.canUpdateSettings ? "Writable" : "Read only"}
+            />
+          </div>
+        )}
 
         {!access.isAllowed ? (
           <AdminStateBox
@@ -318,22 +326,12 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
             </div>
 
             <AdminSectionCard
-              action={
-                <Button
-                  disabled={!canRefreshApiKeys}
-                  onClick={() => void refreshApiKeyData()}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  <RefreshCcw />
-                  {isLoadingApiKeys ? "Refreshing" : "Refresh"}
-                </Button>
-              }
               description="Create read-only or write-capable keys. Raw secrets are shown once."
               title="Public API keys"
             >
-              {publicApiRuntime ? (
+              {isInitialApiKeyLoad && !publicApiRuntime ? (
+                <AdminDetailListSkeleton className="mb-4" />
+              ) : publicApiRuntime ? (
                 <AdminDetailList
                   className="mb-4"
                   items={[
@@ -430,8 +428,8 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                 />
               )}
 
-              {isLoadingApiKeys && apiKeys.length === 0 ? (
-                <AdminStateBox body="Loading API keys." compact title="Loading API keys" />
+              {isInitialApiKeyLoad || (isLoadingApiKeys && apiKeys.length === 0) ? (
+                <AdminMiniListSkeleton rows={3} />
               ) : apiKeys.length === 0 ? (
                 <AdminStateBox
                   body="No managed API keys have been created yet."
@@ -449,31 +447,21 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
 
             <AdminSectionCard
               action={
-                <div className="actions actions-compact">
-                  <Button
-                    disabled={!canRefreshRoles}
-                    onClick={() => void refreshAvailableRoles()}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <RefreshCcw />
-                    {isLoadingRoles ? "Refreshing" : "Refresh"}
+                permissions.canUpdateSettings ? (
+                  <Button onClick={() => createRole()} size="sm" type="button">
+                    <Plus />
+                    New custom role
                   </Button>
-                  {permissions.canUpdateSettings ? (
-                    <Button onClick={() => createRole()} size="sm" type="button">
-                      <Plus />
-                      New custom role
-                    </Button>
-                  ) : null}
-                </div>
+                ) : null
               }
               description="Select a role to inspect it, or create a custom role for this instance."
               title="Roles"
             >
               <div className="record-browser">
                 <div className="record-browser-list">
-                  {rolesLoadError && availableRoles.length === 0 ? (
+                  {isInitialRoleLoad && availableRoles.length === 0 ? (
+                    <AdminMiniListSkeleton rows={4} />
+                  ) : rolesLoadError && availableRoles.length === 0 ? (
                     <AdminStateBox
                       actionLabel="Try again"
                       body={rolesLoadError}

@@ -5,7 +5,7 @@ import {
   listDatamixPermissionGrantsForRole,
   type DatamixRoleDefinition,
 } from "@datamix/core";
-import { RefreshCcw, Save, UserPlus } from "lucide-react";
+import { Save, UserPlus } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -13,6 +13,7 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import { AdminMetricSkeleton, AdminMiniListSkeleton } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
@@ -78,9 +79,10 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
     usersLoadError,
     usersMessage,
   } = workspace;
-  const canRefreshUsers =
-    permissions.canViewUsers && !isLoadingUsers && updatingUserRoleId === null;
-  const canRefreshRoles = !isLoadingRoles && !workspace.isSavingRole;
+  const isInitialUserLoad =
+    permissions.canViewUsers && !hasLoadedUsers && !usersLoadError;
+  const isInitialRoleLoad =
+    permissions.canAccessTeamAccess && !hasLoadedRoles && !rolesLoadError;
 
   React.useEffect(() => {
     if (
@@ -116,39 +118,36 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
     <AdminWorkspaceRouteFrame route={route}>
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
-          action={
-            <Button
-              disabled={!canRefreshUsers}
-              onClick={() => void refreshUserList()}
-              type="button"
-              variant="outline"
-            >
-              <RefreshCcw />
-              {isLoadingUsers ? "Refreshing" : "Refresh users"}
-            </Button>
-          }
           description="Invite teammates, review current users, and assign roles without leaving the routed workspace."
           eyebrow="Team"
           title="Team"
         />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description="Users visible to the current role."
-            label="Users"
-            value={permissions.canViewUsers ? users.length : "Restricted"}
-          />
-          <AdminMetric
-            description="Roles available for invites and assignments."
-            label="Roles"
-            value={availableRoles.length}
-          />
-          <AdminMetric
-            description="Server-side invite permission."
-            label="Invites"
-            value={permissions.canInviteUsers ? "Allowed" : "Restricted"}
-          />
-        </div>
+        {isInitialUserLoad || isInitialRoleLoad ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetric
+              description="Users visible to the current role."
+              label="Users"
+              value={permissions.canViewUsers ? users.length : "Restricted"}
+            />
+            <AdminMetric
+              description="Roles available for invites and assignments."
+              label="Roles"
+              value={availableRoles.length}
+            />
+            <AdminMetric
+              description="Server-side invite permission."
+              label="Invites"
+              value={permissions.canInviteUsers ? "Allowed" : "Restricted"}
+            />
+          </div>
+        )}
 
         {!access.isAllowed ? (
           <AdminStateBox
@@ -159,20 +158,6 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
         ) : (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
             <AdminSectionCard
-              action={
-                permissions.canViewUsers ? (
-                  <Button
-                    disabled={!canRefreshUsers}
-                    onClick={() => void refreshUserList()}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <RefreshCcw />
-                    {isLoadingUsers ? "Refreshing" : "Refresh"}
-                  </Button>
-                ) : null
-              }
               description="Manage who can sign in and which role they receive."
               title="Current users"
             >
@@ -189,8 +174,8 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
                   title="User list is restricted"
                   tone="warning"
                 />
-              ) : isLoadingUsers && !hasLoadedUsers ? (
-                <AdminStateBox body="Loading users." compact title="Loading users" />
+              ) : isInitialUserLoad || (isLoadingUsers && !hasLoadedUsers) ? (
+                <AdminMiniListSkeleton rows={3} />
               ) : usersLoadError && users.length === 0 ? (
                 <AdminStateBox
                   actionLabel="Try again"
@@ -353,22 +338,12 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
         )}
 
         <AdminSectionCard
-          action={
-            <Button
-              disabled={!canRefreshRoles}
-              onClick={() => void refreshAvailableRoles()}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              <RefreshCcw />
-              {isLoadingRoles ? "Refreshing" : "Refresh"}
-            </Button>
-          }
           description="Review built-in and custom roles available to users and invites."
           title="Available roles"
         >
-          {rolesLoadError && availableRoles.length === 0 ? (
+          {isInitialRoleLoad && availableRoles.length === 0 ? (
+            <AdminMiniListSkeleton rows={4} />
+          ) : rolesLoadError && availableRoles.length === 0 ? (
             <AdminStateBox
               actionLabel="Try again"
               body={rolesLoadError}

@@ -164,14 +164,6 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
                     <Save />
                     {isSavingAccountProfile ? "Saving profile" : "Save profile"}
                   </Button>
-                  <Button
-                    onClick={() => void signOut()}
-                    type="button"
-                    variant="outline"
-                  >
-                    <LogOut />
-                    Sign out
-                  </Button>
                 </div>
               </form>
             </AdminSectionCard>

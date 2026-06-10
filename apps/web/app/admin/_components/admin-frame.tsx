@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   Blocks,
   Database,
@@ -13,6 +14,7 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import type { AdminWorkspaceRouteSection } from "../_workspace/admin-routes"
 
 type DatamixSidebarItem = {
   activeIds?: string[]
@@ -20,6 +22,8 @@ type DatamixSidebarItem = {
   icon: LucideIcon
   id: string
   label: string
+  prefetch?: boolean
+  section?: AdminWorkspaceRouteSection
 }
 
 const defaultDatamixSidebarItems: DatamixSidebarItem[] = [
@@ -50,6 +54,7 @@ type DatamixSidebarProps = Omit<
   onAccountClick?: () => void
   onBrandClick?: () => void
   onNavigate?: (item: DatamixSidebarItem) => void
+  onPrefetch?: (item: DatamixSidebarItem) => void
 }
 
 function DatamixSidebar({
@@ -66,6 +71,7 @@ function DatamixSidebar({
   onAccountClick,
   onBrandClick,
   onNavigate,
+  onPrefetch,
   ...props
 }: DatamixSidebarProps) {
   const brandClassName =
@@ -153,15 +159,18 @@ function DatamixSidebar({
 
           if (item.href) {
             return (
-              <a
+              <Link
                 aria-current={isActive ? "page" : undefined}
                 className={navClassName}
                 href={item.href}
                 key={item.id}
                 onClick={() => onNavigate?.(item)}
+                onFocus={() => onPrefetch?.(item)}
+                onMouseEnter={() => onPrefetch?.(item)}
+                prefetch={item.prefetch ?? true}
               >
                 {navContent}
-              </a>
+              </Link>
             )
           }
 

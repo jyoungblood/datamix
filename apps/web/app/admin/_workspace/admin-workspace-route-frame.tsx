@@ -30,6 +30,11 @@ export function AdminWorkspaceRouteFrame({
   route,
 }: AdminWorkspaceRouteFrameProps) {
   const workspace = useAdminWorkspace();
+  const prefetchSidebarRoute = (sidebarRoute: { section?: AdminWorkspaceRoute["section"] }) => {
+    if (sidebarRoute.section) {
+      void workspace.prefetchAdminRoute({ section: sidebarRoute.section });
+    }
+  };
   const accountRoute = adminRoutes.account();
   const sidebarAccount = {
     emailRole: workspace.role.label,
@@ -59,6 +64,7 @@ export function AdminWorkspaceRouteFrame({
                       ? adminWorkspaceSidebarIcons.team
                       : adminWorkspaceSidebarIcons.settings,
           }))}
+          onPrefetch={prefetchSidebarRoute}
         />
       }
     >

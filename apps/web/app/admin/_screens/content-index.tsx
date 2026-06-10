@@ -1,6 +1,5 @@
 "use client";
 
-import { RefreshCcw } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -8,6 +7,7 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import { AdminMetricSkeleton, AdminTableSkeleton } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
@@ -51,10 +51,8 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
     refreshCollections,
   } = workspace;
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
-  const canRefreshCollections =
-    permissions.canViewCollections &&
-    !isLoadingCollections &&
-    !isRefreshingCollections;
+  const shouldShowCollectionSkeleton =
+    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
   const totalFieldCount = collections.reduce(
     (count, collection) => count + collection.definition.fields.length,
     0,
@@ -100,27 +98,35 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
           title="Content"
         />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description={
-              permissions.canViewCollections
-                ? "Schemas that can generate content editors."
-                : "Schema list is hidden for this role."
-            }
-            label="Schemas"
-            value={permissions.canViewCollections ? collections.length : "Restricted"}
-          />
-          <AdminMetric
-            description="Schemas with at least one generated field."
-            label="Content-ready"
-            value={permissions.canViewCollections ? contentReadyCount : "Restricted"}
-          />
-          <AdminMetric
-            description="Stored fields across visible schemas."
-            label="Fields"
-            value={permissions.canViewCollections ? totalFieldCount : "Restricted"}
-          />
-        </div>
+        {shouldShowCollectionSkeleton ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetric
+              description={
+                permissions.canViewCollections
+                  ? "Schemas that can generate content editors."
+                  : "Schema list is hidden for this role."
+              }
+              label="Schemas"
+              value={permissions.canViewCollections ? collections.length : "Restricted"}
+            />
+            <AdminMetric
+              description="Schemas with at least one generated field."
+              label="Content-ready"
+              value={permissions.canViewCollections ? contentReadyCount : "Restricted"}
+            />
+            <AdminMetric
+              description="Stored fields across visible schemas."
+              label="Fields"
+              value={permissions.canViewCollections ? totalFieldCount : "Restricted"}
+            />
+          </div>
+        )}
 
         {!access.isAllowed ? (
           <AdminStateBox body={access.body} title={access.title} tone="warning" />
@@ -132,18 +138,6 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
           />
         ) : (
           <AdminSectionCard
-            action={
-              <Button
-                disabled={!canRefreshCollections}
-                onClick={() => void refreshCollections()}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <RefreshCcw />
-                {isRefreshingCollections ? "Refreshing" : "Refresh"}
-              </Button>
-            }
             description="Each row opens the generated content workspace for that schema."
             title="Choose content schema"
           >
@@ -156,14 +150,8 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
                 <span>Updated</span>
               </div>
 
-              {isInitialCollectionLoad ? (
-                <div className="p-4">
-                  <AdminStateBox
-                    body="Loading saved schemas for content."
-                    compact
-                    title="Loading content"
-                  />
-                </div>
+              {shouldShowCollectionSkeleton || isInitialCollectionLoad ? (
+                <AdminTableSkeleton columns={5} rows={4} />
               ) : collectionLoadError && collections.length === 0 ? (
                 <div className="p-4">
                   <AdminStateBox

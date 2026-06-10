@@ -1,6 +1,5 @@
 "use client";
 
-import { RefreshCcw } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -8,6 +7,7 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import { AdminMetricSkeleton, AdminTableSkeleton } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
@@ -61,10 +61,8 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
     refreshCollections,
   } = workspace;
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
-  const canRefreshCollections =
-    permissions.canViewCollections &&
-    !isLoadingCollections &&
-    !isRefreshingCollections;
+  const shouldShowCollectionSkeleton =
+    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
   const totalFieldCount = collections.reduce(
     (count, collection) => count + collection.definition.fields.length,
     0,
@@ -112,27 +110,35 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
           title="Schema"
         />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description={
-              permissions.canViewCollections
-                ? "Saved schema definitions."
-                : "Schema list is hidden for this role."
-            }
-            label="Schemas"
-            value={permissions.canViewCollections ? collections.length : "Restricted"}
-          />
-          <AdminMetric
-            description="Stored fields across visible schemas."
-            label="Fields"
-            value={permissions.canViewCollections ? totalFieldCount : "Restricted"}
-          />
-          <AdminMetric
-            description="Draft schema persistence is not enabled in this slice."
-            label="Drafts"
-            value={permissions.canViewCollections ? 0 : "Restricted"}
-          />
-        </div>
+        {shouldShowCollectionSkeleton ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetric
+              description={
+                permissions.canViewCollections
+                  ? "Saved schema definitions."
+                  : "Schema list is hidden for this role."
+              }
+              label="Schemas"
+              value={permissions.canViewCollections ? collections.length : "Restricted"}
+            />
+            <AdminMetric
+              description="Stored fields across visible schemas."
+              label="Fields"
+              value={permissions.canViewCollections ? totalFieldCount : "Restricted"}
+            />
+            <AdminMetric
+              description="Draft schema persistence is not enabled in this slice."
+              label="Drafts"
+              value={permissions.canViewCollections ? 0 : "Restricted"}
+            />
+          </div>
+        )}
 
         {!access.isAllowed ? (
           <AdminStateBox body={access.body} title={access.title} tone="warning" />
@@ -154,18 +160,6 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
           />
         ) : (
           <AdminSectionCard
-            action={
-              <Button
-                disabled={!canRefreshCollections}
-                onClick={() => void refreshCollections()}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                <RefreshCcw />
-                {isRefreshingCollections ? "Refreshing" : "Refresh"}
-              </Button>
-            }
             description="Saved schemas drive generated content editors. Open a schema to edit fields and storage details."
             title="Saved schemas"
           >
@@ -178,14 +172,8 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
                 <span>Updated</span>
               </div>
 
-              {isInitialCollectionLoad ? (
-                <div className="p-4">
-                  <AdminStateBox
-                    body="Loading saved schema definitions."
-                    compact
-                    title="Loading schemas"
-                  />
-                </div>
+              {shouldShowCollectionSkeleton || isInitialCollectionLoad ? (
+                <AdminTableSkeleton columns={5} rows={4} />
               ) : collectionLoadError && collections.length === 0 ? (
                 <div className="p-4">
                   <AdminStateBox

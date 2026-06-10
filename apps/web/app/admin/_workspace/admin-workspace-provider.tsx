@@ -74,6 +74,7 @@ import {
   createRoleIdSuggestion,
   type RoleDraft,
 } from "../_lib/role-drafts";
+import type { AdminWorkspaceRouteSection } from "./admin-routes";
 
 type AdminWorkspaceUser = {
   displayName: string;
@@ -173,6 +174,7 @@ export type AdminWorkspaceContextValue = {
   mediaSearchQuery: string;
   permissions: AdminWorkspacePermissions;
   publicApiRuntime: PublicApiRuntimeSummary | null;
+  prefetchAdminRoute: (route: { section: AdminWorkspaceRouteSection }) => Promise<void>;
   recordDraft: GeneratedRecordFormState;
   recordCollectionName: string | null;
   recordIssues: DatamixSchemaValidationIssue[];
@@ -387,6 +389,9 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const apiKeysLoadRequestId = React.useRef(0);
   const collectionLoadRequestId = React.useRef(0);
   const mediaAssetsLoadRequestId = React.useRef(0);
+  const prefetchedRouteSectionsRef = React.useRef(
+    new Set<AdminWorkspaceRouteSection>(),
+  );
   const recordLoadRequestId = React.useRef(0);
   const rolesLoadRequestId = React.useRef(0);
   const usersLoadRequestId = React.useRef(0);
@@ -1000,6 +1005,76 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     [loadRecords],
   );
 
+  const prefetchAdminRoute = React.useCallback(
+    async (route: { section: AdminWorkspaceRouteSection }) => {
+      if (prefetchedRouteSectionsRef.current.has(route.section)) {
+        return;
+      }
+
+      prefetchedRouteSectionsRef.current.add(route.section);
+
+      const prefetchTasks: Promise<void>[] = [];
+
+      if (
+        (route.section === "schema" || route.section === "content") &&
+        permissions?.canViewCollections &&
+        !hasLoadedCollections &&
+        !isLoadingCollections
+      ) {
+        prefetchTasks.push(loadCollections());
+      }
+
+      if (
+        route.section === "media" &&
+        permissions?.canViewMedia &&
+        !hasLoadedMediaAssets &&
+        !isLoadingMediaAssets
+      ) {
+        prefetchTasks.push(loadMediaAssets());
+      }
+
+      if (route.section === "team" && permissions?.canAccessTeamAccess) {
+        if (permissions.canViewUsers && !hasLoadedUsers && !isLoadingUsers) {
+          prefetchTasks.push(loadUserList());
+        }
+
+        if (!hasLoadedRoles && !isLoadingRoles) {
+          prefetchTasks.push(loadAvailableRoles());
+        }
+      }
+
+      if (route.section === "settings" && permissions?.canAccessSettingsWorkspace) {
+        if (!hasLoadedApiKeys && !isLoadingApiKeys) {
+          prefetchTasks.push(loadApiKeyData());
+        }
+
+        if (!hasLoadedRoles && !isLoadingRoles) {
+          prefetchTasks.push(loadAvailableRoles());
+        }
+      }
+
+      await Promise.allSettled(prefetchTasks);
+    },
+    [
+      hasLoadedApiKeys,
+      hasLoadedCollections,
+      hasLoadedMediaAssets,
+      hasLoadedRoles,
+      hasLoadedUsers,
+      isLoadingApiKeys,
+      isLoadingCollections,
+      isLoadingMediaAssets,
+      isLoadingRoles,
+      isLoadingUsers,
+      loadApiKeyData,
+      loadAvailableRoles,
+      loadCollections,
+      loadMediaAssets,
+      loadUserList,
+      permissions,
+    ],
+  );
+
   const selectRecord = React.useCallback(
     (collection: StoredCollectionDefinition, record: StoredCollectionRecord | null) => {
       setRecordCollectionName(collection.definition.name);
@@ -1535,6 +1610,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
 
   React.useEffect(() => {
     if (!session.data) {
+      prefetchedRouteSectionsRef.current.clear();
       setAuthorization(null);
       setAuthorizationError(null);
       setAuthorizationStatusCode(null);
@@ -1877,6 +1953,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     mediaSearchQuery,
     permissions: currentPermissions,
     publicApiRuntime,
+    prefetchAdminRoute,
     recordDraft,
     recordCollectionName,
     recordIssues,

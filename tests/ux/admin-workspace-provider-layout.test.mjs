@@ -9,6 +9,7 @@ const adminRoot = path.join(repoRoot, "apps/web/app/admin");
 const workspaceGroup = path.join(adminRoot, "(workspace)");
 const workspaceLayout = path.join(workspaceGroup, "layout.tsx");
 const adminFrame = path.join(adminRoot, "_components/admin-frame.tsx");
+const adminSkeleton = path.join(adminRoot, "_components/admin-skeleton.tsx");
 const commandPaletteDialog = path.join(
   adminRoot,
   "_components/command-palette-dialog.tsx",
@@ -17,14 +18,27 @@ const adminCommandPalette = path.join(
   adminRoot,
   "_workspace/admin-command-palette.tsx",
 );
+const userAccountScreen = path.join(adminRoot, "_screens/user-account.tsx");
+const workspaceRouteFrame = path.join(
+  adminRoot,
+  "_workspace/admin-workspace-route-frame.tsx",
+);
 const settingsApiKeysScreen = path.join(
   adminRoot,
   "_screens/settings-api-keys.tsx",
 );
+const manualRefreshFreeScreens = [
+  "content-index.tsx",
+  "media-library.tsx",
+  "schema-overview.tsx",
+  "settings-api-keys.tsx",
+  "team-and-roles.tsx",
+];
 const workspaceProvider = path.join(
   adminRoot,
   "_workspace/admin-workspace-provider.tsx",
 );
+const nextShimTypes = path.join(repoRoot, "apps/web/types/next-shims.d.ts");
 
 const protectedWorkspacePages = [
   "page.tsx",
@@ -105,11 +119,13 @@ for (const screenFile of screenFiles) {
 
 const providerSource = readFileSync(workspaceProvider, "utf8");
 const adminFrameSource = readFileSync(adminFrame, "utf8");
+const workspaceRouteFrameSource = readFileSync(workspaceRouteFrame, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
 const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
 const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
 const settingsApiKeysSource = readFileSync(settingsApiKeysScreen, "utf8");
+const userAccountSource = readFileSync(userAccountScreen, "utf8");
 
 for (const transientTitle of ["Checking your session", "Loading access profile"]) {
   assert(
@@ -126,11 +142,86 @@ assert(
 );
 
 assert(
+  adminFrameSource.includes('from "next/link"') &&
+    adminFrameSource.includes("prefetch={item.prefetch") &&
+    adminFrameSource.includes("onMouseEnter") &&
+    adminFrameSource.includes("onFocus") &&
+    adminFrameSource.includes("onPrefetch"),
+  "Sidebar navigation should use Vinext/Next Link prefetching and warm routes on hover/focus.",
+);
+
+assert(
+  providerSource.includes("prefetchAdminRoute") &&
+    providerSource.includes("prefetchedRouteSectionsRef") &&
+    workspaceRouteFrameSource.includes("prefetchAdminRoute") &&
+    workspaceRouteFrameSource.includes("onPrefetch"),
+  "The workspace provider and route frame should expose route-aware data prefetching for sidebar hover/focus.",
+);
+
+assert(
+  existsSync(nextShimTypes) &&
+    readFileSync(nextShimTypes, "utf8").includes('declare module "next/link"'),
+  "The app should provide TypeScript declarations for the Vinext next/link shim used by the sidebar.",
+);
+
+assert(existsSync(adminSkeleton), "Admin screens should share skeleton primitives.");
+
+const adminSkeletonSource = readFileSync(adminSkeleton, "utf8");
+
+for (const skeletonExport of [
+  "AdminDetailListSkeleton",
+  "AdminMetricSkeleton",
+  "AdminMiniListSkeleton",
+  "AdminTableSkeleton",
+]) {
+  assert(
+    adminSkeletonSource.includes(skeletonExport),
+    `Admin skeleton primitives should export ${skeletonExport}.`,
+  );
+}
+
+for (const [screenFile, expectedSkeleton] of [
+  ["content-index.tsx", "AdminTableSkeleton"],
+  ["media-library.tsx", "AdminMiniListSkeleton"],
+  ["schema-overview.tsx", "AdminTableSkeleton"],
+  ["settings-api-keys.tsx", "AdminMiniListSkeleton"],
+  ["team-and-roles.tsx", "AdminMiniListSkeleton"],
+]) {
+  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
+
+  assert(
+    source.includes(expectedSkeleton),
+    `${screenFile} should render ${expectedSkeleton} during initial data loads.`,
+  );
+}
+
+for (const screenFile of manualRefreshFreeScreens) {
+  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
+
+  assert(
+    !source.includes("RefreshCcw"),
+    `${screenFile} should not render normal/manual refresh icon buttons.`,
+  );
+}
+
+assert(
   adminCommandPaletteSource.includes("<input") &&
     adminCommandPaletteSource.includes("readOnly") &&
     adminCommandPaletteSource.includes("⌘ + K") &&
     !adminCommandPaletteSource.includes("Command palette</Button>"),
   "The command palette trigger should be an input-like search field with a keyboard hint, not a text button.",
+);
+
+const accountSignOutCount = (userAccountSource.match(/Sign out/g) ?? []).length;
+const accountSaveProfileIndex = userAccountSource.indexOf("Save profile");
+const accountFormSignOutIndex = userAccountSource.indexOf(
+  "Sign out",
+  accountSaveProfileIndex,
+);
+
+assert(
+  accountSignOutCount === 1 && accountFormSignOutIndex === -1,
+  "The account profile form should not render a second Sign out button next to Save profile.",
 );
 
 assert(
@@ -159,6 +250,6 @@ assert(
 assert(
   !settingsApiKeysSource.includes('"Refresh API keys"') &&
     settingsApiKeysSource.includes('title="Public API keys"') &&
-    settingsApiKeysSource.includes('{isLoadingApiKeys ? "Refreshing" : "Refresh"}'),
-  "Settings should keep only the Public API keys section refresh action, not a duplicate page-header refresh button.",
+    !settingsApiKeysSource.includes('{isLoadingApiKeys ? "Refreshing" : "Refresh"}'),
+  "Settings should not render manual refresh buttons for Public API keys.",
 );

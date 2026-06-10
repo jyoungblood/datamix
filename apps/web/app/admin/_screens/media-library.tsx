@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, RefreshCcw, Upload } from "lucide-react";
+import { Copy, Upload } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -8,6 +8,11 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import {
+  AdminDetailPanelSkeleton,
+  AdminMetricSkeleton,
+  AdminMiniListSkeleton,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import {
   createMediaAssetSearchText,
@@ -52,8 +57,8 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
     setSelectedMediaFile,
     uploadMediaAsset,
   } = workspace;
-  const canRefreshMediaAssets =
-    permissions.canViewMedia && !isLoadingMediaAssets && !isRefreshingMediaAssets;
+  const isInitialMediaLoad =
+    permissions.canViewMedia && !hasLoadedMediaAssets && !mediaLoadError;
   const normalizedMediaSearchQuery = mediaSearchQuery.trim().toLowerCase();
   const filteredMediaAssets =
     normalizedMediaSearchQuery.length === 0
@@ -100,49 +105,46 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
     <AdminWorkspaceRouteFrame route={route}>
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
-          action={
-            <Button
-              disabled={!canRefreshMediaAssets}
-              onClick={() => void refreshMediaAssets()}
-              type="button"
-              variant="outline"
-            >
-              <RefreshCcw />
-              {isRefreshingMediaAssets ? "Refreshing" : "Refresh"}
-            </Button>
-          }
           description="Upload originals, browse stored asset metadata, and copy storage keys for content image fields."
           eyebrow="Media"
           title="Media library"
         />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description={
-              permissions.canViewMedia
-                ? "Assets available in the shared library."
-                : "Library browsing is hidden for this role."
-            }
-            label="Assets"
-            value={permissions.canViewMedia ? mediaAssets.length : "Hidden"}
-          />
-          <AdminMetric
-            description="Current detail panel selection."
-            label="Selected"
-            value={selectedMediaAsset ? selectedMediaAsset.fileName : "None"}
-          />
-          <AdminMetric
-            description="Server-side media upload permission."
-            label="Upload"
-            value={
-              permissions.canUploadMedia
-                ? "Allowed"
-                : permissions.canViewMedia
-                  ? "View only"
-                  : "Restricted"
-            }
-          />
-        </div>
+        {isInitialMediaLoad ? (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+            <AdminMetricSkeleton />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-3">
+            <AdminMetric
+              description={
+                permissions.canViewMedia
+                  ? "Assets available in the shared library."
+                  : "Library browsing is hidden for this role."
+              }
+              label="Assets"
+              value={permissions.canViewMedia ? mediaAssets.length : "Hidden"}
+            />
+            <AdminMetric
+              description="Current detail panel selection."
+              label="Selected"
+              value={selectedMediaAsset ? selectedMediaAsset.fileName : "None"}
+            />
+            <AdminMetric
+              description="Server-side media upload permission."
+              label="Upload"
+              value={
+                permissions.canUploadMedia
+                  ? "Allowed"
+                  : permissions.canViewMedia
+                    ? "View only"
+                    : "Restricted"
+              }
+            />
+          </div>
+        )}
 
         {!access.isAllowed ? (
           <AdminStateBox
@@ -226,15 +228,6 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
                     <Upload />
                     {isUploadingMedia ? "Uploading asset" : "Upload asset"}
                   </Button>
-                  <Button
-                    disabled={!canRefreshMediaAssets}
-                    onClick={() => void refreshMediaAssets()}
-                    type="button"
-                    variant="outline"
-                  >
-                    <RefreshCcw />
-                    {isRefreshingMediaAssets ? "Refreshing" : "Refresh uploads"}
-                  </Button>
                 </div>
               </form>
             </AdminSectionCard>
@@ -261,12 +254,8 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
                       />
                     </label>
 
-                    {isLoadingMediaAssets ? (
-                      <AdminStateBox
-                        body="Loading recent uploads."
-                        compact
-                        title="Loading uploads"
-                      />
+                    {isInitialMediaLoad || isLoadingMediaAssets ? (
+                      <AdminMiniListSkeleton rows={4} />
                     ) : mediaLoadError && mediaAssets.length === 0 ? (
                       <AdminStateBox
                         actionLabel="Try again"
@@ -335,7 +324,9 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
 
                   <aside className="generated-record-preview">
                     <p className="card-eyebrow">Asset detail</p>
-                    {selectedFilteredMediaAsset ? (
+                    {isInitialMediaLoad || isLoadingMediaAssets ? (
+                      <AdminDetailPanelSkeleton />
+                    ) : selectedFilteredMediaAsset ? (
                       <>
                         <h4 className="section-title">
                           {selectedFilteredMediaAsset.fileName}
