@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const buttonComponent = path.join(repoRoot, "apps/web/components/ui/button.tsx");
+const globalStyles = path.join(repoRoot, "apps/web/styles/globals.css");
 const adminRoot = path.join(repoRoot, "apps/web/app/admin");
 const workspaceGroup = path.join(adminRoot, "(workspace)");
 const workspaceLayout = path.join(workspaceGroup, "layout.tsx");
@@ -14,6 +16,10 @@ const commandPaletteDialog = path.join(
 const adminCommandPalette = path.join(
   adminRoot,
   "_workspace/admin-command-palette.tsx",
+);
+const settingsApiKeysScreen = path.join(
+  adminRoot,
+  "_screens/settings-api-keys.tsx",
 );
 const workspaceProvider = path.join(
   adminRoot,
@@ -99,8 +105,11 @@ for (const screenFile of screenFiles) {
 
 const providerSource = readFileSync(workspaceProvider, "utf8");
 const adminFrameSource = readFileSync(adminFrame, "utf8");
+const buttonComponentSource = readFileSync(buttonComponent, "utf8");
+const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
 const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
+const settingsApiKeysSource = readFileSync(settingsApiKeysScreen, "utf8");
 
 for (const transientTitle of ["Checking your session", "Loading access profile"]) {
   assert(
@@ -133,4 +142,23 @@ assert(
 assert(
   !commandPaletteDialogSource.includes("document.body.style.overflow"),
   "Opening the command palette should not remove page scrollbars or shift the admin layout.",
+);
+
+assert(
+  buttonComponentSource.includes("bg-primary text-primary-foreground") &&
+    !buttonComponentSource.includes("text-[var(--primary-foreground)]"),
+  "Primary buttons should keep using the semantic primary foreground utility.",
+);
+
+assert(
+  globalStylesSource.includes('[data-slot="button"][data-variant="default"]') &&
+    globalStylesSource.includes("color: var(--primary-foreground);"),
+  "The design-system stylesheet should enforce high-contrast text for default primary buttons.",
+);
+
+assert(
+  !settingsApiKeysSource.includes('"Refresh API keys"') &&
+    settingsApiKeysSource.includes('title="Public API keys"') &&
+    settingsApiKeysSource.includes('{isLoadingApiKeys ? "Refreshing" : "Refresh"}'),
+  "Settings should keep only the Public API keys section refresh action, not a duplicate page-header refresh button.",
 );

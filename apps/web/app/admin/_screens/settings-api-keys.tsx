@@ -237,17 +237,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
     <AdminWorkspaceRouteFrame route={route}>
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
-          action={
-            <Button
-              disabled={!canRefreshApiKeys}
-              onClick={() => void refreshApiKeyData()}
-              type="button"
-              variant="outline"
-            >
-              <RefreshCcw />
-              {isLoadingApiKeys ? "Refreshing" : "Refresh API keys"}
-            </Button>
-          }
           description="Review the active session, auth provider posture, public API access, managed keys, and role definitions."
           eyebrow="Settings"
           title="Settings"

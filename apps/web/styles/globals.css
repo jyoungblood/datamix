@@ -416,6 +416,10 @@ textarea {
   background: oklch(0.3 0 0);
 }
 
+[data-slot="button"][data-variant="default"] {
+  color: var(--primary-foreground);
+}
+
 .button:disabled,
 .mini-button:disabled {
   cursor: not-allowed;
