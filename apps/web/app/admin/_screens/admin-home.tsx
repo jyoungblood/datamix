@@ -24,7 +24,6 @@ import { AdminStateBox } from "../_components/admin-state";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import { useAdminWorkspace } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -795,9 +794,5 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
 }
 
 export function AdminHomeRoute() {
-  return (
-    <AdminWorkspaceProvider>
-      <AdminHomeContent route={adminRoutes.home()} />
-    </AdminWorkspaceProvider>
-  );
+  return <AdminHomeContent route={adminRoutes.home()} />;
 }

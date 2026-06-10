@@ -31,7 +31,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 
 type ContentEditorMode = "create" | "edit";
 
@@ -568,13 +567,11 @@ export function ContentEditorRoute({
       : adminRoutes.content.record(collectionName, recordId ?? "");
 
   return (
-    <AdminWorkspaceProvider>
-      <ContentEditorContent
-        collectionName={collectionName}
-        mode={mode}
-        recordId={recordId}
-        route={route}
-      />
-    </AdminWorkspaceProvider>
+    <ContentEditorContent
+      collectionName={collectionName}
+      mode={mode}
+      recordId={recordId}
+      route={route}
+    />
   );
 }

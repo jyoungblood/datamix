@@ -396,7 +396,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [authorizationStatusCode, setAuthorizationStatusCode] = React.useState<number | null>(
     null,
   );
-  const [isLoadingAuthorization, setIsLoadingAuthorization] = React.useState(false);
   const [collections, setCollections] = React.useState<StoredCollectionDefinition[]>([]);
   const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(null);
   const [hasLoadedCollections, setHasLoadedCollections] = React.useState(false);
@@ -500,7 +499,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const loadSessionAuthorizationData = React.useCallback(async () => {
     setAuthorizationError(null);
     setAuthorizationStatusCode(null);
-    setIsLoadingAuthorization(true);
 
     try {
       const nextAuthorization = await loadSessionAccess();
@@ -521,8 +519,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setAuthorizationStatusCode(
         error instanceof SessionAccessError ? error.statusCode : null,
       );
-    } finally {
-      setIsLoadingAuthorization(false);
     }
   }, []);
 
@@ -1542,7 +1538,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setAuthorization(null);
       setAuthorizationError(null);
       setAuthorizationStatusCode(null);
-      setIsLoadingAuthorization(false);
       collectionLoadRequestId.current += 1;
       setCollections([]);
       setCollectionLoadError(null);
@@ -1733,18 +1728,15 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     selectedRecordId && recordCollectionName
       ? records.find((record) => record.id === selectedRecordId) ?? null
       : null;
+  const isResolvingInitialSession =
+    !session.data &&
+    !setupStatus.errorMessage &&
+    (session.isPending || setupStatus.isPending);
+  const isResolvingInitialAuthorization =
+    Boolean(session.data) && !authorization && !authorizationError;
 
-  if (session.isPending || setupStatus.isPending || (session.data && isLoadingAuthorization)) {
-    return (
-      <AdminWorkspaceGateShell
-        body={
-          session.data
-            ? "Loading your role and permissions."
-            : "Checking for an active admin session."
-        }
-        title={session.data ? "Loading access profile" : "Checking your session"}
-      />
-    );
+  if (isResolvingInitialSession || isResolvingInitialAuthorization) {
+    return null;
   }
 
   if (setupStatus.errorMessage) {

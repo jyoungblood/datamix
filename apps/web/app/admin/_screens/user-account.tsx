@@ -16,7 +16,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -200,9 +199,5 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
 }
 
 export function UserAccountRoute() {
-  return (
-    <AdminWorkspaceProvider>
-      <AccountContent route={adminRoutes.account()} />
-    </AdminWorkspaceProvider>
-  );
+  return <AccountContent route={adminRoutes.account()} />;
 }

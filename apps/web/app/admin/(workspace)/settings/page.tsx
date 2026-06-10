@@ -1,4 +1,4 @@
-import { SettingsApiKeysRoute } from "../_screens/settings-api-keys";
+import { SettingsApiKeysRoute } from "@/app/admin/_screens/settings-api-keys";
 
 export default function AdminSettingsPage() {
   return <SettingsApiKeysRoute />;

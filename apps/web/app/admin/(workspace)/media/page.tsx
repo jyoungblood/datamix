@@ -1,4 +1,4 @@
-import { MediaLibraryRoute } from "../_screens/media-library";
+import { MediaLibraryRoute } from "@/app/admin/_screens/media-library";
 
 export default function AdminMediaPage() {
   return <MediaLibraryRoute />;

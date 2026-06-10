@@ -1,4 +1,4 @@
-import { ContentEditorRoute } from "../../../_screens/content-editor";
+import { ContentEditorRoute } from "@/app/admin/_screens/content-editor";
 
 type AdminRecordDetailPageProps = {
   params: {

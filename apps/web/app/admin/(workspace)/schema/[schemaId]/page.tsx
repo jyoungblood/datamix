@@ -1,4 +1,4 @@
-import { SchemaBuilderRoute } from "../../_screens/schema-builder";
+import { SchemaBuilderRoute } from "@/app/admin/_screens/schema-builder";
 
 type AdminSchemaDetailPageProps = {
   params: {

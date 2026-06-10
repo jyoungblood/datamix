@@ -1,4 +1,4 @@
-import { UserAccountRoute } from "../_screens/user-account";
+import { UserAccountRoute } from "@/app/admin/_screens/user-account";
 
 export default function AdminAccountPage() {
   return <UserAccountRoute />;

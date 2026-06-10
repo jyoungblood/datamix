@@ -21,7 +21,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -418,9 +417,5 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
 }
 
 export function TeamAndRolesRoute() {
-  return (
-    <AdminWorkspaceProvider>
-      <TeamAndRolesContent route={adminRoutes.team()} />
-    </AdminWorkspaceProvider>
-  );
+  return <TeamAndRolesContent route={adminRoutes.team()} />;
 }

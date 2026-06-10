@@ -18,7 +18,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { summarizeRecord } from "../_lib/record-drafts";
 import { formatCollectionSummary } from "../_lib/schema-drafts";
@@ -331,9 +330,5 @@ export function ContentCollectionRoute({
 }) {
   const route = adminRoutes.content.collection(collectionName);
 
-  return (
-    <AdminWorkspaceProvider>
-      <ContentCollectionContent collectionName={collectionName} route={route} />
-    </AdminWorkspaceProvider>
-  );
+  return <ContentCollectionContent collectionName={collectionName} route={route} />;
 }

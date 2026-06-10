@@ -30,7 +30,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -694,9 +693,5 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
 }
 
 export function SettingsApiKeysRoute() {
-  return (
-    <AdminWorkspaceProvider>
-      <SettingsApiKeysContent route={adminRoutes.settings()} />
-    </AdminWorkspaceProvider>
-  );
+  return <SettingsApiKeysContent route={adminRoutes.settings()} />;
 }

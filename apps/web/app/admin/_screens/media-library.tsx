@@ -22,7 +22,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -444,9 +443,5 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
 export function MediaLibraryRoute() {
   const route = adminRoutes.media();
 
-  return (
-    <AdminWorkspaceProvider>
-      <MediaLibraryContent route={route} />
-    </AdminWorkspaceProvider>
-  );
+  return <MediaLibraryContent route={route} />;
 }

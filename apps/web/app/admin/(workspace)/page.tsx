@@ -1,4 +1,4 @@
-import { AdminHomeRoute } from "./_screens/admin-home";
+import { AdminHomeRoute } from "@/app/admin/_screens/admin-home";
 
 export default function AdminPage() {
   return (

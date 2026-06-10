@@ -24,7 +24,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 import {
   createDraftFromDefinition,
   createEmptyCollectionDraft,
@@ -922,9 +921,5 @@ export function SchemaBuilderRoute(props: SchemaBuilderRouteProps) {
       ? adminRoutes.schema.new()
       : adminRoutes.schema.detail(props.schemaId);
 
-  return (
-    <AdminWorkspaceProvider>
-      <SchemaBuilderContent route={route} {...props} />
-    </AdminWorkspaceProvider>
-  );
+  return <SchemaBuilderContent route={route} {...props} />;
 }

@@ -1,4 +1,4 @@
-import { ContentCollectionRoute } from "../../_screens/content-collection";
+import { ContentCollectionRoute } from "@/app/admin/_screens/content-collection";
 
 type AdminCollectionPageProps = {
   params: {

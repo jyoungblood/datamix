@@ -18,7 +18,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 import { formatCollectionSummary } from "../_lib/schema-drafts";
 
 import { Badge } from "@/components/ui/badge";
@@ -289,9 +288,5 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
 export function SchemaOverviewRoute() {
   const route = adminRoutes.schema.index();
 
-  return (
-    <AdminWorkspaceProvider>
-      <SchemaOverviewContent route={route} />
-    </AdminWorkspaceProvider>
-  );
+  return <SchemaOverviewContent route={route} />;
 }

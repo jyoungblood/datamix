@@ -18,7 +18,6 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { AdminWorkspaceProvider } from "../_workspace/admin-workspace-provider";
 import { formatCollectionSummary } from "../_lib/schema-drafts";
 
 import { Badge } from "@/components/ui/badge";
@@ -262,9 +261,5 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
 export function ContentIndexRoute() {
   const route = adminRoutes.content.index();
 
-  return (
-    <AdminWorkspaceProvider>
-      <ContentIndexContent route={route} />
-    </AdminWorkspaceProvider>
-  );
+  return <ContentIndexContent route={route} />;
 }
