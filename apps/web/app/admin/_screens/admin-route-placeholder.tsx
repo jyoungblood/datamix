@@ -14,6 +14,7 @@ import {
   adminWorkspaceSidebarRoutes,
   type AdminWorkspaceRoute,
 } from "../_workspace/admin-routes";
+import { AdminWorkspaceCommandPalette } from "../_workspace/admin-command-palette";
 import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
@@ -59,7 +60,7 @@ export function AdminWorkspaceRouteFrame({
         <DatamixSidebar
           account={sidebarAccount}
           activeItem={route.section}
-          brandHref={adminRoutes.schema.index().href}
+          brandHref={adminRoutes.home().href}
           items={adminWorkspaceSidebarRoutes.map((sidebarRoute) => ({
             ...sidebarRoute,
             icon:
@@ -76,6 +77,9 @@ export function AdminWorkspaceRouteFrame({
         />
       }
     >
+      <div className="mx-auto mb-4 flex max-w-6xl justify-end">
+        <AdminWorkspaceCommandPalette route={route} />
+      </div>
       {children}
     </AdminFrame>
   );
@@ -128,7 +132,7 @@ function AdminRoutePlaceholderContent({ route }: AdminRoutePlaceholderProps) {
             />
             <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild size="sm" variant="outline">
-                <a href={buildDatamixAdminPath()}>Open current dashboard</a>
+                <a href={buildDatamixAdminPath()}>Open admin home</a>
               </Button>
               {route.section !== "account" ? (
                 <Button asChild size="sm" variant="ghost">

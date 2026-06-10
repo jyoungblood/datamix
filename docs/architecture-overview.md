@@ -38,7 +38,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
   [apps/web/app/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/page.tsx:1),
   [apps/web/app/admin/setup/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/setup/page.tsx:1),
   [apps/web/app/admin/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/page.tsx:1),
-  [apps/web/app/admin/_screens/dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/dashboard.tsx:1)
+  [apps/web/app/admin/_screens/admin-home.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/admin-home.tsx:1)
 - Admin client helpers:
   [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1),
   [apps/web/lib/collection-definitions.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/collection-definitions.ts:1),
@@ -77,7 +77,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 - Changing public or session auth behavior:
   Start in [apps/web/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/auth.ts:1), [apps/web/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/auth-handlers.ts:1), [apps/web/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-auth.ts:1), and [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1).
 - Changing collection schema or generated record behavior:
-  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/collections.ts:1), [apps/web/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/records.ts:1), and [apps/web/app/admin/_screens/dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/dashboard.tsx:1).
+  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/collections.ts:1), [apps/web/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/records.ts:1), [apps/web/app/admin/_screens/schema-builder.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/schema-builder.tsx:1), and [apps/web/app/admin/_screens/content-editor.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/content-editor.tsx:1).
 - Changing media behavior:
   Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/web/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/media.ts:1), [apps/web/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/media-handlers.ts:1), and [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1).
 - Changing roles, invites, users, or API keys:
@@ -85,7 +85,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 ## Code Shape Guidance
 
-- `apps/web/app/admin/_screens/dashboard.tsx` is currently a large, direct composition point for the authenticated admin. Extract only when a smaller module makes the behavior easier to understand.
+- Routed admin screens share `apps/web/app/admin/_workspace/admin-workspace-provider.tsx` and `apps/web/app/admin/_screens/admin-route-placeholder.tsx`; keep shared session, permission, refresh, and navigation behavior there instead of duplicating it in individual screens.
 - `apps/web/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 

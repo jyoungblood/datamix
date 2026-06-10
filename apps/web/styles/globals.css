@@ -258,26 +258,16 @@ textarea {
   color: var(--muted-foreground);
 }
 
-.page-title,
-.admin-page-title {
+.page-title {
   margin: 0;
   font-size: clamp(2.25rem, 5vw, 3.25rem);
   line-height: 1;
   letter-spacing: -0.03em;
 }
 
-.admin-page-title {
-  font-size: clamp(2rem, 3vw, 2.75rem);
-  letter-spacing: -0.02em;
-}
-
 .lede,
 .body,
-.admin-brand-copy,
-.admin-page-copy,
 .card-copy,
-.admin-nav-copy,
-.admin-sidebar-copy,
 .list-copy,
 .section-copy,
 .field-builder-copy,
@@ -305,8 +295,7 @@ textarea {
 .option-list,
 .mini-list,
 .permission-section-list,
-.permission-grid,
-.workspace-actions {
+.permission-grid {
   display: grid;
   gap: 1rem;
 }
@@ -327,8 +316,6 @@ textarea {
 }
 
 .surface-name,
-.admin-nav-label,
-.admin-sidebar-heading,
 .list-title,
 .section-title,
 .field-builder-title,
@@ -447,16 +434,6 @@ textarea {
   color: var(--destructive);
 }
 
-.button-shortcut {
-  margin-left: 0.55rem;
-  padding-left: 0.55rem;
-  border-left: 1px solid var(--border);
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .form-error {
   margin: 0;
   color: var(--destructive);
@@ -512,10 +489,7 @@ textarea {
   background: rgba(15, 23, 42, 0.18);
 }
 
-.command-palette-panel,
-.admin-sidebar,
-.admin-topbar,
-.admin-card {
+.command-palette-panel {
   border: 1px solid var(--border);
   background: var(--card);
   box-shadow:
@@ -557,8 +531,7 @@ textarea {
 }
 
 .command-palette-item,
-.mini-list-item,
-.admin-nav-item {
+.mini-list-item {
   width: 100%;
   display: flex;
   align-items: flex-start;
@@ -572,25 +545,23 @@ textarea {
   text-align: left;
 }
 
-button.admin-nav-item,
 .command-palette-item,
 .mini-list-item {
   cursor: pointer;
 }
 
+.command-palette-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .command-palette-item.is-active,
-.mini-list-item.is-selected,
-.admin-nav-item.is-current {
+.mini-list-item.is-selected {
   border-color: var(--border);
   background: var(--accent);
 }
 
-.admin-nav-item.is-muted {
-  opacity: 0.7;
-}
-
 .mini-list-item small,
-.admin-nav-copy,
 .helper-text {
   color: var(--muted-foreground);
 }
@@ -604,74 +575,11 @@ button.admin-nav-item,
   gap: 0.2rem;
 }
 
-.admin-shell-page {
-  min-height: 100vh;
-  padding: 1.25rem;
-  background: var(--background);
-}
-
-.admin-shell {
-  width: min(1280px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.admin-sidebar {
-  position: sticky;
-  top: 1.25rem;
-  display: grid;
-  min-width: 0;
-  gap: 0.85rem;
-  padding: 0.2rem 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow-wrap: anywhere;
-}
-
-.admin-brand-title {
-  margin: 0;
-  font-size: 1.5rem;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-
-.admin-nav {
-  display: grid;
-  gap: 0.75rem;
-}
-
 .compact-box {
   padding: 0.9rem 1rem;
   border-radius: calc(var(--radius) + 0.2rem);
   border: 1px solid var(--border);
   background: var(--background);
-}
-
-.admin-sidebar-card {
-  min-width: 0;
-  display: grid;
-  gap: 0.65rem;
-  padding: 0.85rem 0 0;
-  border: 0;
-  border-top: 1px solid var(--border);
-  border-radius: 0;
-  background: transparent;
-}
-
-.admin-sidebar-card:first-of-type {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.admin-sidebar-user {
-  margin: 0.45rem 0 0;
-  font-size: 1rem;
-  font-weight: 600;
 }
 
 .section-row,
@@ -711,125 +619,6 @@ button.admin-nav-item,
 
 .field-inline {
   min-width: 12rem;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  min-height: 1.75rem;
-  padding: 0.2rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--secondary);
-  color: var(--secondary-foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.status-pill-muted {
-  background: var(--background);
-  color: var(--muted-foreground);
-}
-
-.admin-main {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.admin-topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem;
-  border-radius: calc(var(--radius) + 0.5rem);
-}
-
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-}
-
-.admin-card {
-  padding: 1.25rem;
-  border-radius: calc(var(--radius) + 0.5rem);
-}
-
-.admin-card-wide {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.admin-card-hero {
-  background: var(--card);
-}
-
-.admin-sidebar .section-row {
-  min-width: 0;
-  align-items: center;
-}
-
-.admin-sidebar .actions {
-  gap: 0.45rem;
-}
-
-.admin-sidebar .mini-button {
-  min-height: 2rem;
-  padding: 0.4rem 0.65rem;
-  font-size: 0.8rem;
-}
-
-.admin-sidebar .status-row {
-  gap: 0.35rem;
-}
-
-.admin-sidebar .status-pill {
-  min-height: 1.45rem;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
-}
-
-.admin-sidebar .mini-list,
-.admin-sidebar .workspace-actions {
-  gap: 0.35rem;
-}
-
-.admin-sidebar .empty-state-box {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.admin-sidebar .admin-nav-item,
-.admin-sidebar .mini-list-item {
-  min-width: 0;
-  gap: 0.5rem;
-  padding: 0.55rem 0.6rem;
-  border: 0;
-  border-radius: calc(var(--radius) - 0.05rem);
-  background: transparent;
-  box-shadow: none;
-}
-
-.admin-sidebar .admin-nav-item.is-current,
-.admin-sidebar .mini-list-item.is-selected {
-  background: var(--accent);
-}
-
-.admin-sidebar .admin-nav-copy {
-  display: none;
-}
-
-.admin-sidebar .mini-list-content,
-.admin-sidebar .admin-nav-item > div,
-.admin-sidebar .section-row > div {
-  min-width: 0;
 }
 
 .next-step-list,
@@ -1063,8 +852,7 @@ button.admin-nav-item,
 }
 
 @media (max-width: 640px) {
-  .shell,
-  .admin-shell-page {
+  .shell {
     padding: 1rem;
   }
 
@@ -1084,19 +872,12 @@ button.admin-nav-item,
 }
 
 @media (max-width: 960px) {
-  .admin-shell,
-  .admin-grid,
   .generated-record-layout,
   .record-browser,
   .markdown-field-grid {
     grid-template-columns: 1fr;
   }
 
-  .admin-sidebar {
-    position: static;
-  }
-
-  .admin-topbar,
   .section-row,
   .add-field-controls,
   .option-row,

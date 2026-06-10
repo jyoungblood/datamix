@@ -3,6 +3,7 @@ import { buildDatamixAdminPath } from "@/lib/runtime";
 export type AdminWorkspaceRouteSection =
   | "account"
   | "content"
+  | "home"
   | "media"
   | "schema"
   | "settings"
@@ -44,6 +45,16 @@ function createAdminRoute({ pathname, ...route }: AdminRouteInput) {
 }
 
 export const adminRoutes = {
+  home: () =>
+    createAdminRoute({
+      access: "home",
+      description: "Review the routed admin workspace and jump into a primary area.",
+      id: "home",
+      label: "Home",
+      pathname: "/",
+      section: "home",
+      title: "Admin home",
+    }),
   schema: {
     index: () =>
       createAdminRoute({

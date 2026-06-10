@@ -20,6 +20,7 @@ type AdminWorkspaceRouteAccessState = {
 const routeAccessLabels = {
   account: "an active admin session",
   content: "content permissions",
+  home: "an active admin session",
   media: "media permissions",
   schema: "schema permissions",
   settings: "settings permissions",
@@ -41,7 +42,7 @@ export function useAdminWorkspaceRouteAccess(
 ): AdminWorkspaceRouteAccessState {
   const { permissions } = useAdminWorkspace();
   const isAllowed =
-    route.access === "account"
+    route.access === "account" || route.access === "home"
       ? true
       : route.access === "schema"
         ? permissions.canAccessCollectionBuilder

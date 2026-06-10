@@ -218,6 +218,16 @@ async function requestJson(url, options = {}) {
   };
 }
 
+async function requestText(url, options = {}) {
+  const response = await request(url, options);
+  const text = await response.text();
+
+  return {
+    response,
+    text,
+  };
+}
+
 function assertOk(response, message) {
   assert.equal(
     response.ok,
@@ -402,6 +412,42 @@ async function main() {
       sessionAfterProfileUpdate.json?.session?.user?.image,
       "https://example.com/smoke-avatar.png",
     );
+
+    console.log("Checking routed admin workspace pages...");
+
+    const adminHomePage = await requestText(`${appOrigin}/admin`, {
+      cookieJar,
+      origin: appOrigin,
+    });
+    assertOk(adminHomePage.response, "Expected the routed admin home page to load.");
+    assert.match(
+      adminHomePage.text,
+      /data-admin-homepage="true"/,
+      "Expected /admin to render the redesigned admin homepage placeholder.",
+    );
+    assert.doesNotMatch(
+      adminHomePage.text,
+      /collections-builder|record-editor|inviteSectionId/,
+      "Expected /admin to omit obsolete legacy dashboard sections.",
+    );
+
+    const routedAdminPaths = [
+      "/admin/schema",
+      "/admin/content",
+      "/admin/media",
+      "/admin/team",
+      "/admin/settings",
+      "/admin/account",
+    ];
+
+    for (const routedAdminPath of routedAdminPaths) {
+      const routedAdminPage = await request(`${appOrigin}${routedAdminPath}`, {
+        cookieJar,
+        origin: appOrigin,
+      });
+
+      assertOk(routedAdminPage, `Expected ${routedAdminPath} to load.`);
+    }
 
     console.log("Saving a smoke collection and record...");
 

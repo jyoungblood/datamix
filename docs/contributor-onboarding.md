@@ -77,7 +77,7 @@ Smoke note:
 ## 25-30 Minutes: Learn The Main Paths
 
 - If you are changing admin UI or client fetch behavior:
-  Start in [apps/web/app/admin/_screens/dashboard.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/dashboard.tsx:1) and the matching helper in `apps/web/lib/`.
+  Start in [apps/web/app/admin/_workspace/admin-workspace-provider.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_workspace/admin-workspace-provider.tsx:1), the routed screen under `apps/web/app/admin/_screens/`, and the matching helper in `apps/web/lib/`.
 - If you are changing auth or session behavior:
   Start in [apps/web/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/auth.ts:1), [apps/web/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/auth-handlers.ts:1), [apps/web/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-auth.ts:1), and [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1).
 - If you are changing collection schema or record behavior:

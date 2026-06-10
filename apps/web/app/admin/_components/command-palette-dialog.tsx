@@ -3,10 +3,11 @@
 import { useEffect, useRef } from "react";
 
 export type CommandPaletteItem = {
-  group: "collections" | "records" | "admin";
+  disabled?: boolean;
+  group: "account" | "collections" | "create" | "navigation" | "records" | "refresh";
   id: string;
   keywords: string[];
-  onSelect: () => void;
+  onSelect: () => Promise<void> | void;
   subtitle: string;
   title: string;
 };
@@ -57,6 +58,14 @@ export function CommandPaletteDialog({
 }: CommandPaletteDialogProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   let lastRenderedGroup: CommandPaletteItem["group"] | null = null;
+  const groupLabels = {
+    account: "Account",
+    collections: "Collections",
+    create: "Create",
+    navigation: "Navigation",
+    records: "Records",
+    refresh: "Refresh",
+  } as const satisfies Record<CommandPaletteItem["group"], string>;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -86,7 +95,7 @@ export function CommandPaletteDialog({
         <div className="command-palette-header">
           <div>
             <p className="card-eyebrow">Command palette</p>
-            <h3 className="section-title">Jump anywhere with one command</h3>
+            <h3 className="section-title">Open a route or run an action</h3>
           </div>
           <button className="mini-button" onClick={onClose} type="button">
             Close
@@ -94,7 +103,7 @@ export function CommandPaletteDialog({
         </div>
 
         <label className="field">
-          <span>Search collections, records, and admin actions</span>
+          <span>Search admin routes and actions</span>
           <input
             onChange={(event) => onQueryChange(event.target.value)}
             onKeyDown={(event) => {
@@ -121,25 +130,19 @@ export function CommandPaletteDialog({
                 onClose();
               }
             }}
-            placeholder="Try “media”, “new record”, or a collection name"
+            placeholder="Try media, settings, refresh, or a schema name"
             ref={inputRef}
             type="text"
             value={query}
           />
         </label>
 
-        <p className="helper-text">
-          Use <strong>Up</strong> and <strong>Down</strong> to move, <strong>Enter</strong>{" "}
-          to run a command, and <strong>Esc</strong> to close.
-        </p>
-
         <div className="command-palette-results" role="listbox">
           {items.length === 0 ? (
             <div className="empty-state-box">
               <p className="section-title">No matching commands</p>
               <p className="section-copy">
-                Try a collection name, a record summary, or an admin area like settings or
-                media.
+                Try a schema name, record summary, or admin area like settings or media.
               </p>
             </div>
           ) : (
@@ -152,21 +155,19 @@ export function CommandPaletteDialog({
                 <div key={item.id}>
                   {shouldRenderGroup ? (
                     <p className="command-palette-group-label">
-                      {item.group === "collections"
-                        ? "Collections"
-                        : item.group === "records"
-                          ? "Records"
-                          : "Admin actions"}
+                      {groupLabels[item.group]}
                     </p>
                   ) : null}
 
                   <button
+                    aria-disabled={item.disabled ? "true" : undefined}
                     aria-selected={index === activeIndex}
                     className={
                       index === activeIndex
                         ? "command-palette-item is-active"
                         : "command-palette-item"
                     }
+                    disabled={item.disabled}
                     onClick={() => onSelectItem(index)}
                     type="button"
                   >
