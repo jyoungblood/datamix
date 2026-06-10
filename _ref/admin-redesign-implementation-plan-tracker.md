@@ -60,7 +60,7 @@
 
 - [x] Planning: handoff and current admin implementation reviewed; this tracker created.
 - [ ] Slice 1: Theme, shadcn, and shared admin UI foundation.
-- [ ] Slice 2: Extract pure helpers and reusable behavioral components without route changes.
+- [x] Slice 2: Extract pure helpers and reusable behavioral components without route changes.
 - [ ] Slice 3: Admin workspace shell, auth gate, route helpers, and safe route scaffolding.
 - [ ] Slice 4: Schema overview and schema builder routes.
 - [ ] Slice 5: Content routes and generated content editor.
@@ -131,7 +131,7 @@ npm run build --workspace @datamix/web
 
 **Steps:**
 
-- [ ] Move collection draft types and helpers into `schema-drafts.ts`:
+- [x] Move collection draft types and helpers into `schema-drafts.ts`:
   - `CollectionDraft`
   - `CollectionFieldDraft`
   - `createFieldDraft`
@@ -142,7 +142,7 @@ npm run build --workspace @datamix/web
   - `formatCollectionSummary`
   - `formatPlanSummary`
   - `moveItem`
-- [ ] Move generated record helpers into `record-drafts.ts`:
+- [x] Move generated record helpers into `record-drafts.ts`:
   - `GeneratedRecordFormState`
   - `GeneratedRecordFormValue`
   - `createGeneratedRecordFormState`
@@ -153,28 +153,28 @@ npm run build --workspace @datamix/web
   - `createGeneratedFieldPlaceholder`
   - `summarizeRecord`
   - `upsertRecord`
-- [ ] Move media formatting/search helpers into `media-formatting.ts`:
+- [x] Move media formatting/search helpers into `media-formatting.ts`:
   - `formatRecordTimestamp`
   - `formatByteSize`
   - `createMediaAssetSearchText`
   - media URL derivation helpers used by the route screen.
-- [ ] Move role draft helpers into `role-drafts.ts`:
+- [x] Move role draft helpers into `role-drafts.ts`:
   - `RoleDraft`
   - `createRoleIdSuggestion`
   - `createRoleDraftFromRole`
   - `createEmptyRoleDraft`
   - `resolveRoleLabel`
   - `rolePermissionSections`
-- [ ] Move API key helpers into `api-key-drafts.ts`:
+- [x] Move API key helpers into `api-key-drafts.ts`:
   - `ApiKeyDraft`
   - `createApiKeyDraftFromApiKey`
   - `createEmptyApiKeyDraft`
   - `formatApiKeyAccessLevel`
   - `formatPublicApiAccessMode`
   - `formatAuthProviderStatus`
-- [ ] Extract `CommandPaletteDialog` with the same keyboard behavior and overflow cleanup.
-- [ ] Extract `GeneratedRecordFieldInput` and `MediaAssetFieldPicker` with the same supported field types.
-- [ ] Keep `dashboard.tsx` rendering the same UI by importing the extracted helpers/components.
+- [x] Extract `CommandPaletteDialog` with the same keyboard behavior and overflow cleanup.
+- [x] Extract `GeneratedRecordFieldInput` and `MediaAssetFieldPicker` with the same supported field types.
+- [x] Keep `dashboard.tsx` rendering the same UI by importing the extracted helpers/components.
 
 **Acceptance Criteria:**
 
