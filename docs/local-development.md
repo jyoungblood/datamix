@@ -7,14 +7,14 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 - `npm run dev` starts one local Datamix app on `http://127.0.0.1:3000`.
 - `apps/web` runs through Vinext and the Cloudflare Vite plugin as the unified Worker app.
 - The same app serves `/admin/*`, `/api/*`, auth, media object routes, D1, R2, and Cloudflare Images bindings.
-- Preview and production topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
+- The single deployed-app topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
 
 ## First-Time Setup
 
 1. Run `npm install` from the repo root.
 2. Copy `apps/web/.dev.vars.example` to `apps/web/.dev.vars`.
 3. Replace `BETTER_AUTH_SECRET` in `apps/web/.dev.vars` with a long random string.
-4. Run `npm run typegen:web` after changing `apps/web/wrangler.jsonc`.
+4. Run `npm run typegen` after changing `apps/web/wrangler.jsonc`.
 5. Run `npm run db:migrate:local` after changing checked-in fixed-schema migrations.
 6. Start the app and open `http://127.0.0.1:3000/admin/setup` to create the first admin account in-browser.
 
@@ -25,6 +25,10 @@ Use one terminal from the repo root:
 1. `npm run dev`
 
 Then open `http://127.0.0.1:3000`.
+
+`npm --workspace @datamix/web` means "run this command in the `apps/web` package" inside
+the npm monorepo. It is still one app, not a separate deployment mode. The root `npm run dev`
+command delegates to that workspace command so contributors can start the app from the repo root.
 
 ## D1 Schema Workflow
 
@@ -46,9 +50,9 @@ The smoke harness starts the unified local app on its own, so it does not requir
 
 ## Why The Files Live Where They Do
 
-- `apps/web/wrangler.jsonc` is the single Worker runtime config for local, preview, and production.
+- `apps/web/wrangler.jsonc` is the single deployed Worker runtime config. Local development uses the same app with local-only overrides from `apps/web/.dev.vars`.
 - `apps/web/.dev.vars` belongs next to `apps/web/wrangler.jsonc` because Wrangler loads local Worker variables from the Worker directory.
-- `apps/web/.env.example` documents optional public Vinext values. The root dev script injects local single-origin defaults automatically.
+- Do not add separate `.env` files for deployed origins; keep local Worker values in `apps/web/.dev.vars`.
 
 ## Typed Env Expectations
 

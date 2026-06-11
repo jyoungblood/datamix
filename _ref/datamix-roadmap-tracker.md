@@ -1,6 +1,6 @@
 # Datamix v0 Roadmap and Progress Tracker
 
-Last updated: 2026-05-11
+Last updated: 2026-06-11
 Source of truth: [Datamix-PRD-revised.md](/Users/jy/Desktop/projects/datamix/_ref/Datamix-PRD-revised.md)
 
 ## Summary
@@ -31,16 +31,16 @@ This section is the default technical source of truth for roadmap execution. Fut
 ### Confirmed Stack Decisions
 
 - Runtime/platform: `Cloudflare-only` in v0.
-- Frontend architecture: admin is a client-rendered `SPA`.
+- Frontend architecture: admin routes and API routes ship together from `apps/web`.
 - Frontend runtime/framework: `Vinext`.
-- UI library/design system: `shadcn`.
+- UI library/design system: Tailwind CSS with Datamix's local admin component primitives.
 - Styling system: `Tailwind CSS`.
-- Backend/API framework: `Hono` on a single `Cloudflare Worker` app.
-- Admin hosting target: admin SPA assets built from `apps/admin` and served by that same Worker.
+- Backend/API framework: Vinext App Router route handlers on a single `Cloudflare Worker` app.
+- App hosting target: admin assets and API routes built from `apps/web` and served by that same Worker.
 - Database: `Cloudflare D1`.
 - Object storage/media origin: `Cloudflare R2`.
 - Auth library: `better-auth`.
-- Client-side server state: `TanStack Query`.
+- Client-side server state: same-origin browser fetch helpers in `apps/web/lib`.
 - Content delivery shape: `JSON-first` API.
 
 ### Product-Architecture Constraints
@@ -51,10 +51,11 @@ This section is the default technical source of truth for roadmap execution. Fut
 - v0 email scope is `auth-only`; the email adapter should remain reusable for v1 flows.
 - The project should stay vertically sliced during implementation rather than broad horizontal platform buildout.
 - The product should remain browser-first: a fresh instance should be deployable and usable without local setup.
+- Runtime config has two contexts only: local development and the deployed Cloudflare app. There is no preview/staging deployment lane in v0.
 
 ### UI and UX Constraints
 
-- `Tailwind CSS` and `shadcn` are required defaults for admin UI work unless this tracker is updated.
+- `Tailwind CSS` and Datamix's local admin component primitives are required defaults for admin UI work unless this tracker is updated.
 - Do not substitute another component system or design system such as `MUI`, `Chakra`, `Ant Design`, or similar without an explicit decision.
 - The admin should keep a minimal, calm, collection-first information architecture.
 - `Dark mode` is out of scope for v0.
@@ -64,7 +65,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 - Media assets must be served from `R2` through Worker-managed routes.
 - Image transforms should be implemented inside the Worker runtime and stay behind Worker-managed routes.
 - Email delivery should go through an abstracted provider layer.
-- Supported email providers to design for are `SMTP`, `Resend`, `Mailgun`, `SendGrid`, and `Cloudflare Email`.
+- Supported v0 auth email providers are `SMTP` and `Resend`; additional providers are deferred until a concrete v1 need exists.
 
 ### Collaboration Rule for Agents
 
@@ -119,7 +120,7 @@ This section is the default technical source of truth for roadmap execution. Fut
 | ID | Milestone | Slice | Goal | Depends On | Outputs | Acceptance | Status | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | M0-S1 | M0 | Package manager and workspace bootstrap | Choose package manager and initialize monorepo, root scripts, shared TS config | None | Workspace root, package manager config, shared tsconfig, root scripts | Fresh clone installs and root scripts run from repo root | `ready` | Recommend choosing the package manager best aligned with Cloudflare + Vinext tooling and contributor familiarity |
-| M0-S2 | M0 | App and package scaffolds | Scaffold `apps/admin`, `apps/api`, and `packages/core` with clear boundaries | M0-S1 | Initial app/package directories and baseline entrypoints | Each app/package builds or typechecks with placeholder code and shared config | `planned` | Keep extraction minimal; avoid premature package sprawl |
+| M0-S2 | M0 | App and package scaffolds | Scaffold `apps/web` and `packages/core` with clear boundaries | M0-S1 | Initial app/package directories and baseline entrypoints | Each app/package builds or typechecks with placeholder code and shared config | `planned` | Keep extraction minimal; avoid premature package sprawl |
 | M0-S3 | M0 | Cloudflare runtime conventions | Add Cloudflare dev/runtime config, env typing, and contributor conventions | M0-S1, M0-S2 | Config files, env contract, local dev instructions | Local development contract is documented and typed | `planned` | Treat Cloudflare-only as a feature, not a temporary constraint |
 | M0-S4 | M0 | CI quality gate | Add CI for install, lint, typecheck, and tests | M0-S1, M0-S2 | CI workflow files and passing baseline checks | PR-quality checks run automatically and pass on scaffolded repo | `planned` | Keep CI fast enough for contributors |
 | M1-S1 | M1 | Deploy/runtime contract | Define the single-Worker, single-domain deployment/runtime contract across admin assets, API, D1, and R2 | M0-S3 | Deployment config and service boundary docs/config | One documented runtime contract covers admin, API, database, and storage | `done` | The Worker now serves both the admin assets and the API from one origin |
@@ -200,8 +201,8 @@ Review result:
 ## Revision Notes
 
 - This tracker follows the revised PRD, including the clarification that schema definition and record edit form generation are the same feature.
-- The revised PRD still contains a stale line in section `3.2` mentioning form relay in v0 email scope. This tracker intentionally treats email as auth-only in v0 and reserves submission relay for v1.
-- Runtime contract note: as of 2026-05-11, Datamix runs as one Cloudflare Worker app on one domain. `apps/admin` remains a source directory, but its built SPA assets are served by the Worker rather than a separate Pages deployment.
+- The revised PRD and this tracker intentionally treat email as auth-only in v0 and reserve submission relay for v1.
+- Runtime contract note: as of 2026-06-11, Datamix has one app workspace, `apps/web`, and runs either locally for contributors or as one deployed Cloudflare Worker app. There are no separate admin/API apps and no preview/staging deployment lane in v0.
 - The dedicated scope note for this clarification lives at [docs/v1-contact-form-scope.md](/Users/jy/Desktop/projects/datamix/docs/v1-contact-form-scope.md:1).
 - The broader deferred-epic list for v1 lives at [docs/v1-deferred-epics.md](/Users/jy/Desktop/projects/datamix/docs/v1-deferred-epics.md:1).
 - The final v0 scope boundary lives at [docs/v0-cut-review.md](/Users/jy/Desktop/projects/datamix/docs/v0-cut-review.md:1).

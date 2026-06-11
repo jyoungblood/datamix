@@ -12,7 +12,7 @@ Provide this section verbatim to any LLM assisting with planning or implementati
 
 ### WHAT WE'RE BUILDING
 
-Datamix (DMX) is an open-source, edge-native headless content modeling studio that deploys in a single click to Cloudflare. It provides a JSON-first content delivery API, a fully managed admin UI for content modeling and editing, multi-user RBAC, and a media library - all running on Cloudflare Workers + D1 + R2 with zero local setup required. The admin is a client-rendered SPA (Vinext + shadcn) whose built assets are served by the same Cloudflare Worker app that exposes the Hono API. Auth is handled by better-auth. Client-side server state is managed with TanStack Query. Email (auth flows + form relay) uses an abstracted provider layer supporting SMTP, Resend, Mailgun, SendGrid, and Cloudflare Email interchangeably. The primary differentiator is that the entire lifecycle - provisioning, configuration, content management - happens in-browser with no code editor required.
+Datamix (DMX) is an open-source, edge-native headless content modeling studio that deploys to Cloudflare as one app. It provides a JSON-first content delivery API, a fully managed admin UI for content modeling and editing, multi-user RBAC, and a media library - all running in one Vinext App Router Cloudflare Worker with D1 and R2 bindings. The same `apps/web` app serves admin pages, auth, media, setup, and API route handlers from one origin. Auth is handled by `better-auth`. Email in v0 is auth-only and supports SMTP or Resend through one provider abstraction. The primary differentiator is that deployed instances are configured and managed from the browser; local development is only for project contributors.
 
 ### WHAT WE ARE NOT BUILDING (v0)
 
@@ -51,34 +51,34 @@ Write the simplest, most human-readable code possible. This is an open-source pr
 | Feature | Description | Priority |
 | --- | --- | --- |
 | Frontend | Vinext (vinext.io) - locked in | Required |
-| UI Components | shadcn/ui component library + shadcn CSS variable system | Required |
-| Backend API | Hono on Cloudflare Workers | Required |
+| UI Components | Tailwind CSS with Datamix's local admin component primitives | Required |
+| Backend API | Vinext App Router route handlers in the same Cloudflare Worker app | Required |
 | Database | Cloudflare D1 (SQLite at the edge) | Required |
-| Media Storage | Cloudflare R2 with optional custom domain (e.g. media.yourdomain.com) | Required |
+| Media Storage | Cloudflare R2 behind Worker-managed media routes | Required |
 | Auth | better-auth - full auth with password reset, persistent sessions | Required |
-| Query Building | Kysely - type-safe SQL query builder (adopt if/when query complexity warrants it) | Evaluate |
-| Data Fetching | TanStack Query - client-side server state, caching, and mutation management | Required |
+| Database Access | Drizzle for fixed D1 infrastructure tables; runtime SQL for admin-defined collection tables | Required |
+| Data Fetching | Same-origin browser fetch helpers against `/api/*` routes | Required |
 | Hosting | Single Cloudflare Worker app serving admin SPA assets and API routes | Required |
 
 ### 3.2 Email - Abstracted Provider Layer
 
-Email is required in v0 for two flows: auth (forgot password / account invites) and form processor relay. The email layer must be provider-agnostic from day one - configure once, swap providers without touching application code.
+Email is required in v0 for auth flows: forgot password and account invites. The email layer must stay provider-swappable without touching application code.
 
 | Feature | Description | Priority |
 | --- | --- | --- |
 | SMTP (generic) | Default - works with any SMTP-compatible provider. Lowest friction to configure. | Required v0 |
 | Resend | First-class named provider (excellent DX, generous free tier) | Required v0 |
-| Mailgun / SendGrid | Supported via same abstraction interface | Required v0 |
-| Cloudflare Email | Supported as one option among many - not the default | Supported |
+| Mailgun / SendGrid | Deferred until there is a concrete v1 need | Deferred |
+| Cloudflare Email | Deferred until there is a concrete v1 need | Deferred |
 
 - Single internal email handler interface - provider swapped via env var or admin settings, not code changes
 - Template engine: React Email - write once, render for any provider
-- Admin UI: email provider selector + credential fields (SMTP host/port/user/pass, or API key for hosted providers)
-- Ship SMTP + Resend first - add additional providers incrementally. Do not over-engineer early.
+- Admin UI: show configured auth provider posture without requiring a second deployment surface
+- Ship SMTP + Resend first. Add additional providers incrementally when v1 needs them.
 
 ### 3.3 Architecture Constraints
 
-- Client-rendered SPA admin served by the same Worker app that exposes the API - avoids Worker cold-start UX issues associated with server-rendered apps like SonicJS while keeping one deployed surface
+- Client-rendered admin served by the same Worker app that exposes the API - keeps one deployed surface
 - Separate package architecture - core package + optional extension packages under a shared npm org
 - All image processing (compression, resizing, cropping) must stay behind Cloudflare Worker routes for R2-managed assets
 - Built to receive security updates over time without breaking user customizations
@@ -86,8 +86,8 @@ Email is required in v0 for two flows: auth (forgot password / account invites) 
 
 ### 3.4 Deployment Model
 
-- PRIMARY: 1-click deploy via Cloudflare Deploy Button - provisions all services, runs init, creates admin user with zero local setup
-- SECONDARY: `npx create-datamix@latest my-project --deploy` - local init + immediate deploy option
+- PRIMARY: one Cloudflare-deployed Datamix app configured from the top-level Worker config, then initialized in-browser
+- SECONDARY: `npx create-datamix@latest my-project --deploy` - local scaffold plus explicit Cloudflare provisioning steps
 - Goal: a new instance must be fully operational from a browser tab with no terminal required
 
 ## 4. v0 - Core Feature Set

@@ -11,25 +11,16 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "node ./scripts/dev.mjs",
-    "dev:web": "npm run dev --workspace @datamix/web",
-    "dev:app": "npm run dev:web",
+    "dev": "npm run dev --workspace @datamix/web",
     "build": "npm run build --workspace @datamix/web",
-    "build:web": "npm run build --workspace @datamix/web",
-    "build:app": "npm run build:web",
     "typecheck": "npm run typecheck --workspace @datamix/web",
     "check": "npm run typecheck --workspace @datamix/web",
     "typegen": "npm run typegen --workspace @datamix/web",
-    "typegen:web": "npm run typegen --workspace @datamix/web",
-    "typegen:app": "npm run typegen:web",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate:local": "WRANGLER_LOG_PATH=apps/web/.wrangler/logs wrangler d1 migrations apply DB --local --config apps/web/wrangler.jsonc",
-    "db:migrate:preview": "WRANGLER_LOG_PATH=apps/web/.wrangler/logs wrangler d1 migrations apply DB --remote --env preview --config apps/web/wrangler.jsonc",
-    "db:migrate:production": "WRANGLER_LOG_PATH=apps/web/.wrangler/logs wrangler d1 migrations apply DB --remote --env production --config apps/web/wrangler.jsonc",
+    "db:migrate:remote": "WRANGLER_LOG_PATH=apps/web/.wrangler/logs wrangler d1 migrations apply DB --remote --config apps/web/wrangler.jsonc",
     "smoke": "node --import tsx ./tests/smoke/datamix-smoke.mjs",
     "deploy": "npm run deploy --workspace @datamix/web",
-    "deploy:preview": "npm run deploy:preview --workspace @datamix/web",
-    "deploy:production": "npm run deploy:production --workspace @datamix/web",
     "clean": "node ./scripts/clean.mjs"
   },
   "devDependencies": {

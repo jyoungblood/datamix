@@ -11,7 +11,7 @@ export const datamixProduct = {
 
 export const datamixAuthPath = "/api/auth";
 
-export const datamixEnvironments = ["development", "preview", "production"] as const;
+export const datamixEnvironments = ["development", "production"] as const;
 
 export const datamixSurfaces = [
   {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { access, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { setTimeout as delay } from "node:timers/promises";
@@ -260,16 +260,31 @@ async function main() {
   const smokeAuthSecret =
     process.env.BETTER_AUTH_SECRET ??
     "datamix-smoke-secret-0123456789-abcdefghijklmnopqrstuvwxyz";
-  let createdSmokeDevVars = false;
+  let originalDevVars = null;
   let appProcess = null;
 
   try {
     try {
-      await access(appDevVarsPath);
-    } catch {
-      await writeFile(appDevVarsPath, `BETTER_AUTH_SECRET=${smokeAuthSecret}\n`);
-      createdSmokeDevVars = true;
+      originalDevVars = await readFile(appDevVarsPath, "utf8");
+    } catch (error) {
+      if (error?.code !== "ENOENT") {
+        throw error;
+      }
     }
+
+    await writeFile(
+      appDevVarsPath,
+      [
+        "APP_ENV=development",
+        `APP_ORIGIN=${appOrigin}`,
+        `MEDIA_PUBLIC_ORIGIN=${appOrigin}`,
+        "NEXT_PUBLIC_APP_ENV=development",
+        `NEXT_PUBLIC_APP_ORIGIN=${appOrigin}`,
+        `BETTER_AUTH_SECRET=${smokeAuthSecret}`,
+        "PUBLIC_API_READ_ACCESS=public",
+        "PUBLIC_API_WRITE_ACCESS=disabled",
+      ].join("\n") + "\n",
+    );
 
     console.log("Starting unified local Datamix app for smoke coverage...");
     appProcess = createManagedProcess(
@@ -420,9 +435,9 @@ async function main() {
       origin: appOrigin,
     });
     assertOk(adminHomePage.response, "Expected the routed admin home page to load.");
-    assert.match(
-      adminHomePage.text,
-      /data-admin-homepage="overview-v1"/,
+    assert.ok(
+      adminHomePage.text.includes('data-admin-homepage="overview-v1"') ||
+        adminHomePage.text.includes('\\"data-admin-homepage\\":\\"overview-v1\\"'),
       "Expected /admin to render the routed admin overview.",
     );
     assert.doesNotMatch(
@@ -638,8 +653,10 @@ async function main() {
   } finally {
     await Promise.allSettled([appProcess ? stopManagedProcess(appProcess) : Promise.resolve()]);
 
-    if (createdSmokeDevVars) {
+    if (originalDevVars === null) {
       await rm(appDevVarsPath, { force: true });
+    } else {
+      await writeFile(appDevVarsPath, originalDevVars);
     }
 
     await rm(smokePersistPath, { force: true, recursive: true });

@@ -7,8 +7,9 @@ one Cloudflare Worker app. App Router route handlers live under `app/api/**`, sh
 server helpers live under `server/**`, routed admin pages live under `app/admin/**`,
 and private admin screen components live under `app/admin/_screens/**`.
 
-Use `npm run dev --workspace @datamix/web` for local development on
-`http://127.0.0.1:3000`.
+Use `npm run dev` from the repository root for local development on
+`http://127.0.0.1:3000`. The root command delegates to this workspace's Vinext dev
+server.
 
 Fixed D1 infrastructure tables are defined with Drizzle in `server/db/schema.ts`.
 Use the root `db:*` scripts to generate and apply checked-in migrations under

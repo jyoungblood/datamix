@@ -30,12 +30,11 @@ Datamix is an edge-native, Cloudflare-only content modeling studio that ships as
 - `npm run build`
 - `npm run smoke`
 - `npm run dev`
-- `npm run dev:web`
-- `npm run typegen:web`
+- `npm run typegen`
 - `npm run db:generate`
 - `npm run db:migrate:local`
-- `npm run db:migrate:preview`
-- `npm run db:migrate:production`
+- `npm run db:migrate:remote`
+- `npm run deploy`
 - `npm run clean`
 
 ## Secondary Bootstrap

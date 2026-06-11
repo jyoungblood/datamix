@@ -13,15 +13,9 @@ type CliOptions = {
 };
 
 type ProjectNames = {
-  appDevName: string;
-  appPreviewName: string;
-  appProductionName: string;
-  d1LocalName: string;
-  d1PreviewName: string;
-  d1ProductionName: string;
-  mediaLocalName: string;
-  mediaPreviewName: string;
-  mediaProductionName: string;
+  appName: string;
+  d1Name: string;
+  mediaName: string;
   packageName: string;
   projectSlug: string;
 };
@@ -138,15 +132,9 @@ function createProjectNames(projectDirName: string): ProjectNames {
   const projectSlug = rawSlug.length > 0 ? rawSlug : "datamix-project";
 
   return {
-    appDevName: `${projectSlug}-app-dev`,
-    appPreviewName: `${projectSlug}-app-preview`,
-    appProductionName: `${projectSlug}-app`,
-    d1LocalName: `${projectSlug}-local`,
-    d1PreviewName: `${projectSlug}-preview`,
-    d1ProductionName: `${projectSlug}-production`,
-    mediaLocalName: `${projectSlug}-media-local`,
-    mediaPreviewName: `${projectSlug}-media-preview`,
-    mediaProductionName: `${projectSlug}-media-production`,
+    appName: `${projectSlug}-app`,
+    d1Name: `${projectSlug}-db`,
+    mediaName: `${projectSlug}-media`,
     packageName: projectSlug,
     projectSlug,
   };
@@ -183,75 +171,25 @@ async function customizeTemplate(targetDir: string, names: ProjectNames) {
   const appWranglerPath = path.join(targetDir, "apps/web/wrangler.jsonc");
   const appWranglerSource = await readFile(appWranglerPath, "utf8");
   const appWranglerCustomized = appWranglerSource
-    .replace('"name": "datamix-app-dev"', `"name": "${names.appDevName}"`)
-    .replace('"database_name": "datamix-local"', `"database_name": "${names.d1LocalName}"`)
-    .replace('"preview_database_id": "datamix-local"', `"preview_database_id": "${names.d1LocalName}"`)
-    .replace('"bucket_name": "datamix-media-local"', `"bucket_name": "${names.mediaLocalName}"`)
-    .replace(
-      '"preview_bucket_name": "datamix-media-local"',
-      `"preview_bucket_name": "${names.mediaLocalName}"`,
-    )
-    .replace('"name": "datamix-app-preview"', `"name": "${names.appPreviewName}"`)
-    .replace('"database_name": "datamix-preview"', `"database_name": "${names.d1PreviewName}"`)
-    .replace(
-      '"bucket_name": "datamix-media-preview"',
-      `"bucket_name": "${names.mediaPreviewName}"`,
-    )
-    .replace(
-      '"preview_bucket_name": "datamix-media-preview"',
-      `"preview_bucket_name": "${names.mediaPreviewName}"`,
-    )
-    .replace('"name": "datamix-app"', `"name": "${names.appProductionName}"`)
-    .replace(
-      '"database_name": "datamix-production"',
-      `"database_name": "${names.d1ProductionName}"`,
-    )
-    .replace(
-      '"bucket_name": "datamix-media-production"',
-      `"bucket_name": "${names.mediaProductionName}"`,
-    )
-    .replace(
-      '"preview_bucket_name": "datamix-media-production"',
-      `"preview_bucket_name": "${names.mediaProductionName}"`,
-    );
+    .replace('"name": "datamix-app"', `"name": "${names.appName}"`)
+    .replace('"database_name": "datamix-db"', `"database_name": "${names.d1Name}"`)
+    .replace('"bucket_name": "datamix-media"', `"bucket_name": "${names.mediaName}"`);
 
   await writeFile(appWranglerPath, appWranglerCustomized);
 
   const deployDocPath = path.join(targetDir, "docs/deploy-runtime-contract.md");
   const deployDocSource = await readFile(deployDocPath, "utf8");
   const deployDocCustomized = deployDocSource
+    .replace("- App Worker: `datamix-app`", `- App Worker: \`${names.appName}\``)
+    .replace("- D1 database: `datamix-db`", `- D1 database: \`${names.d1Name}\``)
+    .replace("- R2 bucket: `datamix-media`", `- R2 bucket: \`${names.mediaName}\``)
     .replace(
-      "- App Worker: `datamix-app` with local top-level config and named `preview` / `production` environments",
-      `- App Worker: \`${names.appProductionName}\` with local top-level config and named \`preview\` / \`production\` environments`,
-    )
-    .replace("- Preview D1 database: `datamix-preview`", `- Preview D1 database: \`${names.d1PreviewName}\``)
-    .replace(
-      "- Production D1 database: `datamix-production`",
-      `- Production D1 database: \`${names.d1ProductionName}\``,
+      "1. `npx wrangler d1 create datamix-db`",
+      `1. \`npx wrangler d1 create ${names.d1Name}\``,
     )
     .replace(
-      "- Preview R2 bucket: `datamix-media-preview`",
-      `- Preview R2 bucket: \`${names.mediaPreviewName}\``,
-    )
-    .replace(
-      "- Production R2 bucket: `datamix-media-production`",
-      `- Production R2 bucket: \`${names.mediaProductionName}\``,
-    )
-    .replace(
-      "1. `npx wrangler d1 create datamix-preview`",
-      `1. \`npx wrangler d1 create ${names.d1PreviewName}\``,
-    )
-    .replace(
-      "2. `npx wrangler d1 create datamix-production`",
-      `2. \`npx wrangler d1 create ${names.d1ProductionName}\``,
-    )
-    .replace(
-      "3. `npx wrangler r2 bucket create datamix-media-preview`",
-      `3. \`npx wrangler r2 bucket create ${names.mediaPreviewName}\``,
-    )
-    .replace(
-      "4. `npx wrangler r2 bucket create datamix-media-production`",
-      `4. \`npx wrangler r2 bucket create ${names.mediaProductionName}\``,
+      "2. `npx wrangler r2 bucket create datamix-media`",
+      `2. \`npx wrangler r2 bucket create ${names.mediaName}\``,
     );
 
   await writeFile(deployDocPath, deployDocCustomized);
@@ -312,13 +250,11 @@ function printSuccessMessage(input: {
   if (input.options.deploy) {
     console.log("");
     console.log("Deploy-oriented next steps:");
-    console.log(`  npx wrangler d1 create ${input.names.d1PreviewName}`);
-    console.log(`  npx wrangler d1 create ${input.names.d1ProductionName}`);
-    console.log(`  npx wrangler r2 bucket create ${input.names.mediaPreviewName}`);
-    console.log(`  npx wrangler r2 bucket create ${input.names.mediaProductionName}`);
-    console.log("  Update apps/web/wrangler.jsonc with the returned IDs and real app domains.");
-    console.log("  Run npm run typegen:web after editing wrangler.jsonc.");
-    console.log("  Run npm run deploy:preview or npm run deploy:production when the config is ready.");
+    console.log(`  npx wrangler d1 create ${input.names.d1Name}`);
+    console.log(`  npx wrangler r2 bucket create ${input.names.mediaName}`);
+    console.log("  Update apps/web/wrangler.jsonc with the returned D1 ID and real app domain.");
+    console.log("  Run npm run typegen after editing wrangler.jsonc.");
+    console.log("  Run npm run db:migrate:remote and npm run deploy when the config is ready.");
     console.log("");
     console.log("The browser-first deploy flow remains the primary v0 onboarding path.");
   }

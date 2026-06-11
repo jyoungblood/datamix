@@ -1,10 +1,10 @@
 # Deploy And Runtime Contract
 
-This document is the current source of truth for how Datamix v0 is expected to run on Cloudflare.
+This document is the current source of truth for how Datamix v0 is expected to run.
 
 ## Topology
 
-- Datamix deploys as one `Cloudflare Worker` on one domain.
+- Datamix runs in exactly two contexts: local development or one deployed `Cloudflare Worker` app on one domain.
 - `apps/web` is the unified Vinext App Router Worker for admin pages, auth, content, media, setup, and public JSON routes.
 - `D1` is only bound to the Worker as `DB`.
 - `R2` is only bound to the Worker as `MEDIA_BUCKET`.
@@ -26,17 +26,20 @@ This document is the current source of truth for how Datamix v0 is expected to r
 
 ## Environment Model
 
-Datamix uses three runtime modes:
+Datamix uses two runtime modes:
 
 - `development`: local Vinext/Cloudflare Vite dev server on one origin
-- `preview`: Cloudflare preview deployment on one origin
-- `production`: live deployment on one origin
+- `production`: the deployed Cloudflare app on one origin
+
+There is no named preview, staging, or separate production environment in Wrangler. The top-level
+`apps/web/wrangler.jsonc` config is the deployed app contract. Local development overrides runtime
+values through `apps/web/.dev.vars`.
 
 ## Resource Naming
 
-The current contract uses these Cloudflare resource names:
+The default deployable config uses these Cloudflare resource names:
 
-- App Worker: `datamix-app` with local top-level config and named `preview` / `production` environments
+- App Worker: `datamix-app`
 - D1 binding: `DB`
 - R2 binding: `MEDIA_BUCKET`
 - Images binding: `IMAGES`
@@ -44,16 +47,13 @@ The current contract uses these Cloudflare resource names:
 
 Suggested remote resource names:
 
-- Preview D1 database: `datamix-preview`
-- Production D1 database: `datamix-production`
-- Preview R2 bucket: `datamix-media-preview`
-- Production R2 bucket: `datamix-media-production`
+- D1 database: `datamix-db`
+- R2 bucket: `datamix-media`
 
 ## Origin Contract
 
 - Local app origin: `http://127.0.0.1:3000`
-- Preview app origin: replace the placeholder in `apps/web/wrangler.jsonc` with your real preview domain
-- Production app origin: replace the placeholder in `apps/web/wrangler.jsonc` with your real production domain
+- Deployed app origin: replace the placeholder in `apps/web/wrangler.jsonc` with the real deployed domain
 - The admin talks back to the current browser origin at runtime; it does not rely on a separate API origin variable
 - `APP_ORIGIN` is configured in Worker env because invite/reset emails need absolute URLs and `better-auth` trusted origins must match the deployed domain
 
@@ -66,20 +66,15 @@ Suggested remote resource names:
 - Drizzle schema and generated D1 migrations:
   [apps/web/server/db/schema.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/db/schema.ts:1),
   [drizzle/d1](/Users/jy/Desktop/projects/datamix/drizzle/d1)
-- Optional public app env examples:
-  [apps/web/.env.example](/Users/jy/Desktop/projects/datamix/apps/web/.env.example:1),
-  [apps/web/.env.preview.example](/Users/jy/Desktop/projects/datamix/apps/web/.env.preview.example:1),
-  [apps/web/.env.production.example](/Users/jy/Desktop/projects/datamix/apps/web/.env.production.example:1)
-
 ## Important Constraints
 
 - The admin stays browser-first in v0.
 - The Worker is the only deployed runtime. We do not deploy a separate Pages app.
 - D1 and R2 are never exposed directly to the browser.
 - Media URLs should resolve through Worker-managed routes, not raw public bucket URLs.
-- Preview and production must use separate remote D1 databases and separate remote R2 buckets.
-- The placeholder IDs and `.example` domains in config files are intentional and must be replaced before the first real deploy.
-- Auth secrets are not checked into `wrangler.jsonc`; set `BETTER_AUTH_SECRET` and the chosen auth-email provider credentials as Worker secrets per environment.
+- The deployed app uses one remote D1 database and one remote R2 bucket.
+- The placeholder IDs and `.example` domain in `apps/web/wrangler.jsonc` are intentional and must be replaced before the first real deploy.
+- Auth secrets are not checked into `wrangler.jsonc`; set `BETTER_AUTH_SECRET` and the chosen auth-email provider credentials as Worker secrets for the deployed app.
 
 ## Asset Routing Contract
 
@@ -113,28 +108,25 @@ Suggested remote resource names:
 - Public write access is controlled by `PUBLIC_API_WRITE_ACCESS`:
   `disabled` rejects writes,
   `api-key` requires a configured write key.
-- Temporary v0 key configuration is env-backed:
+- API keys are managed from the Datamix admin. Optional static Worker secrets remain available for bootstrap or recovery:
   `PUBLIC_API_READ_KEY` grants read access when read mode is `api-key`.
   `PUBLIC_API_WRITE_KEY` grants write access and also satisfies read access.
-- This env-backed key check is intentionally the pre-M5 path; managed key lifecycle and UI land later without changing the public route family.
 
 ## Provisioning Notes
 
 When the team is ready to attach real remote resources, these are the expected Wrangler commands:
 
-1. `npx wrangler d1 create datamix-preview`
-2. `npx wrangler d1 create datamix-production`
-3. `npx wrangler r2 bucket create datamix-media-preview`
-4. `npx wrangler r2 bucket create datamix-media-production`
+1. `npx wrangler d1 create datamix-db`
+2. `npx wrangler r2 bucket create datamix-media`
 
 After provisioning:
 
-1. Copy the returned D1 IDs into `apps/web/wrangler.jsonc`
-2. Replace the placeholder app domains in `apps/web/wrangler.jsonc`
-3. Rerun `npm run typegen:web`
-4. Set `BETTER_AUTH_SECRET` for the Worker in each environment
+1. Copy the returned D1 ID into `apps/web/wrangler.jsonc`
+2. Replace the placeholder app domain in `apps/web/wrangler.jsonc`
+3. Rerun `npm run typegen`
+4. Set `BETTER_AUTH_SECRET` for the Worker
 5. Set the auth email provider secrets and sender identity vars for the chosen delivery mode
-6. Apply fixed-schema D1 migrations with `npm run db:migrate:preview` or `npm run db:migrate:production`
-7. Run `npm run deploy:preview` or `npm run deploy:production`
+6. Apply fixed-schema D1 migrations with `npm run db:migrate:remote`
+7. Run `npm run deploy`
 
 When fixed-schema tables change, run `npm run db:generate`, review the generated SQL under `drizzle/d1`, then apply the matching D1 migration before deploying the Worker. Generated collection record tables are still created and changed by runtime raw SQL from admin-defined collection schemas.

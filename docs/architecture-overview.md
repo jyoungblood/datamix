@@ -6,6 +6,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 - Cloudflare-only is the product shape, not a temporary implementation detail.
 - `apps/web` is the only app workspace and the only deployed Worker runtime.
+- Runtime config has two contexts only: local development and the deployed Cloudflare app.
 - The Worker runtime is the only code allowed to touch `D1` and `R2`.
 - Auth and session state live on the app origin and are consumed by same-origin browser requests.
 - Collection schema definition and record edit form generation are the same system.
