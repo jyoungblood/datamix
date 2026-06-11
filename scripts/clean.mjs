@@ -3,7 +3,14 @@ import path from "node:path";
 
 const workspaceRoot = new URL("..", import.meta.url);
 const rootPath = path.resolve(workspaceRoot.pathname);
-const targets = new Set(["dist", ".vinext", ".wrangler", "tsconfig.tsbuildinfo"]);
+const targets = new Set([
+  "dist",
+  ".next",
+  ".vinext",
+  ".wrangler",
+  "next-env.d.ts",
+  "tsconfig.tsbuildinfo",
+]);
 
 async function walk(currentPath) {
   const entries = await readdir(currentPath, { withFileTypes: true });
