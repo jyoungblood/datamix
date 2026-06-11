@@ -222,7 +222,7 @@ export async function authorizeManagedPublicApiKey(
 
   const now = new Date().toISOString();
 
-  void touchApiKeyUsage(input.env, {
+  await touchApiKeyUsage(input.env, {
     apiKeyId: key.id,
     lastUsedAt: now,
     updatedAt: now,

@@ -107,10 +107,10 @@ Suggested remote resource names:
   `disabled` rejects reads.
 - Public write access is controlled by `PUBLIC_API_WRITE_ACCESS`:
   `disabled` rejects writes,
-  `api-key` requires a configured write key.
-- API keys are managed from the Datamix admin. Optional static Worker secrets remain available for bootstrap or recovery:
-  `PUBLIC_API_READ_KEY` grants read access when read mode is `api-key`.
-  `PUBLIC_API_WRITE_KEY` grants write access and also satisfies read access.
+  `api-key` requires a managed write key.
+- API keys are managed from the Datamix admin. Raw secrets are shown once,
+  stored as hashes in D1, revocable, access-level aware, and tracked with
+  `lastUsedAt`.
 
 ## Provisioning Notes
 

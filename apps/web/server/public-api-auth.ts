@@ -65,44 +65,6 @@ export function readApiKeyHeader(headers: Headers) {
   return token?.trim() || null;
 }
 
-async function authorizeConfiguredApiKey({
-  apiKey,
-  permission,
-  runtime,
-}: PublicApiKeyAuthHookInput): Promise<PublicApiPrincipal | null> {
-  if (runtime.writeKey && apiKey === runtime.writeKey) {
-    return {
-      accessLevel: "write",
-      type: "api-key",
-    };
-  }
-
-  if (permission === "read" && runtime.readKey && apiKey === runtime.readKey) {
-    return {
-      accessLevel: "read",
-      type: "api-key",
-    };
-  }
-
-  return null;
-}
-
-export function createConfiguredPublicApiKeyAuthHook(): PublicApiKeyAuthHook {
-  return authorizeConfiguredApiKey;
-}
-
-async function authorizePublicApiKey(
-  input: PublicApiKeyAuthHookInput,
-): Promise<PublicApiPrincipal | null> {
-  const configuredPrincipal = await authorizeConfiguredApiKey(input);
-
-  if (configuredPrincipal) {
-    return configuredPrincipal;
-  }
-
-  return authorizeManagedPublicApiKey(input);
-}
-
 export async function resolvePublicApiAccess(
   env: DatamixBindings,
   headers: Headers,
@@ -148,7 +110,7 @@ export async function resolvePublicApiAccess(
       };
     }
 
-    const keyAuthHook = options?.keyAuthHook ?? authorizePublicApiKey;
+    const keyAuthHook = options?.keyAuthHook ?? authorizeManagedPublicApiKey;
     const principal = await keyAuthHook({
       apiKey,
       env,

@@ -50,7 +50,7 @@ export async function resolveAuthorizedSession(
     const roleId = readDatamixRoleId(session.user);
     const role =
       (roleId ? await getAvailableRoleDefinition(env, roleId) : null) ??
-      resolveDatamixRolePreset(null, "administrator");
+      resolveDatamixRolePreset(roleId);
     const authorization = createDatamixAuthorizationSummaryForRole(role);
 
     return {

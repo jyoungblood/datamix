@@ -6,8 +6,6 @@ import type {
 import { buildDatamixAdminApiUrl } from "./runtime";
 
 export type PublicApiRuntimeSummary = {
-  hasConfiguredReadKey: boolean;
-  hasConfiguredWriteKey: boolean;
   readAccess: "public" | "api-key" | "disabled";
   writeAccess: "disabled" | "api-key";
 };

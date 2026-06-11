@@ -343,14 +343,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                       label: "Public write access",
                       value: formatPublicApiAccessMode(publicApiRuntime.writeAccess),
                     },
-                    {
-                      label: "Configured env read key",
-                      value: publicApiRuntime.hasConfiguredReadKey ? "Present" : "Not set",
-                    },
-                    {
-                      label: "Configured env write key",
-                      value: publicApiRuntime.hasConfiguredWriteKey ? "Present" : "Not set",
-                    },
                   ]}
                 />
               ) : null}

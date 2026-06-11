@@ -37,6 +37,8 @@ export class MediaAssetError extends Error {
   }
 }
 
+export const maxMediaUploadBytes = 25 * 1024 * 1024;
+
 function createMediaObjectCacheControl() {
   return "public, max-age=31536000, immutable";
 }
@@ -376,6 +378,10 @@ function assertUploadFile(value: FormDataEntryValue | null) {
     throw new MediaAssetError("Uploaded file must not be empty.");
   }
 
+  if (value.size > maxMediaUploadBytes) {
+    throw new MediaAssetError("Uploaded file must be 25 MB or smaller.", 413);
+  }
+
   return value;
 }
 
@@ -392,11 +398,10 @@ export async function createMediaAsset(
   const now = new Date().toISOString();
   const assetId = crypto.randomUUID();
   const storageKey = createMediaAssetStorageKey(assetId, file.name);
-  const fileBytes = await file.arrayBuffer();
 
   await env.MEDIA_BUCKET.put(
     storageKey,
-    fileBytes,
+    file.stream(),
     createBucketMetadata(file, session, assetId),
   );
 

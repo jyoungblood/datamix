@@ -37,8 +37,6 @@ type DatamixSecretBindings = {
   AUTH_SMTP_USERNAME?: string;
   BETTER_AUTH_SECRET: string;
   IMAGES: ImagesBinding;
-  PUBLIC_API_READ_KEY?: string;
-  PUBLIC_API_WRITE_KEY?: string;
 };
 
 export type DatamixBindings = GeneratedDatamixBindings & DatamixSecretBindings;
@@ -66,14 +64,10 @@ export type PublicApiWriteAccessMode = (typeof publicApiWriteAccessModes)[number
 
 export type PublicApiRuntimeEnv = {
   readAccess: PublicApiReadAccessMode;
-  readKey: string | null;
   writeAccess: PublicApiWriteAccessMode;
-  writeKey: string | null;
 };
 
 export type PublicApiRuntimeSummary = {
-  hasConfiguredReadKey: boolean;
-  hasConfiguredWriteKey: boolean;
   readAccess: PublicApiReadAccessMode;
   writeAccess: PublicApiWriteAccessMode;
 };
@@ -242,14 +236,10 @@ export function readPublicApiRuntime(env: DatamixBindings): PublicApiRuntimeEnv 
     "PUBLIC_API_WRITE_ACCESS",
     "disabled",
   );
-  const readKey = readOptionalValue(env.PUBLIC_API_READ_KEY);
-  const writeKey = readOptionalValue(env.PUBLIC_API_WRITE_KEY);
 
   return {
     readAccess,
-    readKey,
     writeAccess,
-    writeKey,
   };
 }
 
@@ -257,8 +247,6 @@ export function createPublicApiRuntimeSummary(
   runtime: PublicApiRuntimeEnv,
 ): PublicApiRuntimeSummary {
   return {
-    hasConfiguredReadKey: Boolean(runtime.readKey),
-    hasConfiguredWriteKey: Boolean(runtime.writeKey),
     readAccess: runtime.readAccess,
     writeAccess: runtime.writeAccess,
   };
