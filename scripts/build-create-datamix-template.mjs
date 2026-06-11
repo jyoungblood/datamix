@@ -57,10 +57,6 @@ async function copyDirectory(sourceDir, targetDir) {
         return false;
       }
 
-      if (source.endsWith(`${path.sep}docs${path.sep}vinext-only-migration-tracker.md`)) {
-        return false;
-      }
-
       if (source.endsWith(".dev.vars") || source.endsWith(".env.local")) {
         return false;
       }

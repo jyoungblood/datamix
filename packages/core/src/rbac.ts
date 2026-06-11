@@ -231,7 +231,7 @@ export const datamixPermissionMatrix = [
         key: "records.read",
         action: "read",
         label: "View records",
-        description: "Browse and inspect records in the admin and future protected APIs.",
+        description: "Browse and inspect records in the admin.",
       },
       {
         key: "records.create",
@@ -274,7 +274,7 @@ export const datamixPermissionMatrix = [
         key: "media.update",
         action: "update",
         label: "Edit media",
-        description: "Update asset metadata and future media-level configuration fields.",
+        description: "Update stored asset metadata.",
       },
       {
         key: "media.delete",
@@ -305,7 +305,7 @@ export const datamixPermissionMatrix = [
         key: "users.update",
         action: "update",
         label: "Edit users",
-        description: "Change a user's role assignment or future account access state.",
+        description: "Change a user's role assignment.",
       },
       {
         key: "users.delete",
@@ -318,7 +318,7 @@ export const datamixPermissionMatrix = [
   definePermissionResource(
     "settings",
     "Settings",
-    "Instance-wide configuration, including future role and integration controls.",
+    "Instance-wide configuration, including API keys and role controls.",
     [
       {
         key: "settings.read",
@@ -330,7 +330,7 @@ export const datamixPermissionMatrix = [
         key: "settings.update",
         action: "update",
         label: "Edit settings",
-        description: "Change instance-wide settings and future role definitions.",
+        description: "Change instance-wide settings and role definitions.",
       },
     ],
   ),

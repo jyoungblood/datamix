@@ -54,8 +54,13 @@ npm run smoke
 git diff --check
 ```
 
-If local `apps/web/.env` values cause Wrangler type drift, run:
+The typecheck script pins Wrangler's generated environment shape to
+`apps/web/.dev.vars.example`, so private local values in `apps/web/.dev.vars`
+should not change the checked-in type expectations. Do not use
+`CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false` for this check; that makes
+Wrangler ignore the explicit env file and compare against the smaller
+`wrangler.jsonc`-only shape.
 
 ```bash
-CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false npm run typecheck --workspace @datamix/web
+npm run typecheck --workspace @datamix/web
 ```

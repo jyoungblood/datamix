@@ -443,7 +443,7 @@ async function main() {
     assert.doesNotMatch(
       adminHomePage.text,
       /collections-builder|record-editor|inviteSectionId/,
-      "Expected /admin to omit obsolete legacy dashboard sections.",
+      "Expected /admin to omit retired dashboard section ids.",
     );
 
     const routedAdminPaths = [

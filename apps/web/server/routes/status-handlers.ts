@@ -11,7 +11,7 @@ export function getApiIndex() {
   return jsonResponse({
     ...createServiceStatus("api"),
     runtime,
-    message: "Datamix API scaffold is ready for Cloudflare runtime wiring.",
+    message: "Datamix API is running on the unified Cloudflare Worker.",
   });
 }
 

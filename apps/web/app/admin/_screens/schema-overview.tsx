@@ -260,7 +260,7 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
 
             <div className="mt-4">
               <AdminStateBox
-                body={`Schema workspace state: ${schemaState}. Content counts will be wired when the content routes move in Slice 5.`}
+                body={`Schema workspace state: ${schemaState}. Open a collection from this list to manage its records in the Content workspace.`}
                 compact
                 title="Schema overview scope"
                 tone={collectionLoadError ? "warning" : "neutral"}
