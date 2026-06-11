@@ -7,7 +7,6 @@ import {
   FileText,
   Image,
   KeyRound,
-  RefreshCcw,
   Settings,
   ShieldCheck,
   UserCircle,
@@ -184,16 +183,11 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     mediaLoadError,
     permissions,
     prefetchAdminRoute,
-    refreshApiKeyData,
-    refreshAvailableRoles,
     refreshCollections,
-    refreshMediaAssets,
-    refreshUserList,
     rolesLoadError,
     users,
     usersLoadError,
   } = workspace;
-  const [isRefreshingOverview, setIsRefreshingOverview] = React.useState(false);
   const { contentReadyCount, recentSchemas, totalFieldCount } = React.useMemo(() => {
     const nextRecentSchemas = [...collections]
       .sort((firstCollection, secondCollection) => {
@@ -403,82 +397,24 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
       status: apiKeysStatus,
     },
   ];
-  const canRefreshOverview =
-    !isRefreshingOverview &&
-    !isLoadingApiKeys &&
-    !isLoadingCollections &&
-    !isLoadingMediaAssets &&
-    !isLoadingRoles &&
-    !isLoadingUsers &&
-    !isRefreshingCollections &&
-    !isRefreshingMediaAssets;
-
   React.useEffect(() => {
     void prefetchAdminRoute({ section: "home" });
   }, [prefetchAdminRoute]);
-
-  const handleRefreshOverview = React.useCallback(async () => {
-    setIsRefreshingOverview(true);
-
-    try {
-      const refreshTasks: Promise<void>[] = [];
-
-      if (permissions.canViewCollections) {
-        refreshTasks.push(refreshCollections());
-      }
-
-      if (permissions.canViewMedia) {
-        refreshTasks.push(refreshMediaAssets());
-      }
-
-      if (permissions.canViewUsers) {
-        refreshTasks.push(refreshUserList());
-      }
-
-      if (roleDataIsAllowed) {
-        refreshTasks.push(refreshAvailableRoles());
-      }
-
-      if (permissions.canAccessSettingsWorkspace) {
-        refreshTasks.push(refreshApiKeyData());
-      }
-
-      await Promise.all(refreshTasks);
-    } finally {
-      setIsRefreshingOverview(false);
-    }
-  }, [
-    permissions.canAccessSettingsWorkspace,
-    permissions.canViewCollections,
-    permissions.canViewMedia,
-    permissions.canViewUsers,
-    refreshApiKeyData,
-    refreshAvailableRoles,
-    refreshCollections,
-    refreshMediaAssets,
-    refreshUserList,
-    roleDataIsAllowed,
-  ]);
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
-          action={
-            <Button
-              disabled={!canRefreshOverview}
-              onClick={() => void handleRefreshOverview()}
-              type="button"
-              variant="outline"
-            >
-              <RefreshCcw />
-              {isRefreshingOverview ? "Refreshing" : "Refresh overview"}
-            </Button>
-          }
           description="Review live workspace readiness, recent schemas, and the primary routed admin areas available to your role."
           eyebrow="Admin workspace"
           title="Workspace overview"
         />
+
+        <div>
+          <Button asChild><a href="/api">Open API root</a></Button>
+          <Button asChild><a href="/api/health">Check health</a></Button>
+          <Button asChild><a href="/api/collections">Browse public collections</a></Button>
+        </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <AdminMetric

@@ -34,7 +34,9 @@ export async function resolveAuthorizedSession(
   env: DatamixBindings,
 ): Promise<AdminAccessResult> {
   try {
-    const session = await createAuth(env).api.getSession({
+    const session = await createAuth(env, {
+      baseURL: new URL(request.url).origin,
+    }).api.getSession({
       headers: request.headers,
     });
 

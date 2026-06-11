@@ -32,6 +32,7 @@ const settingsApiKeysScreen = path.join(
   "_screens/settings-api-keys.tsx",
 );
 const manualRefreshFreeScreens = [
+  "admin-home.tsx",
   "content-index.tsx",
   "media-library.tsx",
   "schema-overview.tsx",
@@ -182,6 +183,12 @@ assert(
     adminHomeSource.includes("prefetch={item.route.section !== route.section}") &&
     adminHomeSource.includes("prefetch={true}"),
   "Dashboard navigation links should use Vinext/Next Link prefetching instead of plain anchors.",
+);
+
+assert(
+  !adminHomeSource.includes("Refresh overview") &&
+    !adminHomeSource.includes("handleRefreshOverview"),
+  "The admin dashboard should not render a manual Refresh overview action or keep its local refresh handler.",
 );
 
 assert(
