@@ -158,6 +158,15 @@ assert(
 );
 
 assert(
+  adminFrameSource.includes("prefetchAccountRoute") &&
+    adminFrameSource.includes("onFocus={prefetchAccountRoute}") &&
+    adminFrameSource.includes("onMouseEnter={prefetchAccountRoute}") &&
+    adminFrameSource.includes("prefetch={account.prefetch ?? true}") &&
+    workspaceRouteFrameSource.includes("section: accountRoute.section"),
+  "The sidebar account link should use Vinext/Next Link prefetching and warm the account route on hover/focus.",
+);
+
+assert(
   providerSource.includes("prefetchAdminRoute") &&
     providerSource.includes("prefetchedRouteSectionsRef") &&
     workspaceRouteFrameSource.includes("prefetchAdminRoute") &&

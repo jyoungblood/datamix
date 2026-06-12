@@ -184,6 +184,7 @@
   --sidebar-border: #334155;
   --sidebar-ring: var(--ring);
   --sidebar-muted: #94a3b8;
+  --loader-view-transition-duration: 420ms;
 }
 
 * {
@@ -216,6 +217,60 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.datamix-loader-transition-surface {
+  min-height: 100svh;
+  view-transition-name: datamix-loader-surface;
+}
+
+html.datamix-loader-view-transition::view-transition-group(datamix-loader-surface) {
+  animation-name: none;
+}
+
+html.datamix-loader-view-transition::view-transition-old(datamix-loader-surface),
+html.datamix-loader-view-transition::view-transition-new(datamix-loader-surface) {
+  animation-duration: var(--loader-view-transition-duration);
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  mix-blend-mode: normal;
+}
+
+html.datamix-loader-view-transition::view-transition-old(datamix-loader-surface) {
+  animation-name: datamix-loader-fade-through-out;
+}
+
+html.datamix-loader-view-transition::view-transition-new(datamix-loader-surface) {
+  animation-name: datamix-loader-fade-through-in;
+}
+
+@keyframes datamix-loader-fade-through-out {
+  0% {
+    opacity: 1;
+  }
+
+  45%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes datamix-loader-fade-through-in {
+  0%,
+  45% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.datamix-loader-view-transition::view-transition-group(datamix-loader-surface),
+  html.datamix-loader-view-transition::view-transition-old(datamix-loader-surface),
+  html.datamix-loader-view-transition::view-transition-new(datamix-loader-surface) {
+    animation-duration: 1ms;
+  }
 }
 
 button,

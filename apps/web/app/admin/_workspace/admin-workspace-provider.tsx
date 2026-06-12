@@ -1852,8 +1852,10 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     (session.isPending || setupStatus.isPending);
   const isResolvingInitialAuthorization =
     Boolean(session.data) && !authorization && !authorizationError;
+  const isResolvingInitialAdmin =
+    isResolvingInitialSession || isResolvingInitialAuthorization;
 
-  if (isResolvingInitialSession || isResolvingInitialAuthorization) {
+  if (isResolvingInitialAdmin) {
     return null;
   }
 
@@ -1898,7 +1900,9 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
           </Button>
         }
         body="Datamix did not find an active admin session in this browser. Use the link below if the redirect does not start automatically."
-        title={setupStatus.data?.setupRequired ? "Redirecting to setup" : "Redirecting to sign in"}
+        title={
+          setupStatus.data?.setupRequired ? "Redirecting to setup" : "Redirecting to sign in"
+        }
       />
     );
   }

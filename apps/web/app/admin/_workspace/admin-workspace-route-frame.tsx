@@ -55,6 +55,7 @@ export function AdminWorkspaceRouteFrame({
     href: accountRoute.href,
     initials: workspace.user.initials,
     name: workspace.user.displayName,
+    section: accountRoute.section,
     ...(workspace.user.image ? { avatarSrc: workspace.user.image } : {}),
   };
 

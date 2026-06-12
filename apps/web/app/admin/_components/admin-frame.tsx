@@ -45,6 +45,8 @@ type DatamixSidebarAccount = {
   href?: string
   initials?: string
   name?: string
+  prefetch?: boolean
+  section?: AdminWorkspaceRouteSection
 }
 
 type DatamixSidebarProps = Omit<
@@ -85,6 +87,17 @@ function DatamixSidebar({
   const prefetchBrandRoute = () => {
     if (brandRoute) {
       onPrefetch?.(brandRoute)
+    }
+  }
+  const prefetchAccountRoute = () => {
+    if (account.href && account.section) {
+      onPrefetch?.({
+        href: account.href,
+        id: "account",
+        label: "Account",
+        prefetch: account.prefetch ?? true,
+        section: account.section,
+      })
     }
   }
   const brandClassName =
@@ -221,9 +234,15 @@ function DatamixSidebar({
       </nav>
 
       {account.href ? (
-        <a className={accountClassName} href={account.href}>
+        <Link
+          className={accountClassName}
+          href={account.href}
+          onFocus={prefetchAccountRoute}
+          onMouseEnter={prefetchAccountRoute}
+          prefetch={account.prefetch ?? true}
+        >
           {accountContent}
-        </a>
+        </Link>
       ) : onAccountClick ? (
         <button
           className={accountClassName}
