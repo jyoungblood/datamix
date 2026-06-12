@@ -351,7 +351,6 @@ function SchemaBuilderContent({
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           action={
             <div className="flex flex-wrap gap-2">
@@ -910,7 +909,6 @@ function SchemaBuilderContent({
             </AdminSectionCard>
           </form>
         )}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

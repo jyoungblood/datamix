@@ -75,10 +75,12 @@ export function AdminWorkspaceRouteFrame({
         />
       }
     >
-      <div className="mx-auto mb-4 flex max-w-6xl justify-end">
-        <AdminWorkspaceCommandPalette route={route} />
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+        <div className="flex justify-end">
+          <AdminWorkspaceCommandPalette route={route} />
+        </div>
+        {children}
       </div>
-      {children}
     </AdminFrame>
   );
 }

@@ -191,9 +191,10 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html {
   min-height: 100%;
+  background: var(--background);
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -222,6 +223,10 @@ a {
 .datamix-loader-transition-surface {
   min-height: 100svh;
   view-transition-name: datamix-loader-surface;
+}
+
+html.datamix-loader-view-transition {
+  view-transition-name: none;
 }
 
 html.datamix-loader-view-transition::view-transition-group(datamix-loader-surface) {

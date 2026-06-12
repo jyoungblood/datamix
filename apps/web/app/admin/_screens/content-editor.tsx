@@ -263,7 +263,6 @@ function ContentEditorContent({
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           action={
             collection ? (
@@ -547,7 +546,6 @@ function ContentEditorContent({
             </div>
           </AdminSectionCard>
         )}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

@@ -403,7 +403,6 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           description="Review live workspace readiness, recent schemas, and the primary routed admin areas available to your role."
           eyebrow="Admin workspace"
@@ -677,7 +676,6 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
             </div>
           </AdminSectionCard>
         ) : null}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

@@ -44,7 +44,6 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-5xl flex-col gap-4">
         <AdminPageHeader
           action={
             <Button onClick={() => void signOut()} type="button" variant="outline">
@@ -185,7 +184,6 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
             </Button>
           </div>
         </AdminSectionCard>
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

@@ -116,7 +116,6 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           description="Invite teammates, review current users, and assign roles without leaving the routed workspace."
           eyebrow="Team"
@@ -386,7 +385,6 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
             </div>
           ) : null}
         </AdminSectionCard>
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

@@ -103,7 +103,6 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           description="Upload originals, browse stored asset metadata, and copy storage keys for content image fields."
           eyebrow="Media"
@@ -426,7 +425,6 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
             ) : null}
           </>
         )}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

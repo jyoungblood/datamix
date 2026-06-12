@@ -80,7 +80,6 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           action={
             permissions.canCreateRecords ? (
@@ -241,7 +240,6 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
             </div>
           </AdminSectionCard>
         )}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

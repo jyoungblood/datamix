@@ -84,6 +84,36 @@ assert.match(
 );
 assert.match(
   globalStylesSource,
+  /html\.datamix-loader-view-transition\s*\{[\s\S]*view-transition-name:\s*none/,
+  "Loader transitions should opt the document root out of the default full-page snapshot.",
+);
+assert.match(
+  globalStylesSource,
+  /html\s*\{[\s\S]*scrollbar-gutter:\s*stable/,
+  "The root scroll container should reserve scrollbar gutter space to prevent post-loader layout shifts.",
+);
+assert.match(
+  globalStylesSource,
+  /html\s*\{[\s\S]*background:\s*var\(--background\)/,
+  "The reserved scrollbar gutter should inherit the normal page canvas color.",
+);
+assert.doesNotMatch(
+  globalStylesSource,
+  /html\.datamix-loader-view-transition,\s*html\.datamix-loader-view-transition body\s*\{[\s\S]*background:\s*var\(--sidebar\)/,
+  "Loader transitions should not repaint the root/body canvas when the snapshot starts.",
+);
+assert.doesNotMatch(
+  globalStylesSource,
+  /html\.datamix-loader-view-transition,\s*html\.datamix-loader-view-transition body\s*\{[\s\S]*overflow:\s*hidden/,
+  "Loader transitions should not toggle root/body overflow and force scrollbar gutter repaints.",
+);
+assert.doesNotMatch(
+  globalStylesSource,
+  /\.datamix-loader-transition-surface\s*\{[\s\S]*background:\s*var\(--sidebar\)/,
+  "The transition surface should not repaint behind resolved admin content.",
+);
+assert.match(
+  globalStylesSource,
   /datamix-loader-fade-through-out[\s\S]*45%\s*\{[\s\S]*opacity:\s*0/,
   "The old loader/content snapshot should fade out before the new snapshot fades in.",
 );
@@ -120,20 +150,40 @@ for (const [label, source] of [
   );
 }
 
+assert.match(
+  providerSource,
+  /LoaderViewTransitionBoundary/,
+  "The protected admin workspace provider should render admin resolution through the loader transition boundary.",
+);
+assert.match(
+  providerSource,
+  /active=\{isResolvingInitialAdmin\}/,
+  "Protected admin session/access resolution should drive the loader boundary directly.",
+);
+assert.match(
+  providerSource,
+  /isResolvingInitialAdmin \? null :/,
+  "Protected admin children should not mount until the workspace has resolved.",
+);
+assert.match(
+  providerSource,
+  /<AdminWorkspaceContext\.Provider value=\{value\}>[\s\S]*<LoaderViewTransitionBoundary active=\{isResolvingInitialAdmin\}>[\s\S]*<\/LoaderViewTransitionBoundary>[\s\S]*<\/AdminWorkspaceContext\.Provider>/,
+  "The workspace context provider should stay mounted around the loader boundary so hydrated admin screens never see a null context.",
+);
+assert.match(
+  providerSource,
+  /return children;/,
+  "Ready admin screens should render as the resolved loader-boundary content.",
+);
 assert.doesNotMatch(
   providerSource,
-  /LoaderViewTransitionBoundary|consumeAdminLoaderTransition|adminLoaderTransition/,
-  "The protected admin workspace provider should not own loader transition state or wrappers.",
+  /return \(\s*<AdminWorkspaceContext\.Provider value=\{value\}>[\s\S]*\{children\}[\s\S]*<\/AdminWorkspaceContext\.Provider>\s*\);/,
+  "The workspace context provider should not be recreated inside the ready-only loader branch.",
 );
-assert.match(
+assert.doesNotMatch(
   providerSource,
-  /return null;/,
-  "Direct/cold admin loads should resolve silently instead of showing the full-screen loader.",
-);
-assert.match(
-  providerSource,
-  /<AdminWorkspaceContext\.Provider value=\{value\}>\s*\{children\}\s*<\/AdminWorkspaceContext\.Provider>/,
-  "Ready admin screens should render directly inside the workspace context provider.",
+  /if \(isResolvingInitialAdmin\)\s*\{\s*return null;\s*\}/,
+  "Direct/cold admin loads should show the full-screen loader instead of returning nothing.",
 );
 
 assert.doesNotMatch(
@@ -149,5 +199,5 @@ assert.doesNotMatch(
 assert.doesNotMatch(
   providerSource,
   /const shouldShowLoader = isResolvingInitialSession \|\| isResolvingInitialAuthorization;/,
-  "Protected admin session/access resolution should not show the loader just because an admin page is loading cold.",
+  "Protected admin session/access resolution should use the shared isResolvingInitialAdmin loader state.",
 );

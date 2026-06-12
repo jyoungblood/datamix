@@ -10,6 +10,7 @@ const loaderDemoComponent = path.join(
   repoRoot,
   "apps/web/app/loader/demo/loader-demo.tsx",
 );
+const centeredCardPage = path.join(repoRoot, "apps/web/components/centered-card-page.tsx");
 const loaderComponent = path.join(repoRoot, "apps/web/components/loader-interstitial.tsx");
 
 assert.ok(!existsSync(loaderPage), "The temporary /loader preview route should be removed.");
@@ -21,14 +22,22 @@ assert.ok(
   !existsSync(loaderDemoComponent),
   "The temporary /loader/demo client component should be removed.",
 );
+assert.ok(existsSync(centeredCardPage), "The auth card shell should be shared.");
 assert.ok(existsSync(loaderComponent), "The loader UI should be shared.");
 
+const centeredCardPageSource = readFileSync(centeredCardPage, "utf8");
 const componentSource = readFileSync(loaderComponent, "utf8");
 
 assert.match(
   componentSource,
-  /min-h-svh[^"]*bg-background|bg-background[^"]*min-h-svh/,
-  "The loader screen should fill the viewport with the app background color.",
+  /min-h-svh[^"]*bg-\[var\(--sidebar\)\]|bg-\[var\(--sidebar\)\][^"]*min-h-svh/,
+  "The loader screen should fill the viewport with the sidebar background color.",
+);
+
+assert.match(
+  componentSource,
+  /fixed[^"]*inset-0|inset-0[^"]*fixed/,
+  "The loader screen should cover the scrollbar gutter instead of relying on root canvas color.",
 );
 
 assert.match(
@@ -39,8 +48,20 @@ assert.match(
 
 assert.match(
   componentSource,
+  /text-white/,
+  "The loader spinner should render in white.",
+);
+
+assert.doesNotMatch(
+  componentSource,
   /text-primary/,
-  "The loader spinner should use the shadcn primary color.",
+  "The loader spinner should not use the shadcn primary color.",
+);
+
+assert.match(
+  centeredCardPageSource,
+  /min-h-svh[^"]*bg-\[var\(--sidebar\)\]|bg-\[var\(--sidebar\)\][^"]*min-h-svh/,
+  "The shared auth card shell should use the sidebar background color.",
 );
 
 assert.match(

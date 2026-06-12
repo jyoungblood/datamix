@@ -235,7 +235,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           description="Review the active session, auth provider posture, public API access, managed keys, and role definitions."
           eyebrow="Settings"
@@ -656,7 +655,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
             </AdminSectionCard>
           </>
         )}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }

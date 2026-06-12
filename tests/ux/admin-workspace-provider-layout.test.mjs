@@ -278,6 +278,23 @@ assert(
 );
 
 assert(
+  workspaceRouteFrameSource.includes("max-w-6xl") &&
+    workspaceRouteFrameSource.includes("mx-auto") &&
+    workspaceRouteFrameSource.includes("AdminWorkspaceCommandPalette") &&
+    workspaceRouteFrameSource.includes("{children}"),
+  "The shared workspace route frame should own one centered max-w-6xl content rail for every admin screen.",
+);
+
+for (const screenFile of screenFiles) {
+  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
+
+  assert(
+    !/mx-auto\s+flex\s+max-w-(?:5xl|6xl)/.test(source),
+    `${screenFile} should not define its own centered admin route width wrapper.`,
+  );
+}
+
+assert(
   buttonComponentSource.includes("bg-primary text-primary-foreground") &&
     !buttonComponentSource.includes("text-[var(--primary-foreground)]"),
   "Primary buttons should keep using the semantic primary foreground utility.",

@@ -9,9 +9,14 @@ import type {
   DatamixRoleDefinition,
   DatamixSchemaValidationIssue,
 } from "@datamix/core";
-import { datamixDefaultRoleAssignments, datamixRolePresets } from "@datamix/core";
+import {
+  createDatamixAuthorizationSummary,
+  datamixDefaultRoleAssignments,
+  datamixRolePresets,
+} from "@datamix/core";
 import * as React from "react";
 
+import { LoaderViewTransitionBoundary } from "@/components/loader-view-transition";
 import { Button } from "@/components/ui/button";
 import {
   AccountRequestError,
@@ -1854,91 +1859,9 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     Boolean(session.data) && !authorization && !authorizationError;
   const isResolvingInitialAdmin =
     isResolvingInitialSession || isResolvingInitialAuthorization;
-
-  if (isResolvingInitialAdmin) {
-    return null;
-  }
-
-  if (setupStatus.errorMessage) {
-    return (
-      <AdminWorkspaceGateShell
-        action={
-          <>
-            <Button asChild variant="outline">
-              <a href={buildDatamixAdminPath("/login")}>Back home</a>
-            </Button>
-            <Button onClick={setupStatus.reload} type="button">
-              Retry status
-            </Button>
-          </>
-        }
-        body={
-          <>
-            <p>{setupStatus.errorMessage}</p>
-            <p>
-              {setupStatus.statusCode === 503
-                ? "Set `BETTER_AUTH_SECRET` on the Datamix Worker, then reload this page."
-                : "Datamix will retry automatically when the network comes back or this tab regains focus. You can also retry now."}
-            </p>
-          </>
-        }
-        title={setupStatusHeading}
-      />
-    );
-  }
-
-  if (!session.data) {
-    const authRedirectHref = setupStatus.data?.setupRequired
-      ? buildDatamixAdminPath("/setup")
-      : loginHref;
-
-    return (
-      <AdminWorkspaceGateShell
-        action={
-          <Button asChild>
-            <a href={authRedirectHref}>Continue</a>
-          </Button>
-        }
-        body="Datamix did not find an active admin session in this browser. Use the link below if the redirect does not start automatically."
-        title={
-          setupStatus.data?.setupRequired ? "Redirecting to setup" : "Redirecting to sign in"
-        }
-      />
-    );
-  }
-
-  if (authorizationError || !authorization) {
-    return (
-      <AdminWorkspaceGateShell
-        action={
-          <>
-            <Button asChild variant="outline">
-              <a href={buildDatamixAdminPath("/login")}>Back home</a>
-            </Button>
-            <Button onClick={() => void loadSessionAuthorizationData()} type="button">
-              Retry access profile
-            </Button>
-          </>
-        }
-        body={
-          <>
-            <p>
-              {authorizationError ??
-                "Datamix could not resolve the current role and permission summary."}
-            </p>
-            <p>
-              {authorizationStatusCode && authorizationStatusCode >= 500
-                ? "The protected session route is reachable, but it could not finish resolving your role just now. Retry in a moment."
-                : "Datamix will retry automatically when the session stabilizes, and you can manually retry without losing your browser state."}
-            </p>
-          </>
-        }
-        title="Access profile is unavailable"
-      />
-    );
-  }
-
-  const currentPermissions = permissions ?? createAdminWorkspacePermissions(authorization);
+  const currentAuthorization = authorization ?? createDatamixAuthorizationSummary(null);
+  const currentPermissions =
+    permissions ?? createAdminWorkspacePermissions(currentAuthorization);
   const value: AdminWorkspaceContextValue = {
     accountError,
     accountImage,
@@ -1951,7 +1874,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     apiKeysMessage,
     apiKeySecret,
     apiKeySecretMessage,
-    authorization,
+    authorization: currentAuthorization,
     availableRoles,
     collectionLoadError,
     collections,
@@ -2016,7 +1939,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     refreshRecords,
     refreshUserList,
     revokeApiKey,
-    role: authorization.role,
+    role: currentAuthorization.role,
     roleDraft,
     roleIssues,
     rolesLoadError,
@@ -2060,9 +1983,94 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     updatingUserRoleId,
   };
 
+  const renderAdminWorkspaceContent = () => {
+    if (setupStatus.errorMessage) {
+      return (
+        <AdminWorkspaceGateShell
+          action={
+            <>
+              <Button asChild variant="outline">
+                <a href={buildDatamixAdminPath("/login")}>Back home</a>
+              </Button>
+              <Button onClick={setupStatus.reload} type="button">
+                Retry status
+              </Button>
+            </>
+          }
+          body={
+            <>
+              <p>{setupStatus.errorMessage}</p>
+              <p>
+                {setupStatus.statusCode === 503
+                  ? "Set `BETTER_AUTH_SECRET` on the Datamix Worker, then reload this page."
+                  : "Datamix will retry automatically when the network comes back or this tab regains focus. You can also retry now."}
+              </p>
+            </>
+          }
+          title={setupStatusHeading}
+        />
+      );
+    }
+
+    if (!session.data) {
+      const authRedirectHref = setupStatus.data?.setupRequired
+        ? buildDatamixAdminPath("/setup")
+        : loginHref;
+
+      return (
+        <AdminWorkspaceGateShell
+          action={
+            <Button asChild>
+              <a href={authRedirectHref}>Continue</a>
+            </Button>
+          }
+          body="Datamix did not find an active admin session in this browser. Use the link below if the redirect does not start automatically."
+          title={
+            setupStatus.data?.setupRequired ? "Redirecting to setup" : "Redirecting to sign in"
+          }
+        />
+      );
+    }
+
+    if (authorizationError || !authorization) {
+      return (
+        <AdminWorkspaceGateShell
+          action={
+            <>
+              <Button asChild variant="outline">
+                <a href={buildDatamixAdminPath("/login")}>Back home</a>
+              </Button>
+              <Button onClick={() => void loadSessionAuthorizationData()} type="button">
+                Retry access profile
+              </Button>
+            </>
+          }
+          body={
+            <>
+              <p>
+                {authorizationError ??
+                  "Datamix could not resolve the current role and permission summary."}
+              </p>
+              <p>
+                {authorizationStatusCode && authorizationStatusCode >= 500
+                  ? "The protected session route is reachable, but it could not finish resolving your role just now. Retry in a moment."
+                  : "Datamix will retry automatically when the session stabilizes, and you can manually retry without losing your browser state."}
+              </p>
+            </>
+          }
+          title="Access profile is unavailable"
+        />
+      );
+    }
+
+    return children;
+  };
+
   return (
     <AdminWorkspaceContext.Provider value={value}>
-      {children}
+      <LoaderViewTransitionBoundary active={isResolvingInitialAdmin}>
+        {isResolvingInitialAdmin ? null : renderAdminWorkspaceContent()}
+      </LoaderViewTransitionBoundary>
     </AdminWorkspaceContext.Provider>
   );
 }

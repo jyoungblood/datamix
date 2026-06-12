@@ -109,7 +109,6 @@ function ContentCollectionContent({
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <AdminPageHeader
           action={
             collection && permissions.canCreateRecords ? (
@@ -318,7 +317,6 @@ function ContentCollectionContent({
             </div>
           </AdminSectionCard>
         )}
-      </div>
     </AdminWorkspaceRouteFrame>
   );
 }
