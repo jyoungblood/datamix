@@ -1,6 +1,9 @@
 export function LoaderInterstitial() {
   return (
-    <main className="fixed inset-0 z-50 grid min-h-svh place-items-center bg-[var(--sidebar)]">
+    <main
+      className="fixed inset-0 z-50 grid min-h-svh place-items-center bg-[var(--sidebar)]"
+      data-page-canvas="sidebar"
+    >
       <div aria-label="Loading" className="text-white" role="status">
         <TailSpinSpinner />
         <span className="sr-only">Loading</span>

@@ -26,6 +26,8 @@ assert.ok(
 
 const transitionSource = readSource("apps/web/components/loader-view-transition.tsx");
 const globalStylesSource = readSource("apps/web/styles/globals.css");
+const centeredCardPageSource = readSource("apps/web/components/centered-card-page.tsx");
+const loaderInterstitialSource = readSource("apps/web/components/loader-interstitial.tsx");
 const loginSource = readSource("apps/web/app/admin/_screens/login.tsx");
 const setupSource = readSource("apps/web/app/admin/_screens/setup.tsx");
 const providerSource = readSource(
@@ -94,8 +96,23 @@ assert.match(
 );
 assert.match(
   globalStylesSource,
-  /html\s*\{[\s\S]*background:\s*var\(--background\)/,
-  "The reserved scrollbar gutter should inherit the normal page canvas color.",
+  /html\s*\{[\s\S]*--page-canvas:\s*var\(--background\)[\s\S]*background:\s*var\(--page-canvas\)/,
+  "The reserved scrollbar gutter should paint with the active page canvas color.",
+);
+assert.match(
+  globalStylesSource,
+  /html:has\(\[data-page-canvas="sidebar"\]\)\s*\{[\s\S]*--page-canvas:\s*var\(--sidebar\)/,
+  "Sidebar-colored pages should be able to tint the root scrollbar gutter.",
+);
+assert.match(
+  centeredCardPageSource,
+  /data-page-canvas="sidebar"/,
+  "The shared auth card shell should tint the root scrollbar gutter to match the sidebar canvas.",
+);
+assert.match(
+  loaderInterstitialSource,
+  /data-page-canvas="sidebar"/,
+  "The shared loader should tint the root scrollbar gutter to match its sidebar canvas.",
 );
 assert.doesNotMatch(
   globalStylesSource,

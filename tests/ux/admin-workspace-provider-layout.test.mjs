@@ -100,9 +100,17 @@ assert(
 );
 
 for (const pagePath of protectedWorkspacePages) {
+  const source = readFileSync(path.join(workspaceGroup, pagePath), "utf8");
+
   assert(
     existsSync(path.join(workspaceGroup, pagePath)),
     `Protected admin page should live under the shared workspace group: ${pagePath}.`,
+  );
+  assert(
+    source.includes("AdminWorkspaceProviderFallback") &&
+      source.includes("<AdminWorkspaceProviderFallback>") &&
+      source.includes("</AdminWorkspaceProviderFallback>"),
+    `Protected admin page should wrap its content in the provider fallback: ${pagePath}.`,
   );
 }
 
@@ -275,6 +283,13 @@ assert(
 assert(
   !commandPaletteDialogSource.includes("document.body.style.overflow"),
   "Opening the command palette should not remove page scrollbars or shift the admin layout.",
+);
+
+assert(
+  globalStylesSource.includes('html:has([data-page-canvas="muted"])') &&
+    globalStylesSource.includes("--page-canvas: var(--muted);") &&
+    adminFrameSource.includes('data-page-canvas="muted"'),
+  "Admin workspace pages should tint the reserved scrollbar gutter to match the muted main canvas.",
 );
 
 assert(

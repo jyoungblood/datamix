@@ -42,6 +42,12 @@ assert.match(
 
 assert.match(
   rootPageSource,
+  /data-page-canvas="sidebar"/,
+  "The root page should tint the reserved scrollbar gutter to match the sidebar background.",
+);
+
+assert.match(
+  rootPageSource,
   /items-center/,
   "The root page should vertically center the brand link.",
 );

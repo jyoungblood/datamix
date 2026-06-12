@@ -276,6 +276,7 @@ function AdminFrame({
         "flex min-h-screen bg-[var(--background)] font-body text-[var(--foreground)]",
         className
       )}
+      data-page-canvas="muted"
       {...props}
     >
       {sidebar ?? <DatamixSidebar />}

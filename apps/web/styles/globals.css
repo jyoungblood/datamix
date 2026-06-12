@@ -193,14 +193,23 @@
 
 html {
   min-height: 100%;
-  background: var(--background);
+  --page-canvas: var(--background);
+  background: var(--page-canvas);
   scrollbar-gutter: stable;
+}
+
+html:has([data-page-canvas="sidebar"]) {
+  --page-canvas: var(--sidebar);
+}
+
+html:has([data-page-canvas="muted"]) {
+  --page-canvas: var(--muted);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--background);
+  background: var(--page-canvas);
   color: var(--foreground);
   font-family:
     "Inter Variable",

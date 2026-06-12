@@ -270,6 +270,18 @@ type AdminWorkspaceGateShellProps = {
 export const AdminWorkspaceContext =
   React.createContext<AdminWorkspaceContextValue | null>(null);
 
+export function AdminWorkspaceProviderFallback({
+  children,
+}: AdminWorkspaceProviderProps) {
+  const context = React.useContext(AdminWorkspaceContext);
+
+  if (context) {
+    return <>{children}</>;
+  }
+
+  return <AdminWorkspaceProvider>{children}</AdminWorkspaceProvider>;
+}
+
 function createCurrentAdminPath() {
   if (typeof window === "undefined") {
     return buildDatamixAdminPath();
