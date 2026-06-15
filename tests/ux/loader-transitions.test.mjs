@@ -36,6 +36,21 @@ const providerSource = readSource(
 
 assert.match(
   transitionSource,
+  /const LOADER_VIEW_TRANSITIONS_ENABLED = false;/,
+  "The loader view transition boundary should be toggleable and disabled for now.",
+);
+assert.match(
+  transitionSource,
+  /if \(!LOADER_VIEW_TRANSITIONS_ENABLED\)\s*\{[\s\S]*<div[\s\S]*className="datamix-loader-transition-surface"[\s\S]*\{children\}[\s\S]*<\/div>/,
+  "When disabled, the loader transition boundary should preserve its stable wrapper while skipping the loader screen.",
+);
+assert.match(
+  transitionSource,
+  /data-page-canvas=\{active \? "sidebar" : undefined\}/,
+  "Active disabled loader boundaries should keep the sidebar canvas painted without rendering the loader UI.",
+);
+assert.match(
+  transitionSource,
   /viewTransitionDocument\.startViewTransition/,
   "The loader transition boundary should use the View Transition API when available.",
 );
@@ -191,6 +206,21 @@ assert.match(
   providerSource,
   /return children;/,
   "Ready admin screens should render as the resolved loader-boundary content.",
+);
+assert.doesNotMatch(
+  providerSource,
+  /Redirecting to sign in|Redirecting to setup|Datamix did not find an active admin session/,
+  "Protected admin routes should not flash an intermediate redirect gate before login/setup renders.",
+);
+assert.match(
+  providerSource,
+  /function AdminRedirectCanvas\(\)[\s\S]*data-page-canvas="sidebar"[\s\S]*bg-\[var\(--sidebar\)\]/,
+  "Protected admin redirects should keep the sidebar canvas painted while the browser navigates.",
+);
+assert.match(
+  providerSource,
+  /if \(!session\.data\)\s*\{[\s\S]*return <AdminRedirectCanvas \/>;/,
+  "Protected admin redirects should render the silent dark canvas instead of null.",
 );
 assert.doesNotMatch(
   providerSource,

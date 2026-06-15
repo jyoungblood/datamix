@@ -1,5 +1,4 @@
 import { ContentCollectionRoute } from "@/app/admin/_screens/content-collection";
-import { AdminWorkspaceProviderFallback } from "@/app/admin/_workspace/admin-workspace-provider";
 
 type AdminCollectionPageProps = {
   params: {
@@ -8,9 +7,5 @@ type AdminCollectionPageProps = {
 };
 
 export default function AdminCollectionPage({ params }: AdminCollectionPageProps) {
-  return (
-    <AdminWorkspaceProviderFallback>
-      <ContentCollectionRoute collectionName={params.collection} />
-    </AdminWorkspaceProviderFallback>
-  );
+  return <ContentCollectionRoute collectionName={params.collection} />;
 }

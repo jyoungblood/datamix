@@ -370,8 +370,6 @@ function SchemaBuilderContent({
               </Button>
             </div>
           }
-          description="Edit fields in a focused builder before opening generated content editors."
-          eyebrow="Schema"
           title={pageTitle}
         />
 

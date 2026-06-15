@@ -4,13 +4,11 @@ import { Copy, Upload } from "lucide-react";
 import * as React from "react";
 
 import {
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
 import {
   AdminDetailPanelSkeleton,
-  AdminMetricSkeleton,
   AdminMiniListSkeleton,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
@@ -103,47 +101,7 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-        <AdminPageHeader
-          description="Upload originals, browse stored asset metadata, and copy storage keys for content image fields."
-          eyebrow="Media"
-          title="Media library"
-        />
-
-        {isInitialMediaLoad ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            <AdminMetricSkeleton />
-            <AdminMetricSkeleton />
-            <AdminMetricSkeleton />
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            <AdminMetric
-              description={
-                permissions.canViewMedia
-                  ? "Assets available in the shared library."
-                  : "Library browsing is hidden for this role."
-              }
-              label="Assets"
-              value={permissions.canViewMedia ? mediaAssets.length : "Hidden"}
-            />
-            <AdminMetric
-              description="Current detail panel selection."
-              label="Selected"
-              value={selectedMediaAsset ? selectedMediaAsset.fileName : "None"}
-            />
-            <AdminMetric
-              description="Server-side media upload permission."
-              label="Upload"
-              value={
-                permissions.canUploadMedia
-                  ? "Allowed"
-                  : permissions.canViewMedia
-                    ? "View only"
-                    : "Restricted"
-              }
-            />
-          </div>
-        )}
+      <AdminPageHeader title="Media library" />
 
         {!access.isAllowed ? (
           <AdminStateBox

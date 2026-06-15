@@ -5,7 +5,6 @@ import * as React from "react";
 
 import {
   AdminDetailList,
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
@@ -51,28 +50,8 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
               Sign out
             </Button>
           }
-          description="Update the current admin profile and keep email changes read-only until a verified email-change flow exists."
-          eyebrow="Account"
           title="Account"
         />
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description="Display name shown in the admin sidebar."
-            label="Profile"
-            value={user.displayName}
-          />
-          <AdminMetric
-            description="Permission profile for this session."
-            label="Role"
-            value={role.label}
-          />
-          <AdminMetric
-            description="Session-bound email address."
-            label="Email"
-            value={user.email ?? "Unknown"}
-          />
-        </div>
 
         {!access.isAllowed ? (
           <AdminStateBox body={access.body} title={access.title} tone="warning" />

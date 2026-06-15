@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type AdminSkeletonProps = React.ComponentPropsWithoutRef<"div">;
@@ -27,22 +26,6 @@ function AdminSkeletonBlock({
       )}
       {...props}
     />
-  );
-}
-
-function AdminMetricSkeleton({ className, ...props }: AdminSkeletonProps) {
-  return (
-    <Card
-      aria-hidden="true"
-      className={cn("rounded-lg border-border bg-white shadow-none", className)}
-      {...props}
-    >
-      <CardContent className="p-4">
-        <AdminSkeletonBlock className="h-3 w-20" />
-        <AdminSkeletonBlock className="mt-2 h-8 w-16" />
-        <AdminSkeletonBlock className="mt-2 h-3 w-4/5" />
-      </CardContent>
-    </Card>
   );
 }
 
@@ -145,7 +128,6 @@ function AdminDetailPanelSkeleton({ className, ...props }: AdminSkeletonProps) {
 export {
   AdminDetailListSkeleton,
   AdminDetailPanelSkeleton,
-  AdminMetricSkeleton,
   AdminMiniListSkeleton,
   AdminTableSkeleton,
 };

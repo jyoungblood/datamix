@@ -177,9 +177,6 @@ function DatamixSidebar({
           )
           const navContent = (
             <>
-              {isActive ? (
-                <span className="h-[18px] w-[3px] rounded-full bg-[var(--primary)]" />
-              ) : null}
               <Icon
                 className={cn(
                   "h-[15px] w-[15px]",

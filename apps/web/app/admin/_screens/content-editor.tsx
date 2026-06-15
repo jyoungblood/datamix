@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { listMediaAssets } from "@/lib/media";
 import { GeneratedRecordFieldInput } from "../_components/generated-record-field-input";
 import {
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
@@ -277,8 +276,6 @@ function ContentEditorContent({
               </Button>
             )
           }
-          description="This editor is generated directly from the saved schema fields."
-          eyebrow="Content"
           title={
             collection
               ? isEditMode
@@ -287,24 +284,6 @@ function ContentEditorContent({
               : "Content editor"
           }
         />
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description="Generated fields in this editor."
-            label="Fields"
-            value={collection ? collection.definition.fields.length : "Unknown"}
-          />
-          <AdminMetric
-            description="Saved content available in this route context."
-            label="Content"
-            value={permissions.canViewRecords ? visibleRecords.length : "Restricted"}
-          />
-          <AdminMetric
-            description="Fields currently accepted by storage."
-            label="Stored fields"
-            value={permissions.canViewRecords ? recordSupportedFieldNames : "Restricted"}
-          />
-        </div>
 
         {!access.isAllowed ? (
           <AdminStateBox body={access.body} title={access.title} tone="warning" />

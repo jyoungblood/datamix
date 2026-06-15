@@ -21,7 +21,32 @@ type LoaderViewTransitionBoundaryProps = {
   fallback?: React.ReactNode;
 };
 
+const LOADER_VIEW_TRANSITIONS_ENABLED = false;
+
 export function LoaderViewTransitionBoundary({
+  active,
+  children,
+  ...props
+}: LoaderViewTransitionBoundaryProps) {
+  if (!LOADER_VIEW_TRANSITIONS_ENABLED) {
+    return (
+      <div
+        className="datamix-loader-transition-surface"
+        data-page-canvas={active ? "sidebar" : undefined}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <EnabledLoaderViewTransitionBoundary active={active} {...props}>
+      {children}
+    </EnabledLoaderViewTransitionBoundary>
+  );
+}
+
+function EnabledLoaderViewTransitionBoundary({
   active,
   children,
   fallback = <LoaderInterstitial />,

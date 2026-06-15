@@ -16,7 +16,6 @@ import {
 import * as React from "react";
 
 import {
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
@@ -403,67 +402,12 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-        <AdminPageHeader
-          description="Review live workspace readiness, recent schemas, and the primary routed admin areas available to your role."
-          eyebrow="Admin workspace"
-          title="Workspace overview"
-        />
+      <AdminPageHeader title="Workspace overview" />
 
         <div>
           <Button asChild><a href="/api">Open API root</a></Button>
           <Button asChild><a href="/api/health">Check health</a></Button>
           <Button asChild><a href="/api/collections">Browse public collections</a></Button>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <AdminMetric
-            description={
-              permissions.canViewCollections
-                ? "Saved schemas available to generated editors."
-                : "Schema count is hidden for this role."
-            }
-            label="Schemas"
-            value={formatMetricValue({
-              hasLoaded: hasLoadedCollections,
-              isAllowed: permissions.canViewCollections,
-              isLoading: isLoadingCollections,
-              value: collections.length,
-            })}
-          />
-          <AdminMetric
-            description="Schemas with at least one generated field."
-            label="Content-ready"
-            value={formatMetricValue({
-              hasLoaded: hasLoadedCollections,
-              isAllowed: permissions.canViewCollections,
-              isLoading: isLoadingCollections,
-              value: contentReadyCount,
-            })}
-          />
-          <AdminMetric
-            description={
-              permissions.canViewMedia
-                ? "Media assets available to image fields."
-                : "Asset count is hidden for this role."
-            }
-            label="Media assets"
-            value={formatMetricValue({
-              hasLoaded: hasLoadedMediaAssets,
-              isAllowed: permissions.canViewMedia,
-              isLoading: isLoadingMediaAssets,
-              value: mediaAssets.length,
-            })}
-          />
-          <AdminMetric
-            description="Active keys exposed through the public API settings."
-            label="Active API keys"
-            value={formatMetricValue({
-              hasLoaded: hasLoadedApiKeys,
-              isAllowed: permissions.canAccessSettingsWorkspace,
-              isLoading: isLoadingApiKeys,
-              value: activeApiKeyCount,
-            })}
-          />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">

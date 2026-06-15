@@ -4,11 +4,26 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const rootLayoutPath = path.join(repoRoot, "apps/web/app/layout.tsx");
 const rootPagePath = path.join(repoRoot, "apps/web/app/page.tsx");
 
+assert.ok(existsSync(rootLayoutPath), "The app root layout should exist.");
 assert.ok(existsSync(rootPagePath), "The app root page should exist.");
 
+const rootLayoutSource = readFileSync(rootLayoutPath, "utf8");
 const rootPageSource = readFileSync(rootPagePath, "utf8");
+
+assert.match(
+  rootLayoutSource,
+  /backgroundColor:\s*"var\(--page-canvas, #080f1f\)"/,
+  "The document shell should have a dark fallback canvas before app CSS or route content paints.",
+);
+
+assert.match(
+  rootLayoutSource,
+  /<html[^>]*style=\{initialPageCanvasStyle\}[\s\S]*<body[^>]*style=\{initialPageCanvasStyle\}/,
+  "The initial canvas fallback should be applied to both html and body.",
+);
 
 assert.match(
   rootPageSource,

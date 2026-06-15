@@ -4,7 +4,6 @@ import { RefreshCcw } from "lucide-react";
 import * as React from "react";
 
 import {
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
@@ -123,32 +122,8 @@ function ContentCollectionContent({
               </Button>
             )
           }
-          description="Browse saved content for one schema, then open a generated editor."
-          eyebrow="Content"
           title={collection ? collection.definition.label : "Content"}
         />
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <AdminMetric
-            description="Generated fields in this schema."
-            label="Fields"
-            value={collection ? collection.definition.fields.length : "Unknown"}
-          />
-          <AdminMetric
-            description={
-              permissions.canViewRecords
-                ? "Saved content entries for this schema."
-                : "Content list is hidden for this role."
-            }
-            label="Content"
-            value={permissions.canViewRecords ? visibleRecords.length : "Restricted"}
-          />
-          <AdminMetric
-            description="Fields currently accepted by storage."
-            label="Stored fields"
-            value={permissions.canViewRecords ? recordSupportedFieldNames : "Restricted"}
-          />
-        </div>
 
         {!access.isAllowed ? (
           <AdminStateBox body={access.body} title={access.title} tone="warning" />

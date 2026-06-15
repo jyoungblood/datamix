@@ -9,11 +9,10 @@ import { Save, UserPlus } from "lucide-react";
 import * as React from "react";
 
 import {
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
-import { AdminMetricSkeleton, AdminMiniListSkeleton } from "../_components/admin-skeleton";
+import { AdminMiniListSkeleton } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
@@ -116,37 +115,7 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-        <AdminPageHeader
-          description="Invite teammates, review current users, and assign roles without leaving the routed workspace."
-          eyebrow="Team"
-          title="Team"
-        />
-
-        {isInitialUserLoad || isInitialRoleLoad ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            <AdminMetricSkeleton />
-            <AdminMetricSkeleton />
-            <AdminMetricSkeleton />
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            <AdminMetric
-              description="Users visible to the current role."
-              label="Users"
-              value={permissions.canViewUsers ? users.length : "Restricted"}
-            />
-            <AdminMetric
-              description="Roles available for invites and assignments."
-              label="Roles"
-              value={availableRoles.length}
-            />
-            <AdminMetric
-              description="Server-side invite permission."
-              label="Invites"
-              value={permissions.canInviteUsers ? "Allowed" : "Restricted"}
-            />
-          </div>
-        )}
+      <AdminPageHeader title="Team" />
 
         {!access.isAllowed ? (
           <AdminStateBox

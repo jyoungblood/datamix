@@ -10,13 +10,11 @@ import * as React from "react";
 
 import {
   AdminDetailList,
-  AdminMetric,
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
 import {
   AdminDetailListSkeleton,
-  AdminMetricSkeleton,
   AdminMiniListSkeleton,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
@@ -235,37 +233,7 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
 
   return (
     <AdminWorkspaceRouteFrame route={route}>
-        <AdminPageHeader
-          description="Review the active session, auth provider posture, public API access, managed keys, and role definitions."
-          eyebrow="Settings"
-          title="Settings"
-        />
-
-        {isInitialApiKeyLoad || isInitialRoleLoad ? (
-          <div className="grid gap-3 md:grid-cols-3">
-            <AdminMetricSkeleton />
-            <AdminMetricSkeleton />
-            <AdminMetricSkeleton />
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            <AdminMetric
-              description="Role assigned to this session."
-              label="Current role"
-              value={role.label}
-            />
-            <AdminMetric
-              description="Managed keys in the database."
-              label="API keys"
-              value={permissions.canAccessSettingsWorkspace ? apiKeys.length : "Restricted"}
-            />
-            <AdminMetric
-              description="Custom role editor permission."
-              label="Role editor"
-              value={permissions.canUpdateSettings ? "Writable" : "Read only"}
-            />
-          </div>
-        )}
+      <AdminPageHeader title="Settings" />
 
         {!access.isAllowed ? (
           <AdminStateBox

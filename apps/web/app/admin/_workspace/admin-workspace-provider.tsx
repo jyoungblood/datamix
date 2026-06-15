@@ -270,18 +270,6 @@ type AdminWorkspaceGateShellProps = {
 export const AdminWorkspaceContext =
   React.createContext<AdminWorkspaceContextValue | null>(null);
 
-export function AdminWorkspaceProviderFallback({
-  children,
-}: AdminWorkspaceProviderProps) {
-  const context = React.useContext(AdminWorkspaceContext);
-
-  if (context) {
-    return <>{children}</>;
-  }
-
-  return <AdminWorkspaceProvider>{children}</AdminWorkspaceProvider>;
-}
-
 function createCurrentAdminPath() {
   if (typeof window === "undefined") {
     return buildDatamixAdminPath();
@@ -400,6 +388,16 @@ function AdminWorkspaceGateShell({
   );
 }
 
+function AdminRedirectCanvas() {
+  return (
+    <main
+      aria-hidden="true"
+      data-page-canvas="sidebar"
+      className="min-h-svh bg-[var(--sidebar)]"
+    />
+  );
+}
+
 export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps) {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
@@ -512,7 +510,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     [authorization],
   );
 
-  const loginHref = createLoginHref();
   const setupStatusHeading =
     setupStatus.statusCode === 503
       ? "Datamix setup is missing required configuration"
@@ -2025,23 +2022,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
 
     if (!session.data) {
-      const authRedirectHref = setupStatus.data?.setupRequired
-        ? buildDatamixAdminPath("/setup")
-        : loginHref;
-
-      return (
-        <AdminWorkspaceGateShell
-          action={
-            <Button asChild>
-              <a href={authRedirectHref}>Continue</a>
-            </Button>
-          }
-          body="Datamix did not find an active admin session in this browser. Use the link below if the redirect does not start automatically."
-          title={
-            setupStatus.data?.setupRequired ? "Redirecting to setup" : "Redirecting to sign in"
-          }
-        />
-      );
+      return <AdminRedirectCanvas />;
     }
 
     if (authorizationError || !authorization) {

@@ -107,10 +107,8 @@ for (const pagePath of protectedWorkspacePages) {
     `Protected admin page should live under the shared workspace group: ${pagePath}.`,
   );
   assert(
-    source.includes("AdminWorkspaceProviderFallback") &&
-      source.includes("<AdminWorkspaceProviderFallback>") &&
-      source.includes("</AdminWorkspaceProviderFallback>"),
-    `Protected admin page should wrap its content in the provider fallback: ${pagePath}.`,
+    !source.includes("AdminWorkspaceProviderFallback"),
+    `Protected admin page should use the shared workspace layout provider instead of a fallback wrapper: ${pagePath}.`,
   );
 }
 

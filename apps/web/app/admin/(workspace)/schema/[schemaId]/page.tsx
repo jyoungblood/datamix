@@ -1,5 +1,4 @@
 import { SchemaBuilderRoute } from "@/app/admin/_screens/schema-builder";
-import { AdminWorkspaceProviderFallback } from "@/app/admin/_workspace/admin-workspace-provider";
 
 type AdminSchemaDetailPageProps = {
   params: {
@@ -10,9 +9,5 @@ type AdminSchemaDetailPageProps = {
 export default function AdminSchemaDetailPage({
   params,
 }: AdminSchemaDetailPageProps) {
-  return (
-    <AdminWorkspaceProviderFallback>
-      <SchemaBuilderRoute mode="edit" schemaId={params.schemaId} />
-    </AdminWorkspaceProviderFallback>
-  );
+  return <SchemaBuilderRoute mode="edit" schemaId={params.schemaId} />;
 }
