@@ -46,8 +46,13 @@ assert.match(
 );
 assert.match(
   transitionSource,
-  /data-page-canvas=\{active \? "sidebar" : undefined\}/,
-  "Active disabled loader boundaries should keep the sidebar canvas painted without rendering the loader UI.",
+  /activePageCanvas = "sidebar"/,
+  "Loader boundaries should default active pages to the sidebar canvas for auth interstitials.",
+);
+assert.match(
+  transitionSource,
+  /data-page-canvas=\{active \? activePageCanvas : undefined\}/,
+  "Active disabled loader boundaries should paint the configured page canvas without rendering the loader UI.",
 );
 assert.match(
   transitionSource,
@@ -194,12 +199,22 @@ assert.match(
 );
 assert.match(
   providerSource,
-  /isResolvingInitialAdmin \? null :/,
-  "Protected admin children should not mount until the workspace has resolved.",
+  /activePageCanvas="muted"/,
+  "Protected admin session/access resolution should keep the workspace canvas muted instead of flashing the dark auth canvas.",
 );
 assert.match(
   providerSource,
-  /<AdminWorkspaceContext\.Provider value=\{value\}>[\s\S]*<LoaderViewTransitionBoundary active=\{isResolvingInitialAdmin\}>[\s\S]*<\/LoaderViewTransitionBoundary>[\s\S]*<\/AdminWorkspaceContext\.Provider>/,
+  /fallback=\{<AdminWorkspaceResolutionCanvas \/>\}/,
+  "Protected admin resolution should use the muted workspace canvas as its transition fallback.",
+);
+assert.match(
+  providerSource,
+  /isResolvingInitialAdmin \?\s*\(\s*<AdminWorkspaceResolutionCanvas \/>/,
+  "Protected admin children should not mount until the workspace has resolved, and should render the muted workspace canvas meanwhile.",
+);
+assert.match(
+  providerSource,
+  /<AdminWorkspaceContext\.Provider value=\{value\}>[\s\S]*<LoaderViewTransitionBoundary[\s\S]*active=\{isResolvingInitialAdmin\}[\s\S]*activePageCanvas="muted"[\s\S]*<\/LoaderViewTransitionBoundary>[\s\S]*<\/AdminWorkspaceContext\.Provider>/,
   "The workspace context provider should stay mounted around the loader boundary so hydrated admin screens never see a null context.",
 );
 assert.match(
@@ -216,6 +231,11 @@ assert.match(
   providerSource,
   /function AdminRedirectCanvas\(\)[\s\S]*data-page-canvas="sidebar"[\s\S]*bg-\[var\(--sidebar\)\]/,
   "Protected admin redirects should keep the sidebar canvas painted while the browser navigates.",
+);
+assert.match(
+  providerSource,
+  /function AdminWorkspaceResolutionCanvas\(\)[\s\S]*data-page-canvas="muted"[\s\S]*bg-\[var\(--muted\)\]/,
+  "Protected admin session/access resolution should render a muted workspace canvas instead of the sidebar canvas.",
 );
 assert.match(
   providerSource,

@@ -1,4 +1,5 @@
 import { ContentCollectionRoute } from "@/app/admin/_screens/content-collection";
+import { AdminWorkspacePage } from "@/app/admin/_workspace/admin-workspace-page";
 
 type AdminCollectionPageProps = {
   params: {
@@ -7,5 +8,9 @@ type AdminCollectionPageProps = {
 };
 
 export default function AdminCollectionPage({ params }: AdminCollectionPageProps) {
-  return <ContentCollectionRoute collectionName={params.collection} />;
+  return (
+    <AdminWorkspacePage>
+      <ContentCollectionRoute collectionName={params.collection} />
+    </AdminWorkspacePage>
+  );
 }

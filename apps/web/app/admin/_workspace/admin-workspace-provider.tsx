@@ -398,6 +398,16 @@ function AdminRedirectCanvas() {
   );
 }
 
+function AdminWorkspaceResolutionCanvas() {
+  return (
+    <main
+      aria-hidden="true"
+      data-page-canvas="muted"
+      className="min-h-svh bg-[var(--muted)]"
+    />
+  );
+}
+
 export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps) {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
@@ -2061,8 +2071,16 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
 
   return (
     <AdminWorkspaceContext.Provider value={value}>
-      <LoaderViewTransitionBoundary active={isResolvingInitialAdmin}>
-        {isResolvingInitialAdmin ? null : renderAdminWorkspaceContent()}
+      <LoaderViewTransitionBoundary
+        active={isResolvingInitialAdmin}
+        activePageCanvas="muted"
+        fallback={<AdminWorkspaceResolutionCanvas />}
+      >
+        {isResolvingInitialAdmin ? (
+          <AdminWorkspaceResolutionCanvas />
+        ) : (
+          renderAdminWorkspaceContent()
+        )}
       </LoaderViewTransitionBoundary>
     </AdminWorkspaceContext.Provider>
   );

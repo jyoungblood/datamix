@@ -8,6 +8,7 @@ const globalStyles = path.join(repoRoot, "apps/web/styles/globals.css");
 const adminRoot = path.join(repoRoot, "apps/web/app/admin");
 const workspaceGroup = path.join(adminRoot, "(workspace)");
 const workspaceLayout = path.join(workspaceGroup, "layout.tsx");
+const workspacePage = path.join(adminRoot, "_workspace/admin-workspace-page.tsx");
 const adminFrame = path.join(adminRoot, "_components/admin-frame.tsx");
 const adminSkeleton = path.join(adminRoot, "_components/admin-skeleton.tsx");
 const commandPaletteDialog = path.join(
@@ -87,16 +88,22 @@ function assert(condition, message) {
 }
 
 assert(
-  existsSync(workspaceLayout),
-  "Protected admin routes should share apps/web/app/admin/(workspace)/layout.tsx.",
+  existsSync(workspacePage),
+  "Protected admin routes should share an explicit AdminWorkspacePage wrapper.",
 );
 
-const layoutSource = readFileSync(workspaceLayout, "utf8");
+const workspacePageSource = readFileSync(workspacePage, "utf8");
 
 assert(
-  layoutSource.includes("AdminWorkspaceProvider") &&
-    layoutSource.includes("<AdminWorkspaceProvider>"),
-  "The protected admin layout should mount one persistent AdminWorkspaceProvider.",
+  workspacePageSource.includes("AdminWorkspaceProvider") &&
+    workspacePageSource.includes("<AdminWorkspaceProvider>"),
+  "AdminWorkspacePage should mount the AdminWorkspaceProvider.",
+);
+
+assert(
+  !existsSync(workspaceLayout) ||
+    !readFileSync(workspaceLayout, "utf8").includes("AdminWorkspaceProvider"),
+  "Protected admin routes should not rely on a route-group layout for AdminWorkspaceProvider.",
 );
 
 for (const pagePath of protectedWorkspacePages) {
@@ -105,6 +112,11 @@ for (const pagePath of protectedWorkspacePages) {
   assert(
     existsSync(path.join(workspaceGroup, pagePath)),
     `Protected admin page should live under the shared workspace group: ${pagePath}.`,
+  );
+  assert(
+    source.includes("AdminWorkspacePage") &&
+      source.includes("<AdminWorkspacePage>"),
+    `Protected admin page should explicitly wrap its screen with AdminWorkspacePage: ${pagePath}.`,
   );
   assert(
     !source.includes("AdminWorkspaceProviderFallback"),
@@ -218,7 +230,7 @@ const adminSkeletonSource = readFileSync(adminSkeleton, "utf8");
 
 for (const skeletonExport of [
   "AdminDetailListSkeleton",
-  "AdminMetricSkeleton",
+  "AdminDetailPanelSkeleton",
   "AdminMiniListSkeleton",
   "AdminTableSkeleton",
 ]) {

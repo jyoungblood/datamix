@@ -17,6 +17,7 @@ type ViewTransitionDocument = Document & {
 
 type LoaderViewTransitionBoundaryProps = {
   active: boolean;
+  activePageCanvas?: "muted" | "sidebar";
   children: React.ReactNode;
   fallback?: React.ReactNode;
 };
@@ -25,6 +26,7 @@ const LOADER_VIEW_TRANSITIONS_ENABLED = false;
 
 export function LoaderViewTransitionBoundary({
   active,
+  activePageCanvas = "sidebar",
   children,
   ...props
 }: LoaderViewTransitionBoundaryProps) {
@@ -32,7 +34,7 @@ export function LoaderViewTransitionBoundary({
     return (
       <div
         className="datamix-loader-transition-surface"
-        data-page-canvas={active ? "sidebar" : undefined}
+        data-page-canvas={active ? activePageCanvas : undefined}
       >
         {children}
       </div>
@@ -40,7 +42,11 @@ export function LoaderViewTransitionBoundary({
   }
 
   return (
-    <EnabledLoaderViewTransitionBoundary active={active} {...props}>
+    <EnabledLoaderViewTransitionBoundary
+      active={active}
+      activePageCanvas={activePageCanvas}
+      {...props}
+    >
       {children}
     </EnabledLoaderViewTransitionBoundary>
   );
@@ -48,6 +54,7 @@ export function LoaderViewTransitionBoundary({
 
 function EnabledLoaderViewTransitionBoundary({
   active,
+  activePageCanvas = "sidebar",
   children,
   fallback = <LoaderInterstitial />,
 }: LoaderViewTransitionBoundaryProps) {
@@ -89,7 +96,10 @@ function EnabledLoaderViewTransitionBoundary({
   }, [active, renderLoader]);
 
   return (
-    <div className="datamix-loader-transition-surface">
+    <div
+      className="datamix-loader-transition-surface"
+      data-page-canvas={renderLoader ? activePageCanvas : undefined}
+    >
       {renderLoader ? fallback : children}
     </div>
   );

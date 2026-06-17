@@ -1,4 +1,5 @@
 import { SchemaBuilderRoute } from "@/app/admin/_screens/schema-builder";
+import { AdminWorkspacePage } from "@/app/admin/_workspace/admin-workspace-page";
 
 type AdminSchemaDetailPageProps = {
   params: {
@@ -9,5 +10,9 @@ type AdminSchemaDetailPageProps = {
 export default function AdminSchemaDetailPage({
   params,
 }: AdminSchemaDetailPageProps) {
-  return <SchemaBuilderRoute mode="edit" schemaId={params.schemaId} />;
+  return (
+    <AdminWorkspacePage>
+      <SchemaBuilderRoute mode="edit" schemaId={params.schemaId} />
+    </AdminWorkspacePage>
+  );
 }
