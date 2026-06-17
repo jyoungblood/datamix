@@ -8,8 +8,10 @@ import {
   AdminSectionCard,
 } from "../_components/admin-design";
 import {
+  AdminLoadingReserve,
   AdminDetailPanelSkeleton,
   AdminMiniListSkeleton,
+  useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import {
@@ -55,6 +57,10 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
   } = workspace;
   const isInitialMediaLoad =
     permissions.canViewMedia && !hasLoadedMediaAssets && !mediaLoadError;
+  const shouldShowMediaSkeleton =
+    isInitialMediaLoad || (isLoadingMediaAssets && mediaAssets.length === 0);
+  const shouldShowDelayedMediaSkeleton =
+    useDelayedLoadingIndicator(shouldShowMediaSkeleton);
   const normalizedMediaSearchQuery = mediaSearchQuery.trim().toLowerCase();
   const filteredMediaAssets =
     normalizedMediaSearchQuery.length === 0
@@ -203,8 +209,12 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
                       />
                     </label>
 
-                    {isInitialMediaLoad || isLoadingMediaAssets ? (
-                      <AdminMiniListSkeleton rows={4} />
+                    {shouldShowMediaSkeleton ? (
+                      shouldShowDelayedMediaSkeleton ? (
+                        <AdminMiniListSkeleton rows={4} />
+                      ) : (
+                        <AdminLoadingReserve className="min-h-[252px]" />
+                      )
                     ) : mediaLoadError && mediaAssets.length === 0 ? (
                       <AdminStateBox
                         body={mediaLoadError}
@@ -264,8 +274,12 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
 
                   <aside className="generated-record-preview">
                     <p className="card-eyebrow">Asset detail</p>
-                    {isInitialMediaLoad || isLoadingMediaAssets ? (
-                      <AdminDetailPanelSkeleton />
+                    {shouldShowMediaSkeleton ? (
+                      shouldShowDelayedMediaSkeleton ? (
+                        <AdminDetailPanelSkeleton />
+                      ) : (
+                        <AdminLoadingReserve className="min-h-[210px]" />
+                      )
                     ) : selectedFilteredMediaAsset ? (
                       <>
                         <h4 className="section-title">

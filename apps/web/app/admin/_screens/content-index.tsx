@@ -4,7 +4,11 @@ import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { AdminPageHeader } from "../_components/admin-design";
-import { AdminTableSkeleton } from "../_components/admin-skeleton";
+import {
+  AdminLoadingReserve,
+  AdminTableSkeleton,
+  useDelayedLoadingIndicator,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { summarizeRecord } from "../_lib/record-drafts";
@@ -63,13 +67,22 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
   const [isLoadingContentRecords, setIsLoadingContentRecords] =
     React.useState(false);
   const recordsLoadRequestId = React.useRef(0);
-  const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const collectionSignature = createCollectionSignature(collections);
   const hasCurrentContentRecords =
     hasLoadedContentRecords && loadedCollectionSignature === collectionSignature;
+  const shouldShowCollectionSkeleton =
+    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
+  const shouldShowContentRecordsSkeleton =
+    permissions.canViewCollections &&
+    permissions.canViewRecords &&
+    hasLoadedCollections &&
+    collections.length > 0 &&
+    !hasCurrentContentRecords &&
+    !recordLoadError;
   const shouldShowSkeleton =
-    isInitialCollectionLoad ||
-    (!hasCurrentContentRecords && isLoadingContentRecords);
+    shouldShowCollectionSkeleton || shouldShowContentRecordsSkeleton;
+  const shouldShowDelayedSkeleton =
+    useDelayedLoadingIndicator(shouldShowSkeleton);
 
   const loadContentRecords = React.useCallback(
     async () => {
@@ -245,7 +258,11 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
           </div>
 
           {shouldShowSkeleton ? (
-            <AdminTableSkeleton columns={5} rows={5} />
+            shouldShowDelayedSkeleton ? (
+              <AdminTableSkeleton columns={5} rows={5} />
+            ) : (
+              <AdminLoadingReserve className="min-h-[220px]" />
+            )
           ) : collectionLoadError && collections.length === 0 ? (
             <div className="p-4">
               <AdminStateBox

@@ -19,6 +19,11 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import {
+  AdminLoadingReserve,
+  AdminMiniListSkeleton,
+  useDelayedLoadingIndicator,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
@@ -39,7 +44,7 @@ type AdminHomeRouteItem = {
   isAllowed: boolean;
   route: AdminWorkspaceRoute;
   status: OverviewStatus;
-  value: string;
+  value: React.ReactNode;
 };
 
 type AdminHomeStatusRow = {
@@ -93,7 +98,7 @@ function formatMetricValue({
     return restrictedValue;
   }
 
-  if (isLoading && !hasLoaded) {
+  if (!hasLoaded) {
     return "Loading";
   }
 
@@ -136,8 +141,8 @@ function createDatasetStatus({
   if (!hasLoaded) {
     return {
       body: loadingBody,
-      label: "Queued",
-      variant: "outline",
+      label: "Loading",
+      variant: "secondary",
     };
   }
 
@@ -202,6 +207,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     () => apiKeys.filter((apiKey) => !apiKey.revokedAt).length,
     [apiKeys],
   );
+  const isInitialCollectionLoad =
+    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
+  const shouldShowRecentSchemaSkeleton =
+    useDelayedLoadingIndicator(isInitialCollectionLoad);
   const roleDataIsAllowed =
     permissions.canAccessTeamAccess || permissions.canAccessSettingsWorkspace;
   const collectionStatus = createDatasetStatus({
@@ -278,17 +287,27 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
   const routeItems: AdminHomeRouteItem[] = [
     {
       detail: permissions.canViewCollections
-        ? `${formatCount(collections.length, "schema")} visible`
+        ? hasLoadedCollections
+          ? `${formatCount(collections.length, "schema")} visible`
+          : "Loading schemas"
         : "Schema tools",
       icon: Database,
       isAllowed: permissions.canAccessCollectionBuilder,
       route: adminRoutes.schema.index(),
       status: collectionStatus,
-      value: permissions.canViewCollections ? String(collections.length) : "Limited",
+      value: formatMetricValue({
+        hasLoaded: hasLoadedCollections,
+        isAllowed: permissions.canViewCollections,
+        isLoading: isLoadingCollections,
+        restrictedValue: "Limited",
+        value: String(collections.length),
+      }),
     },
     {
       detail: permissions.canViewCollections
-        ? `${formatCount(contentReadyCount, "content-ready schema", "content-ready schemas")}`
+        ? hasLoadedCollections
+          ? `${formatCount(contentReadyCount, "content-ready schema", "content-ready schemas")}`
+          : "Loading content-ready schemas"
         : "Generated content editors",
       icon: FileText,
       isAllowed: permissions.canAccessRecordsWorkspace,
@@ -302,37 +321,66 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
             label: permissions.canAccessRecordsWorkspace ? "Available" : "Restricted",
             variant: permissions.canAccessRecordsWorkspace ? "secondary" : "outline",
           },
-      value: permissions.canViewCollections ? String(contentReadyCount) : "Open",
+      value: formatMetricValue({
+        hasLoaded: hasLoadedCollections,
+        isAllowed: permissions.canViewCollections,
+        isLoading: isLoadingCollections,
+        restrictedValue: "Open",
+        value: String(contentReadyCount),
+      }),
     },
     {
       detail: permissions.canViewMedia
-        ? `${formatCount(mediaAssets.length, "asset")} visible`
+        ? hasLoadedMediaAssets
+          ? `${formatCount(mediaAssets.length, "asset")} visible`
+          : "Loading media assets"
         : "Asset library",
       icon: Image,
       isAllowed: permissions.canAccessMediaWorkspace,
       route: adminRoutes.media(),
       status: mediaStatus,
-      value: permissions.canViewMedia ? String(mediaAssets.length) : "Limited",
+      value: formatMetricValue({
+        hasLoaded: hasLoadedMediaAssets,
+        isAllowed: permissions.canViewMedia,
+        isLoading: isLoadingMediaAssets,
+        restrictedValue: "Limited",
+        value: String(mediaAssets.length),
+      }),
     },
     {
       detail: permissions.canViewUsers
-        ? `${formatCount(users.length, "user")} visible`
+        ? hasLoadedUsers
+          ? `${formatCount(users.length, "user")} visible`
+          : "Loading users"
         : "Users and invites",
       icon: Users,
       isAllowed: permissions.canAccessTeamAccess,
       route: adminRoutes.team(),
       status: teamStatus,
-      value: permissions.canViewUsers ? String(users.length) : "Limited",
+      value: formatMetricValue({
+        hasLoaded: hasLoadedUsers,
+        isAllowed: permissions.canViewUsers,
+        isLoading: isLoadingUsers,
+        restrictedValue: "Limited",
+        value: String(users.length),
+      }),
     },
     {
       detail: permissions.canAccessSettingsWorkspace
-        ? `${formatCount(activeApiKeyCount, "active key", "active keys")}`
+        ? hasLoadedApiKeys
+          ? `${formatCount(activeApiKeyCount, "active key", "active keys")}`
+          : "Loading API key posture"
         : "API keys and roles",
       icon: Settings,
       isAllowed: permissions.canAccessSettingsWorkspace,
       route: adminRoutes.settings(),
       status: apiKeysStatus,
-      value: permissions.canAccessSettingsWorkspace ? String(activeApiKeyCount) : "Restricted",
+      value: formatMetricValue({
+        hasLoaded: hasLoadedApiKeys,
+        isAllowed: permissions.canAccessSettingsWorkspace,
+        isLoading: isLoadingApiKeys,
+        value: String(activeApiKeyCount),
+      }),
     },
     {
       detail: workspace.user.email ?? "Current session",
@@ -477,12 +525,12 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                   title="Schema list is restricted"
                   tone="warning"
                 />
-              ) : isLoadingCollections && !hasLoadedCollections ? (
-                <AdminStateBox
-                  body="Loading saved schemas for this overview."
-                  compact
-                  title="Loading schemas"
-                />
+              ) : isInitialCollectionLoad ? (
+                shouldShowRecentSchemaSkeleton ? (
+                  <AdminMiniListSkeleton rows={3} />
+                ) : (
+                  <AdminLoadingReserve className="min-h-[156px]" />
+                )
               ) : collectionLoadError && collections.length === 0 ? (
                 <AdminStateBox
                   body={collectionLoadError}

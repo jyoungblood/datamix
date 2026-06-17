@@ -32,6 +32,31 @@ const settingsApiKeysScreen = path.join(
   adminRoot,
   "_screens/settings-api-keys.tsx",
 );
+const adminHomeSourcePath = path.join(adminRoot, "_screens/admin-home.tsx");
+const contentEditorSourcePath = path.join(
+  adminRoot,
+  "_screens/content-editor.tsx",
+);
+const contentIndexSourcePath = path.join(
+  adminRoot,
+  "_screens/content-index.tsx",
+);
+const mediaLibrarySourcePath = path.join(
+  adminRoot,
+  "_screens/media-library.tsx",
+);
+const schemaBuilderSourcePath = path.join(
+  adminRoot,
+  "_screens/schema-builder.tsx",
+);
+const schemaOverviewSourcePath = path.join(
+  adminRoot,
+  "_screens/schema-overview.tsx",
+);
+const teamAndRolesSourcePath = path.join(
+  adminRoot,
+  "_screens/team-and-roles.tsx",
+);
 const manualRefreshFreeScreens = [
   "admin-home.tsx",
   "content-editor.tsx",
@@ -148,8 +173,14 @@ const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
 const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
 const settingsApiKeysSource = readFileSync(settingsApiKeysScreen, "utf8");
+const adminHomeSource = readFileSync(adminHomeSourcePath, "utf8");
+const contentEditorSource = readFileSync(contentEditorSourcePath, "utf8");
+const contentIndexSource = readFileSync(contentIndexSourcePath, "utf8");
+const mediaLibrarySource = readFileSync(mediaLibrarySourcePath, "utf8");
+const schemaBuilderSource = readFileSync(schemaBuilderSourcePath, "utf8");
+const schemaOverviewSource = readFileSync(schemaOverviewSourcePath, "utf8");
+const teamAndRolesSource = readFileSync(teamAndRolesSourcePath, "utf8");
 const userAccountSource = readFileSync(userAccountScreen, "utf8");
-const adminHomeSource = readFileSync(path.join(adminRoot, "_screens/admin-home.tsx"), "utf8");
 const adminRoutesSource = readFileSync(adminRoutesSourcePath, "utf8");
 
 for (const transientTitle of ["Checking your session", "Loading access profile"]) {
@@ -231,8 +262,10 @@ const adminSkeletonSource = readFileSync(adminSkeleton, "utf8");
 for (const skeletonExport of [
   "AdminDetailListSkeleton",
   "AdminDetailPanelSkeleton",
+  "AdminLoadingReserve",
   "AdminMiniListSkeleton",
   "AdminTableSkeleton",
+  "useDelayedLoadingIndicator",
 ]) {
   assert(
     adminSkeletonSource.includes(skeletonExport),
@@ -369,3 +402,74 @@ assert(
     !settingsApiKeysSource.includes('{isLoadingApiKeys ? "Refreshing" : "Refresh"}'),
   "Settings should not render manual refresh buttons for Public API keys.",
 );
+
+assert(
+  contentIndexSource.includes("const shouldShowCollectionSkeleton =") &&
+    contentIndexSource.includes("permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError") &&
+    contentIndexSource.includes("const shouldShowContentRecordsSkeleton =") &&
+    /!hasCurrentContentRecords\s*&&\s*!recordLoadError/.test(contentIndexSource) &&
+    contentIndexSource.includes("const shouldShowSkeleton =") &&
+    /shouldShowCollectionSkeleton\s*\|\|\s*shouldShowContentRecordsSkeleton/.test(contentIndexSource) &&
+    /const shouldShowDelayedSkeleton\s*=\s*useDelayedLoadingIndicator\(shouldShowSkeleton\)/.test(contentIndexSource) &&
+    contentIndexSource.includes("shouldShowDelayedSkeleton ?") &&
+    contentIndexSource.includes("AdminLoadingReserve"),
+  "Content index should keep first-paint collection/content empty states hidden and delay skeletons until loading is perceptible.",
+);
+
+assert(
+  contentEditorSource.includes(
+    "permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError",
+  ) &&
+    contentEditorSource.includes("const isInitialRecordLoad =") &&
+    contentEditorSource.includes("!recordLoadError") &&
+    contentEditorSource.includes("(!isActiveRecordCollection || !hasLoadedRecords)") &&
+    contentEditorSource.includes("shouldShowContentSchemaLoadingState") &&
+    contentEditorSource.includes("shouldShowContentRecordLoadingState") &&
+    !contentEditorSource.includes("Loading content record id"),
+  "Content editor should hide route-param placeholders and delay visible loading states until API loading is perceptible.",
+);
+
+assert(
+  schemaBuilderSource.includes(
+    "permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError",
+  ) &&
+    schemaBuilderSource.includes("shouldBlockSchemaUntilLoaded") &&
+    schemaBuilderSource.includes("shouldShowSchemaLoadingState") &&
+    schemaBuilderSource.includes("AdminLoadingReserve") &&
+    !schemaBuilderSource.includes("`${decodedSchemaId} schema`") &&
+    !schemaBuilderSource.includes(
+      "const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;",
+    ),
+  "Schema builder edit routes should not show the route id as the page title before schema data loads.",
+);
+
+assert(
+  adminHomeSource.includes("AdminMiniListSkeleton") &&
+    /const shouldShowRecentSchemaSkeleton\s*=\s*useDelayedLoadingIndicator\(isInitialCollectionLoad\)/.test(adminHomeSource) &&
+    adminHomeSource.includes("shouldShowRecentSchemaSkeleton ?") &&
+    adminHomeSource.includes("const isInitialCollectionLoad =") &&
+    adminHomeSource.includes("permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError") &&
+    adminHomeSource.includes("if (!hasLoaded)") &&
+    !adminHomeSource.includes('label: "Queued"'),
+  "The dashboard should reserve loading UI on first paint instead of rendering queued or empty overview states.",
+);
+
+assert(
+  settingsApiKeysSource.includes("setupStatus.isPending") &&
+    settingsApiKeysSource.includes("shouldShowOAuthSkeleton") &&
+    settingsApiKeysSource.includes("shouldShowApiKeySkeleton") &&
+    settingsApiKeysSource.includes("shouldShowRoleSkeleton"),
+  "Settings OAuth/API key/role panels should delay skeletons while setup/runtime details are pending.",
+);
+
+for (const [screenLabel, source] of [
+  ["schema overview", schemaOverviewSource],
+  ["media library", mediaLibrarySource],
+  ["team and roles", teamAndRolesSource],
+]) {
+  assert(
+    source.includes("useDelayedLoadingIndicator") &&
+      source.includes("AdminLoadingReserve"),
+    `${screenLabel} should delay skeleton display and reserve layout during fast initial loads.`,
+  );
+}

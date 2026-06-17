@@ -14,6 +14,10 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import {
+  AdminLoadingReserve,
+  useDelayedLoadingIndicator,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
@@ -143,7 +147,13 @@ function SchemaBuilderContent({
   const canSaveCurrentSchema = isEditingExistingSchema
     ? permissions.canUpdateCollections
     : permissions.canCreateCollections;
-  const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
+  const isInitialCollectionLoad =
+    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
+  const shouldBlockSchemaUntilLoaded =
+    isEditingExistingSchema && isInitialCollectionLoad;
+  const shouldShowSchemaLoadingState = useDelayedLoadingIndicator(
+    shouldBlockSchemaUntilLoaded,
+  );
   const hasUnsavedSchemaChanges =
     activeCollection !== null
       ? JSON.stringify(activeCollection.definition) !==
@@ -153,11 +163,11 @@ function SchemaBuilderContent({
   const pageTitle =
     mode === "create"
       ? "New schema"
+      : shouldBlockSchemaUntilLoaded
+        ? "Schema"
       : activeCollection
         ? `${activeCollection.definition.label} schema`
-        : decodedSchemaId
-          ? `${decodedSchemaId} schema`
-          : "Schema";
+        : "Schema";
 
   React.useEffect(() => {
     if (
@@ -373,11 +383,15 @@ function SchemaBuilderContent({
             title="Schema editing is restricted"
             tone="warning"
           />
-        ) : isEditingExistingSchema && isInitialCollectionLoad ? (
-          <AdminStateBox
-            body="Loading saved schema details before opening the builder."
-            title="Loading schema"
-          />
+        ) : shouldBlockSchemaUntilLoaded ? (
+          shouldShowSchemaLoadingState ? (
+            <AdminStateBox
+              body="Loading saved schema details before opening the builder."
+              title="Loading schema"
+            />
+          ) : (
+            <AdminLoadingReserve className="min-h-[520px]" />
+          )
         ) : isEditingExistingSchema &&
           collectionLoadError &&
           collections.length === 0 ? (

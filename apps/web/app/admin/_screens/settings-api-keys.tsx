@@ -15,7 +15,9 @@ import {
 } from "../_components/admin-design";
 import {
   AdminDetailListSkeleton,
+  AdminLoadingReserve,
   AdminMiniListSkeleton,
+  useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import {
@@ -185,6 +187,21 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
     permissions.canAccessSettingsWorkspace && !hasLoadedApiKeys && !apiKeysLoadError;
   const isInitialRoleLoad =
     permissions.canAccessSettingsWorkspace && !hasLoadedRoles && !rolesLoadError;
+  const shouldShowOAuthSkeleton = setupStatus.isPending;
+  const shouldShowApiKeyRuntimeSkeleton = isInitialApiKeyLoad && !publicApiRuntime;
+  const shouldShowApiKeySkeleton =
+    isInitialApiKeyLoad || (isLoadingApiKeys && apiKeys.length === 0);
+  const shouldShowRoleSkeleton =
+    isInitialRoleLoad && availableRoles.length === 0;
+  const shouldShowDelayedOAuthSkeleton =
+    useDelayedLoadingIndicator(shouldShowOAuthSkeleton);
+  const shouldShowDelayedApiKeyRuntimeSkeleton = useDelayedLoadingIndicator(
+    shouldShowApiKeyRuntimeSkeleton,
+  );
+  const shouldShowDelayedApiKeySkeleton =
+    useDelayedLoadingIndicator(shouldShowApiKeySkeleton);
+  const shouldShowDelayedRoleSkeleton =
+    useDelayedLoadingIndicator(shouldShowRoleSkeleton);
 
   React.useEffect(() => {
     if (
@@ -260,7 +277,13 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                 description="Enable GitHub or Google for invited users through environment configuration."
                 title="Optional OAuth sign-in"
               >
-                {setupStatus.oauth ? (
+                {shouldShowOAuthSkeleton ? (
+                  shouldShowDelayedOAuthSkeleton ? (
+                    <AdminMiniListSkeleton rows={2} />
+                  ) : (
+                    <AdminLoadingReserve className="min-h-[126px]" />
+                  )
+                ) : setupStatus.oauth ? (
                   <div className="mini-list">
                     {setupStatus.oauth.providers.map((provider) => (
                       <div
@@ -295,8 +318,12 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
               description="Create read-only or write-capable keys. Raw secrets are shown once."
               title="Public API keys"
             >
-              {isInitialApiKeyLoad && !publicApiRuntime ? (
-                <AdminDetailListSkeleton className="mb-4" />
+              {shouldShowApiKeyRuntimeSkeleton ? (
+                shouldShowDelayedApiKeyRuntimeSkeleton ? (
+                  <AdminDetailListSkeleton className="mb-4" />
+                ) : (
+                  <AdminLoadingReserve className="mb-4 min-h-[76px]" />
+                )
               ) : publicApiRuntime ? (
                 <AdminDetailList
                   className="mb-4"
@@ -386,8 +413,12 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                 />
               )}
 
-              {isInitialApiKeyLoad || (isLoadingApiKeys && apiKeys.length === 0) ? (
-                <AdminMiniListSkeleton rows={3} />
+              {shouldShowApiKeySkeleton ? (
+                shouldShowDelayedApiKeySkeleton ? (
+                  <AdminMiniListSkeleton rows={3} />
+                ) : (
+                  <AdminLoadingReserve className="min-h-[190px]" />
+                )
               ) : apiKeys.length === 0 ? (
                 <AdminStateBox
                   body="No managed API keys have been created yet."
@@ -417,8 +448,12 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
             >
               <div className="record-browser">
                 <div className="record-browser-list">
-                  {isInitialRoleLoad && availableRoles.length === 0 ? (
-                    <AdminMiniListSkeleton rows={4} />
+                  {shouldShowRoleSkeleton ? (
+                    shouldShowDelayedRoleSkeleton ? (
+                      <AdminMiniListSkeleton rows={4} />
+                    ) : (
+                      <AdminLoadingReserve className="min-h-[252px]" />
+                    )
                   ) : rolesLoadError && availableRoles.length === 0 ? (
                     <AdminStateBox
                       body={rolesLoadError}
@@ -426,8 +461,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                       title="Role list is unavailable"
                       tone="error"
                     />
-                  ) : isLoadingRoles && availableRoles.length === 0 ? (
-                    <AdminStateBox body="Loading roles." compact title="Loading roles" />
                   ) : (
                     <div className="mini-list">
                       {rolePreviewItems.map((availableRole) => (

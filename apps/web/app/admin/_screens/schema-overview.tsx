@@ -3,7 +3,11 @@
 import * as React from "react";
 
 import { AdminPageHeader } from "../_components/admin-design";
-import { AdminTableSkeleton } from "../_components/admin-skeleton";
+import {
+  AdminLoadingReserve,
+  AdminTableSkeleton,
+  useDelayedLoadingIndicator,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
@@ -57,6 +61,9 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const shouldShowCollectionSkeleton =
     permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
+  const shouldShowSkeleton =
+    shouldShowCollectionSkeleton || isInitialCollectionLoad;
+  const shouldShowDelayedSkeleton = useDelayedLoadingIndicator(shouldShowSkeleton);
 
   React.useEffect(() => {
     if (
@@ -120,8 +127,12 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
               <span>Updated</span>
             </div>
 
-            {shouldShowCollectionSkeleton || isInitialCollectionLoad ? (
-              <AdminTableSkeleton columns={5} rows={4} />
+            {shouldShowSkeleton ? (
+              shouldShowDelayedSkeleton ? (
+                <AdminTableSkeleton columns={5} rows={4} />
+              ) : (
+                <AdminLoadingReserve className="min-h-[180px]" />
+              )
             ) : collectionLoadError && collections.length === 0 ? (
               <div className="p-4">
                 <AdminStateBox

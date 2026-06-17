@@ -12,7 +12,11 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
-import { AdminMiniListSkeleton } from "../_components/admin-skeleton";
+import {
+  AdminLoadingReserve,
+  AdminMiniListSkeleton,
+  useDelayedLoadingIndicator,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
@@ -80,6 +84,13 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
     permissions.canViewUsers && !hasLoadedUsers && !usersLoadError;
   const isInitialRoleLoad =
     permissions.canAccessTeamAccess && !hasLoadedRoles && !rolesLoadError;
+  const shouldShowUserSkeleton =
+    isInitialUserLoad || (isLoadingUsers && !hasLoadedUsers);
+  const shouldShowRoleSkeleton = isInitialRoleLoad;
+  const shouldShowDelayedUserSkeleton =
+    useDelayedLoadingIndicator(shouldShowUserSkeleton);
+  const shouldShowDelayedRoleSkeleton =
+    useDelayedLoadingIndicator(shouldShowRoleSkeleton);
 
   React.useEffect(() => {
     if (
@@ -140,8 +151,12 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
                   title="User list is restricted"
                   tone="warning"
                 />
-              ) : isInitialUserLoad || (isLoadingUsers && !hasLoadedUsers) ? (
-                <AdminMiniListSkeleton rows={3} />
+              ) : shouldShowUserSkeleton ? (
+                shouldShowDelayedUserSkeleton ? (
+                  <AdminMiniListSkeleton rows={3} />
+                ) : (
+                  <AdminLoadingReserve className="min-h-[190px]" />
+                )
               ) : usersLoadError && users.length === 0 ? (
                 <AdminStateBox
                   body={usersLoadError}
@@ -303,8 +318,12 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
           description="Review built-in and custom roles available to users and invites."
           title="Available roles"
         >
-          {isInitialRoleLoad && availableRoles.length === 0 ? (
-            <AdminMiniListSkeleton rows={4} />
+          {shouldShowRoleSkeleton && availableRoles.length === 0 ? (
+            shouldShowDelayedRoleSkeleton ? (
+              <AdminMiniListSkeleton rows={4} />
+            ) : (
+              <AdminLoadingReserve className="min-h-[252px]" />
+            )
           ) : rolesLoadError && availableRoles.length === 0 ? (
             <AdminStateBox
               body={rolesLoadError}

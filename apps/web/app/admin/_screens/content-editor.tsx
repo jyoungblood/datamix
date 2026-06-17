@@ -14,6 +14,10 @@ import {
   AdminPageHeader,
   AdminSectionCard,
 } from "../_components/admin-design";
+import {
+  AdminLoadingReserve,
+  useDelayedLoadingIndicator,
+} from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import {
@@ -99,7 +103,9 @@ function ContentEditorContent({
       ? null
       : collections.find((item) => item.id === activeSchemaId) ?? null;
   const isEditMode = mode === "edit";
-  const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
+  const isInitialCollectionLoad =
+    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
+  const shouldBlockContentSchemaUntilLoaded = isInitialCollectionLoad;
   const isActiveRecordCollection =
     collection !== null && recordCollectionName === collection.definition.name;
   const visibleRecords = isActiveRecordCollection ? records : [];
@@ -123,7 +129,17 @@ function ContentEditorContent({
     ? permissions.canUpdateRecords
     : permissions.canCreateRecords;
   const isInitialRecordLoad =
-    isActiveRecordCollection && isLoadingRecords && !hasLoadedRecords;
+    isEditMode &&
+    collection !== null &&
+    permissions.canViewRecords &&
+    !recordLoadError &&
+    (!isActiveRecordCollection || !hasLoadedRecords);
+  const shouldShowContentSchemaLoadingState = useDelayedLoadingIndicator(
+    shouldBlockContentSchemaUntilLoaded,
+  );
+  const shouldShowContentRecordLoadingState = useDelayedLoadingIndicator(
+    isInitialRecordLoad,
+  );
 
   React.useEffect(() => {
     setSelectedSchemaId(decodedSchemaId);
@@ -303,11 +319,15 @@ function ContentEditorContent({
 
         {!access.isAllowed ? (
           <AdminStateBox body={access.body} title={access.title} tone="warning" />
-        ) : isInitialCollectionLoad ? (
-          <AdminStateBox
-            body="Loading schemas before opening this generated content editor."
-            title="Loading content schema"
-          />
+        ) : shouldBlockContentSchemaUntilLoaded ? (
+          shouldShowContentSchemaLoadingState ? (
+            <AdminStateBox
+              body="Loading schemas before opening this generated content editor."
+              title="Loading content schema"
+            />
+          ) : (
+            <AdminLoadingReserve className="min-h-[520px]" />
+          )
         ) : collectionLoadError && collections.length === 0 ? (
           <AdminStateBox
             body={collectionLoadError}
@@ -372,10 +392,14 @@ function ContentEditorContent({
             tone="warning"
           />
         ) : isEditMode && isInitialRecordLoad ? (
-          <AdminStateBox
-            body={`Loading content record id ${recordId}.`}
-            title="Loading content"
-          />
+          shouldShowContentRecordLoadingState ? (
+            <AdminStateBox
+              body="Loading this content record."
+              title="Loading content"
+            />
+          ) : (
+            <AdminLoadingReserve className="min-h-[520px]" />
+          )
         ) : isEditMode && recordLoadError && visibleRecords.length === 0 ? (
           <AdminStateBox
             body={recordLoadError}

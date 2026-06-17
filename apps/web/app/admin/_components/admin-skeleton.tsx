@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -12,6 +14,45 @@ type AdminTableSkeletonProps = AdminSkeletonProps & {
 type AdminMiniListSkeletonProps = AdminSkeletonProps & {
   rows?: number;
 };
+
+const LOADING_INDICATOR_DELAY_MS = 180;
+
+function useDelayedLoadingIndicator(
+  isLoading: boolean,
+  delayMs = LOADING_INDICATOR_DELAY_MS,
+) {
+  const [shouldShowIndicator, setShouldShowIndicator] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      setShouldShowIndicator(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShouldShowIndicator(true);
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [delayMs, isLoading]);
+
+  return shouldShowIndicator;
+}
+
+function AdminLoadingReserve({
+  className,
+  ...props
+}: React.ComponentPropsWithoutRef<"div">) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn("min-h-32", className)}
+      {...props}
+    />
+  );
+}
 
 function AdminSkeletonBlock({
   className,
@@ -128,6 +169,8 @@ function AdminDetailPanelSkeleton({ className, ...props }: AdminSkeletonProps) {
 export {
   AdminDetailListSkeleton,
   AdminDetailPanelSkeleton,
+  AdminLoadingReserve,
   AdminMiniListSkeleton,
   AdminTableSkeleton,
+  useDelayedLoadingIndicator,
 };
