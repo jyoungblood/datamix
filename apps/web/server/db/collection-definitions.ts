@@ -7,6 +7,7 @@ import { datamixCollections } from "./schema";
 export type CollectionDefinitionRow = {
   createdAt: string;
   description: string | null;
+  id: string;
   label: string;
   name: string;
   schemaJson: string;
@@ -29,6 +30,19 @@ export async function getCollectionDefinitionRow(
     .select()
     .from(datamixCollections)
     .where(eq(datamixCollections.name, name))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function getCollectionDefinitionRowById(
+  env: DatamixBindings,
+  id: string,
+) {
+  const [row] = await createDb(env)
+    .select()
+    .from(datamixCollections)
+    .where(eq(datamixCollections.id, id))
     .limit(1);
 
   return row ?? null;

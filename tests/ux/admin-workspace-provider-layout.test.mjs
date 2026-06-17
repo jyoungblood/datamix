@@ -34,8 +34,10 @@ const settingsApiKeysScreen = path.join(
 );
 const manualRefreshFreeScreens = [
   "admin-home.tsx",
+  "content-editor.tsx",
   "content-index.tsx",
   "media-library.tsx",
+  "schema-builder.tsx",
   "schema-overview.tsx",
   "settings-api-keys.tsx",
   "team-and-roles.tsx",
@@ -50,9 +52,8 @@ const protectedWorkspacePages = [
   "page.tsx",
   "account/page.tsx",
   "content/page.tsx",
-  "content/[collection]/page.tsx",
-  "content/[collection]/new/page.tsx",
-  "content/[collection]/[recordId]/page.tsx",
+  "content/new/page.tsx",
+  "content/[schemaId]/[recordId]/page.tsx",
   "media/page.tsx",
   "schema/page.tsx",
   "schema/new/page.tsx",
@@ -70,7 +71,6 @@ const standaloneAuthPages = [
 
 const screenFiles = [
   "admin-home.tsx",
-  "content-collection.tsx",
   "content-editor.tsx",
   "content-index.tsx",
   "media-library.tsx",
@@ -259,10 +259,42 @@ for (const screenFile of manualRefreshFreeScreens) {
   const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
 
   assert(
-    !source.includes("RefreshCcw"),
-    `${screenFile} should not render normal/manual refresh icon buttons.`,
+    !source.includes("RefreshCcw") &&
+      !source.includes("refreshCollections") &&
+      !source.includes("refreshMediaAssets") &&
+      !source.includes("refreshRecords") &&
+      !source.includes("refreshAvailableRoles") &&
+      !source.includes("refreshUserList") &&
+      !source.includes("Retry refresh") &&
+      !source.includes("Retry schema refresh") &&
+      !source.includes("Refreshing "),
+    `${screenFile} should not render manual refresh controls or keep refresh-specific handlers.`,
   );
 }
+
+assert(
+  !providerSource.includes("isRefreshingCollections") &&
+    !providerSource.includes("isRefreshingMediaAssets") &&
+    !providerSource.includes("isRefreshingRecords") &&
+    !providerSource.includes("refreshAccess") &&
+    !providerSource.includes("refreshApiKeyData") &&
+    !providerSource.includes("refreshAvailableRoles") &&
+    !providerSource.includes("refreshCollections") &&
+    !providerSource.includes("refreshMediaAssets") &&
+    !providerSource.includes("refreshRecords") &&
+    !providerSource.includes("refreshUserList"),
+  "The admin workspace provider should not expose manual refresh state or refresh-specific context functions.",
+);
+
+assert(
+  !adminCommandPaletteSource.includes("refreshCurrentRoute") &&
+    !adminCommandPaletteSource.includes("Refresh ") &&
+    !adminCommandPaletteSource.includes("group: \"refresh\"") &&
+    !adminCommandPaletteSource.includes("keywords: [\"refresh\"") &&
+    !commandPaletteDialogSource.includes('"refresh"') &&
+    !commandPaletteDialogSource.includes("Refresh"),
+  "The command palette should not include refresh commands or a refresh command group.",
+);
 
 assert(
   adminCommandPaletteSource.includes("<input") &&

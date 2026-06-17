@@ -163,7 +163,6 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
     loadAvailableRoles,
     permissions,
     publicApiRuntime,
-    refreshAvailableRoles,
     resetRoleDraft,
     role,
     roleDraft,
@@ -422,10 +421,8 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                     <AdminMiniListSkeleton rows={4} />
                   ) : rolesLoadError && availableRoles.length === 0 ? (
                     <AdminStateBox
-                      actionLabel="Try again"
                       body={rolesLoadError}
                       compact
-                      onAction={() => void refreshAvailableRoles()}
                       title="Role list is unavailable"
                       tone="error"
                     />
@@ -459,11 +456,9 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
                   {rolesLoadError && availableRoles.length > 0 ? (
                     <div className="mt-4">
                       <AdminStateBox
-                        actionLabel="Retry roles"
                         body={rolesLoadError}
                         compact
-                        onAction={() => void refreshAvailableRoles()}
-                        title="Role refresh did not finish"
+                        title="Role list may be out of date"
                         tone="warning"
                       />
                     </div>

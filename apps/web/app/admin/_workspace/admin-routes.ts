@@ -94,41 +94,24 @@ export const adminRoutes = {
     index: () =>
       createAdminRoute({
         access: "content",
-        description: "Choose a schema before browsing or editing content.",
+        description: "Browse and edit content across saved schemas.",
         id: "content",
         label: "Content",
         pathname: "/content",
         section: "content",
         title: "Content",
       }),
-    collection: (collection: string) => {
-      const label = formatRouteSegment(collection);
-
-      return createAdminRoute({
+    newRecord: () =>
+      createAdminRoute({
         access: "content",
-        description: "Browse records for a schema and open content editors.",
-        id: "content-collection",
-        label,
-        pathname: `/content/${encodeRouteSegment(collection)}`,
-        section: "content",
-        title: label ? `Content: ${label}` : "Content collection",
-      });
-    },
-    newRecord: (collection: string) => {
-      const label = formatRouteSegment(collection);
-
-      return createAdminRoute({
-        access: "content",
-        description: "Create a new content record for the selected schema.",
+        description: "Create a new content record after choosing a schema.",
         id: "content-new-record",
         label: "New content",
-        pathname: `/content/${encodeRouteSegment(collection)}/new`,
+        pathname: "/content/new",
         section: "content",
-        title: label ? `New ${label} content` : "New content",
-      });
-    },
-    record: (collection: string, recordId: string) => {
-      const collectionLabel = formatRouteSegment(collection);
+        title: "New content",
+      }),
+    record: (schemaId: string, recordId: string) => {
       const recordLabel = formatRouteSegment(recordId);
 
       return createAdminRoute({
@@ -136,14 +119,11 @@ export const adminRoutes = {
         description: "Edit an existing content record.",
         id: "content-record",
         label: recordLabel,
-        pathname: `/content/${encodeRouteSegment(collection)}/${encodeRouteSegment(
+        pathname: `/content/${encodeRouteSegment(schemaId)}/${encodeRouteSegment(
           recordId,
         )}`,
         section: "content",
-        title:
-          collectionLabel && recordLabel
-            ? `${collectionLabel}: ${recordLabel}`
-            : "Content record",
+        title: recordLabel ? `Content: ${recordLabel}` : "Content record",
       });
     },
   },

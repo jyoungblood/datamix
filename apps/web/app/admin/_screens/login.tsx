@@ -186,15 +186,12 @@ export default function LoginPage() {
             <AlertDescription>
               {setupStatus.statusCode === 503
                 ? "Set BETTER_AUTH_SECRET on the Datamix Worker, then reload this page."
-                : "Datamix will retry automatically when the tab regains focus or the network comes back. You can also retry now."}
+                : "Datamix will retry automatically when the tab regains focus or the network comes back."}
             </AlertDescription>
           </Alert>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline">
               <a href="/">Back home</a>
-            </Button>
-            <Button onClick={setupStatus.reload} type="button">
-              Retry status
             </Button>
           </div>
         </CenteredCardPage>

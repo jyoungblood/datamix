@@ -77,7 +77,7 @@ export function AdminWorkspaceRouteFrame({
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
         <div className="flex justify-end">
-          <AdminWorkspaceCommandPalette route={route} />
+          <AdminWorkspaceCommandPalette />
         </div>
         {children}
       </div>

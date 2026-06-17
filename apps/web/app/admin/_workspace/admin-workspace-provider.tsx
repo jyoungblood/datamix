@@ -156,22 +156,19 @@ export type AdminWorkspaceContextValue = {
   isLoadingRecords: boolean;
   isLoadingRoles: boolean;
   isLoadingUsers: boolean;
-  isRefreshingCollections: boolean;
-  isRefreshingMediaAssets: boolean;
-  isRefreshingRecords: boolean;
   isSavingAccountProfile: boolean;
   isSavingRecord: boolean;
   isSavingRole: boolean;
   isUploadingMedia: boolean;
-  loadApiKeyData: (options?: { refresh?: boolean }) => Promise<void>;
+  loadApiKeyData: () => Promise<void>;
   loadAvailableRoles: (options?: { preferredRoleId?: string }) => Promise<void>;
-  loadCollections: (options?: { refresh?: boolean }) => Promise<void>;
-  loadMediaAssets: (options?: { refresh?: boolean }) => Promise<void>;
+  loadCollections: () => Promise<void>;
+  loadMediaAssets: () => Promise<void>;
   loadRecords: (
     collection: StoredCollectionDefinition,
-    options?: { refresh?: boolean; selectedRecordId?: string | null },
+    options?: { selectedRecordId?: string | null },
   ) => Promise<void>;
-  loadUserList: (options?: { refresh?: boolean }) => Promise<void>;
+  loadUserList: () => Promise<void>;
   mediaAssets: DatamixMediaAsset[];
   mediaClipboardMessage: string | null;
   mediaLoadError: string | null;
@@ -188,16 +185,6 @@ export type AdminWorkspaceContextValue = {
   records: StoredCollectionRecord[];
   recordSupportedFieldNames: string;
   resetRoleDraft: () => void;
-  refreshAccess: () => Promise<void>;
-  refreshApiKeyData: () => Promise<void>;
-  refreshAvailableRoles: () => Promise<void>;
-  refreshCollections: () => Promise<void>;
-  refreshMediaAssets: () => Promise<void>;
-  refreshRecords: (
-    collection: StoredCollectionDefinition,
-    options?: { selectedRecordId?: string | null },
-  ) => Promise<void>;
-  refreshUserList: () => Promise<void>;
   revokeApiKey: (apiKey: DatamixApiKeySummary) => Promise<DatamixApiKeySummary | null>;
   role: DatamixAuthorizationSummary["role"];
   roleDraft: RoleDraft;
@@ -430,7 +417,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(null);
   const [hasLoadedCollections, setHasLoadedCollections] = React.useState(false);
   const [isLoadingCollections, setIsLoadingCollections] = React.useState(false);
-  const [isRefreshingCollections, setIsRefreshingCollections] = React.useState(false);
   const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>([]);
   const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(null);
   const [mediaMessage, setMediaMessage] = React.useState<string | null>(null);
@@ -444,7 +430,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [selectedMediaFile, setSelectedMediaFile] = React.useState<File | null>(null);
   const [hasLoadedMediaAssets, setHasLoadedMediaAssets] = React.useState(false);
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = React.useState(false);
-  const [isRefreshingMediaAssets, setIsRefreshingMediaAssets] = React.useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = React.useState(false);
   const [recordCollectionName, setRecordCollectionName] = React.useState<string | null>(
     null,
@@ -461,7 +446,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     React.useState("none");
   const [hasLoadedRecords, setHasLoadedRecords] = React.useState(false);
   const [isLoadingRecords, setIsLoadingRecords] = React.useState(false);
-  const [isRefreshingRecords, setIsRefreshingRecords] = React.useState(false);
   const [isSavingRecord, setIsSavingRecord] = React.useState(false);
   const [availableRoles, setAvailableRoles] = React.useState<DatamixRoleDefinition[]>([
     ...datamixRolePresets,
@@ -637,15 +621,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     [],
   );
 
-  const refreshAvailableRoles = React.useCallback(
-    () =>
-      loadAvailableRoles(
-        selectedRoleId ? { preferredRoleId: selectedRoleId } : undefined,
-      ),
-    [loadAvailableRoles, selectedRoleId],
-  );
-
-  const loadApiKeyData = React.useCallback(async (_options?: { refresh?: boolean }) => {
+  const loadApiKeyData = React.useCallback(async () => {
     const requestId = apiKeysLoadRequestId.current + 1;
 
     apiKeysLoadRequestId.current = requestId;
@@ -688,12 +664,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
   }, []);
 
-  const refreshApiKeyData = React.useCallback(
-    () => loadApiKeyData({ refresh: true }),
-    [loadApiKeyData],
-  );
-
-  const loadUserList = React.useCallback(async (_options?: { refresh?: boolean }) => {
+  const loadUserList = React.useCallback(async () => {
     const requestId = usersLoadRequestId.current + 1;
 
     usersLoadRequestId.current = requestId;
@@ -731,24 +702,13 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
   }, []);
 
-  const refreshUserList = React.useCallback(
-    () => loadUserList({ refresh: true }),
-    [loadUserList],
-  );
-
   const loadCollections = React.useCallback(
-    async (options?: { refresh?: boolean }) => {
+    async () => {
       const requestId = collectionLoadRequestId.current + 1;
-      const isRefresh = options?.refresh === true && hasLoadedCollections;
 
       collectionLoadRequestId.current = requestId;
       setCollectionLoadError(null);
-
-      if (isRefresh) {
-        setIsRefreshingCollections(true);
-      } else {
-        setIsLoadingCollections(true);
-      }
+      setIsLoadingCollections(true);
 
       try {
         const nextCollections = await listCollectionDefinitions();
@@ -772,16 +732,10 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       } finally {
         if (collectionLoadRequestId.current === requestId) {
           setIsLoadingCollections(false);
-          setIsRefreshingCollections(false);
         }
       }
     },
-    [hasLoadedCollections],
-  );
-
-  const refreshCollections = React.useCallback(
-    () => loadCollections({ refresh: true }),
-    [loadCollections],
+    [],
   );
 
   const resetMediaWorkspace = React.useCallback(() => {
@@ -795,23 +749,16 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     setSelectedMediaFile(null);
     setHasLoadedMediaAssets(false);
     setIsLoadingMediaAssets(false);
-    setIsRefreshingMediaAssets(false);
     setIsUploadingMedia(false);
   }, []);
 
   const loadMediaAssets = React.useCallback(
-    async (options?: { refresh?: boolean }) => {
+    async () => {
       const requestId = mediaAssetsLoadRequestId.current + 1;
-      const isRefresh = options?.refresh === true && hasLoadedMediaAssets;
 
       mediaAssetsLoadRequestId.current = requestId;
       setMediaLoadError(null);
-
-      if (isRefresh) {
-        setIsRefreshingMediaAssets(true);
-      } else {
-        setIsLoadingMediaAssets(true);
-      }
+      setIsLoadingMediaAssets(true);
 
       try {
         const assets = await listMediaAssets();
@@ -839,16 +786,10 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       } finally {
         if (mediaAssetsLoadRequestId.current === requestId) {
           setIsLoadingMediaAssets(false);
-          setIsRefreshingMediaAssets(false);
         }
       }
     },
-    [hasLoadedMediaAssets],
-  );
-
-  const refreshMediaAssets = React.useCallback(
-    () => loadMediaAssets({ refresh: true }),
-    [loadMediaAssets],
+    [],
   );
 
   const selectMediaAsset = React.useCallback((assetId: string) => {
@@ -878,7 +819,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       );
       setMediaClipboardMessage(null);
       setSelectedMediaFile(null);
-      void loadMediaAssets({ refresh: true });
+      void loadMediaAssets();
 
       return result.asset;
     } catch (error) {
@@ -934,37 +875,29 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     setRecordSupportedFieldNames("none");
     setHasLoadedRecords(false);
     setIsLoadingRecords(false);
-    setIsRefreshingRecords(false);
     setIsSavingRecord(false);
   }, []);
 
   const loadRecords = React.useCallback(
     async (
       collection: StoredCollectionDefinition,
-      options?: { refresh?: boolean; selectedRecordId?: string | null },
+      options?: { selectedRecordId?: string | null },
     ) => {
       const nextCollectionName = collection.definition.name;
       const isSameCollection = recordCollectionName === nextCollectionName;
       const requestId = recordLoadRequestId.current + 1;
-      const isRefresh =
-        options?.refresh === true && isSameCollection && hasLoadedRecords;
 
       recordLoadRequestId.current = requestId;
       setRecordCollectionName(nextCollectionName);
       setRecordIssues([]);
       setRecordLoadError(null);
-
-      if (isRefresh) {
-        setIsRefreshingRecords(true);
-      } else {
-        setHasLoadedRecords(false);
-        setIsLoadingRecords(true);
-        setRecordMessage(null);
-        setRecords([]);
-        setSelectedRecordId(options?.selectedRecordId ?? null);
-        setRecordDraft(createGeneratedRecordFormState(collection.definition));
-        setRecordSupportedFieldNames("none");
-      }
+      setHasLoadedRecords(false);
+      setIsLoadingRecords(true);
+      setRecordMessage(null);
+      setRecords([]);
+      setSelectedRecordId(options?.selectedRecordId ?? null);
+      setRecordDraft(createGeneratedRecordFormState(collection.definition));
+      setRecordSupportedFieldNames("none");
 
       try {
         const result = await listCollectionRecords(nextCollectionName);
@@ -1003,30 +936,18 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
           return;
         }
 
-        if (!isRefresh) {
-          setRecords([]);
-          setRecordSupportedFieldNames("none");
-        }
-
+        setRecords([]);
+        setRecordSupportedFieldNames("none");
         setRecordLoadError(
           error instanceof Error ? error.message : "Unable to load collection records.",
         );
       } finally {
         if (recordLoadRequestId.current === requestId) {
           setIsLoadingRecords(false);
-          setIsRefreshingRecords(false);
         }
       }
     },
-    [hasLoadedRecords, recordCollectionName, selectedRecordId],
-  );
-
-  const refreshRecords = React.useCallback(
-    (
-      collection: StoredCollectionDefinition,
-      options?: { selectedRecordId?: string | null },
-    ) => loadRecords(collection, { refresh: true, ...options }),
-    [loadRecords],
+    [recordCollectionName, selectedRecordId],
   );
 
   const prefetchAdminRoute = React.useCallback(
@@ -1245,7 +1166,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setInviteName("");
 
       if (permissions.canViewUsers) {
-        await loadUserList({ refresh: true });
+        await loadUserList();
       }
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : "Unable to send invite.");
@@ -1357,13 +1278,13 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
 
         const currentSuggestion = createRoleIdSuggestion(currentRoleDraft.label);
         const nextSuggestion = createRoleIdSuggestion(value);
-        const shouldRefreshRoleId =
+        const shouldUpdateRoleId =
           currentRoleDraft.id.trim().length === 0 ||
           currentRoleDraft.id === currentSuggestion;
 
         return {
           ...currentRoleDraft,
-          id: shouldRefreshRoleId ? nextSuggestion : currentRoleDraft.id,
+          id: shouldUpdateRoleId ? nextSuggestion : currentRoleDraft.id,
           label: value,
         };
       });
@@ -1685,7 +1606,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setCollectionLoadError(null);
       setHasLoadedCollections(false);
       setIsLoadingCollections(false);
-      setIsRefreshingCollections(false);
       resetMediaWorkspace();
       resetRecordWorkspace();
       resetRoleWorkspace();
@@ -1777,7 +1697,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setSelectedMediaAssetId(null);
       setHasLoadedMediaAssets(false);
       setIsLoadingMediaAssets(false);
-      setIsRefreshingMediaAssets(false);
       setMediaLoadError(null);
     }
   }, [permissions, resetMediaWorkspace]);
@@ -1921,9 +1840,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     isLoadingRecords,
     isLoadingRoles,
     isLoadingUsers,
-    isRefreshingCollections,
-    isRefreshingMediaAssets,
-    isRefreshingRecords,
     isSavingAccountProfile,
     isSavingRecord,
     isSavingRole,
@@ -1950,13 +1866,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     records,
     recordSupportedFieldNames,
     resetRoleDraft,
-    refreshAccess: loadSessionAuthorizationData,
-    refreshApiKeyData,
-    refreshAvailableRoles,
-    refreshCollections,
-    refreshMediaAssets,
-    refreshRecords,
-    refreshUserList,
     revokeApiKey,
     role: currentAuthorization.role,
     roleDraft,
@@ -2007,14 +1916,9 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       return (
         <AdminWorkspaceGateShell
           action={
-            <>
-              <Button asChild variant="outline">
-                <a href={buildDatamixAdminPath("/login")}>Back home</a>
-              </Button>
-              <Button onClick={setupStatus.reload} type="button">
-                Retry status
-              </Button>
-            </>
+            <Button asChild variant="outline">
+              <a href={buildDatamixAdminPath("/login")}>Back home</a>
+            </Button>
           }
           body={
             <>
@@ -2022,7 +1926,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
               <p>
                 {setupStatus.statusCode === 503
                   ? "Set `BETTER_AUTH_SECRET` on the Datamix Worker, then reload this page."
-                  : "Datamix will retry automatically when the network comes back or this tab regains focus. You can also retry now."}
+                  : "Datamix will retry automatically when the network comes back or this tab regains focus."}
               </p>
             </>
           }
@@ -2039,14 +1943,9 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       return (
         <AdminWorkspaceGateShell
           action={
-            <>
-              <Button asChild variant="outline">
-                <a href={buildDatamixAdminPath("/login")}>Back home</a>
-              </Button>
-              <Button onClick={() => void loadSessionAuthorizationData()} type="button">
-                Retry access profile
-              </Button>
-            </>
+            <Button asChild variant="outline">
+              <a href={buildDatamixAdminPath("/login")}>Back home</a>
+            </Button>
           }
           body={
             <>
@@ -2056,8 +1955,8 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
               </p>
               <p>
                 {authorizationStatusCode && authorizationStatusCode >= 500
-                  ? "The protected session route is reachable, but it could not finish resolving your role just now. Retry in a moment."
-                  : "Datamix will retry automatically when the session stabilizes, and you can manually retry without losing your browser state."}
+                  ? "The protected session route is reachable, but it could not finish resolving your role just now."
+                  : "Datamix will retry automatically when the session stabilizes."}
               </p>
             </>
           }

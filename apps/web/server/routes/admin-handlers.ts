@@ -119,6 +119,7 @@ function storedCollectionDefinitionBody(
   return {
     createdAt: collection.createdAt,
     definition: collection.definition,
+    id: collection.id,
     tableName: collection.tableName,
     updatedAt: collection.updatedAt,
   };
@@ -130,6 +131,7 @@ function generatedCollectionBody(
   return {
     createdAt: collection.createdAt,
     definition: collection.definition,
+    id: collection.id,
     routes: createGeneratedCollectionCrudRoute(collection.definition.name),
     tableName: collection.tableName,
     updatedAt: collection.updatedAt,

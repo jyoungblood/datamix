@@ -6,7 +6,7 @@ import {
   type DatamixSchemaValidationIssue,
   type DatamixSelectOption,
 } from "@datamix/core";
-import { Plus, RefreshCcw } from "lucide-react";
+import { Plus } from "lucide-react";
 import * as React from "react";
 
 import {
@@ -115,17 +115,15 @@ function SchemaBuilderContent({
     collections,
     hasLoadedCollections,
     isLoadingCollections,
-    isRefreshingCollections,
     loadCollections,
     permissions,
-    refreshCollections,
   } = workspace;
   const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
   const activeCollection =
     decodedSchemaId === null
       ? null
       : collections.find(
-          (collection) => collection.definition.name === decodedSchemaId,
+          (collection) => collection.id === decodedSchemaId,
         ) ?? null;
   const [draft, setDraft] = React.useState<CollectionDraft>(
     createEmptyCollectionDraft,
@@ -145,10 +143,6 @@ function SchemaBuilderContent({
   const canSaveCurrentSchema = isEditingExistingSchema
     ? permissions.canUpdateCollections
     : permissions.canCreateCollections;
-  const canRefreshCollections =
-    permissions.canViewCollections &&
-    !isLoadingCollections &&
-    !isRefreshingCollections;
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const hasUnsavedSchemaChanges =
     activeCollection !== null
@@ -196,12 +190,12 @@ function SchemaBuilderContent({
       return;
     }
 
-    if (draftSourceName === activeCollection.definition.name) {
+    if (draftSourceName === activeCollection.id) {
       return;
     }
 
     setDraft(createDraftFromDefinition(activeCollection.definition));
-    setDraftSourceName(activeCollection.definition.name);
+    setDraftSourceName(activeCollection.id);
     setCollectionIssues([]);
     setCollectionMessage(null);
   }, [activeCollection, draftSourceName, mode]);
@@ -294,7 +288,7 @@ function SchemaBuilderContent({
   const resetDraft = () => {
     if (activeCollection) {
       setDraft(createDraftFromDefinition(activeCollection.definition));
-      setDraftSourceName(activeCollection.definition.name);
+      setDraftSourceName(activeCollection.id);
     } else {
       setDraft(createEmptyCollectionDraft());
       setDraftSourceName("new");
@@ -318,18 +312,16 @@ function SchemaBuilderContent({
       const result = await saveCollectionDefinition(serializeDraft(draft));
 
       if (permissions.canViewCollections) {
-        await loadCollections({ refresh: true });
+        await loadCollections();
       }
 
       if (mode === "create") {
-        window.location.href = adminRoutes.schema.detail(
-          result.collection.definition.name,
-        ).href;
+        window.location.href = adminRoutes.schema.detail(result.collection.id).href;
         return;
       }
 
       setDraft(createDraftFromDefinition(result.collection.definition));
-      setDraftSourceName(result.collection.definition.name);
+      setDraftSourceName(result.collection.id);
       setCollectionMessage(
         formatSchemaLanguage(`${result.message} ${formatPlanSummary(result.plan)}`),
       );
@@ -390,9 +382,7 @@ function SchemaBuilderContent({
           collectionLoadError &&
           collections.length === 0 ? (
           <AdminStateBox
-            actionLabel="Try again"
             body={collectionLoadError}
-            onAction={() => void refreshCollections()}
             title="Schema is unavailable"
             tone="error"
           />
@@ -401,7 +391,7 @@ function SchemaBuilderContent({
           activeCollection === null ? (
           <AdminStateBox
             actionLabel="Back to schemas"
-            body={`Datamix could not find a saved schema named ${decodedSchemaId ?? "this route"}.`}
+            body={`Datamix could not find a saved schema with id ${decodedSchemaId ?? "this route"}.`}
             onAction={() => {
               window.location.href = adminRoutes.schema.index().href;
             }}
@@ -416,18 +406,6 @@ function SchemaBuilderContent({
           >
             <aside className="space-y-4">
               <AdminSectionCard
-                action={
-                  <Button
-                    disabled={!canRefreshCollections}
-                    onClick={() => void refreshCollections()}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    <RefreshCcw />
-                    Refresh
-                  </Button>
-                }
                 description={
                   isEditingExistingSchema
                     ? "The schema name is the stable storage identifier."
@@ -592,11 +570,9 @@ function SchemaBuilderContent({
               ) : null}
               {collectionLoadError && collections.length > 0 ? (
                 <AdminStateBox
-                  actionLabel="Retry schema refresh"
-                  body={`${collectionLoadError} You can keep editing the current draft while Datamix retries the saved schema list.`}
+                  body={`${collectionLoadError} You can keep editing the current draft with the last saved schema list that loaded.`}
                   compact
-                  onAction={() => void refreshCollections()}
-                  title="Saved schema list is out of date"
+                  title="Saved schema list may be out of date"
                   tone="warning"
                 />
               ) : null}

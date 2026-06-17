@@ -12,10 +12,6 @@ import { summarizeRecord } from "../_lib/record-drafts";
 import { adminRoutes, type AdminWorkspaceRoute } from "./admin-routes";
 import { useAdminWorkspace } from "./admin-workspace-hooks";
 
-type AdminWorkspaceCommandPaletteProps = {
-  route: AdminWorkspaceRoute;
-};
-
 function navigateTo(href: string) {
   window.location.href = href;
 }
@@ -31,9 +27,7 @@ function createNavigationCommand(route: AdminWorkspaceRoute): CommandPaletteItem
   };
 }
 
-export function AdminWorkspaceCommandPalette({
-  route,
-}: AdminWorkspaceCommandPaletteProps) {
+export function AdminWorkspaceCommandPalette() {
   const workspace = useAdminWorkspace();
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -85,90 +79,6 @@ export function AdminWorkspaceCommandPalette({
     };
   }, []);
 
-  const routeRefreshLabel =
-    route.section === "home"
-      ? "Refresh access"
-      : route.section === "content" && currentCollection
-        ? `Refresh ${currentCollection.definition.label} records`
-        : `Refresh ${route.label}`;
-  const isRouteRefreshDisabled =
-    route.section === "home"
-      ? false
-      : route.section === "schema"
-        ? !workspace.permissions.canViewCollections ||
-          workspace.isLoadingCollections ||
-          workspace.isRefreshingCollections
-        : route.section === "content"
-          ? currentCollection
-            ? !workspace.permissions.canViewRecords ||
-              workspace.isLoadingRecords ||
-              workspace.isRefreshingRecords
-            : !workspace.permissions.canViewCollections ||
-              workspace.isLoadingCollections ||
-              workspace.isRefreshingCollections
-          : route.section === "media"
-            ? !workspace.permissions.canViewMedia ||
-              workspace.isLoadingMediaAssets ||
-              workspace.isRefreshingMediaAssets
-            : route.section === "team"
-              ? !workspace.permissions.canAccessTeamAccess ||
-                workspace.isLoadingRoles ||
-                workspace.isLoadingUsers ||
-                workspace.updatingUserRoleId !== null
-              : route.section === "settings"
-                ? !workspace.permissions.canAccessSettingsWorkspace ||
-                  workspace.isLoadingApiKeys ||
-                  workspace.isLoadingRoles ||
-                  workspace.isCreatingApiKey ||
-                  workspace.isSavingRole ||
-                  workspace.savingApiKeyId !== null ||
-                  workspace.revokingApiKeyId !== null
-                : false;
-
-  const refreshCurrentRoute = React.useCallback(async () => {
-    if (route.section === "home" || route.section === "account") {
-      await workspace.refreshAccess();
-      return;
-    }
-
-    if (route.section === "schema") {
-      await workspace.refreshCollections();
-      return;
-    }
-
-    if (route.section === "content") {
-      if (currentCollection) {
-        await workspace.refreshRecords(currentCollection, {
-          selectedRecordId: workspace.selectedRecord?.id ?? null,
-        });
-        return;
-      }
-
-      await workspace.refreshCollections();
-      return;
-    }
-
-    if (route.section === "media") {
-      await workspace.refreshMediaAssets();
-      return;
-    }
-
-    if (route.section === "team") {
-      await Promise.all([
-        workspace.permissions.canViewUsers
-          ? workspace.refreshUserList()
-          : Promise.resolve(),
-        workspace.refreshAvailableRoles(),
-      ]);
-      return;
-    }
-
-    await Promise.all([
-      workspace.refreshApiKeyData(),
-      workspace.refreshAvailableRoles(),
-    ]);
-  }, [currentCollection, route.section, workspace]);
-
   const commandPaletteItems = React.useMemo(() => {
     const routeCommands = [
       adminRoutes.home(),
@@ -193,58 +103,32 @@ export function AdminWorkspaceCommandPalette({
       },
     ];
 
-    if (workspace.permissions.canCreateRecords) {
-      createCommands.push(
-        ...workspace.collections.map((collection) => ({
-          group: "create" as const,
-          id: `create-record-${collection.definition.name}`,
-          keywords: [
-            "new",
-            "create",
-            "record",
-            "content",
-            collection.definition.name,
-            collection.definition.label,
-          ],
-          onSelect: () =>
-            navigateTo(adminRoutes.content.newRecord(collection.definition.name).href),
-          subtitle: `Create content in ${collection.definition.label}.`,
-          title: `New ${collection.definition.label} record`,
-        })),
-      );
-    }
+    createCommands.push({
+      disabled: !workspace.permissions.canCreateRecords,
+      group: "create",
+      id: "create-record",
+      keywords: ["new", "create", "record", "content"],
+      onSelect: () => navigateTo(adminRoutes.content.newRecord().href),
+      subtitle: workspace.permissions.canCreateRecords
+        ? "Choose a schema and create content."
+        : "Content creation is restricted for the current role.",
+      title: "New content",
+    });
 
-    const collectionCommands = workspace.collections.flatMap((collection) => [
-      {
-        group: "collections" as const,
-        id: `open-schema-${collection.definition.name}`,
-        keywords: [
-          "schema",
-          "collection",
-          "model",
-          collection.definition.name,
-          collection.definition.label,
-        ],
-        onSelect: () =>
-          navigateTo(adminRoutes.schema.detail(collection.definition.name).href),
-        subtitle: `Edit ${collection.definition.fields.length} schema fields.`,
-        title: `Schema: ${collection.definition.label}`,
-      },
-      {
-        group: "collections" as const,
-        id: `open-content-${collection.definition.name}`,
-        keywords: [
-          "content",
-          "records",
-          collection.definition.name,
-          collection.definition.label,
-        ],
-        onSelect: () =>
-          navigateTo(adminRoutes.content.collection(collection.definition.name).href),
-        subtitle: `Browse records for ${collection.definition.label}.`,
-        title: `Content: ${collection.definition.label}`,
-      },
-    ]);
+    const collectionCommands = workspace.collections.map((collection) => ({
+      group: "collections" as const,
+      id: `open-schema-${collection.id}`,
+      keywords: [
+        "schema",
+        "collection",
+        "model",
+        collection.definition.name,
+        collection.definition.label,
+      ],
+      onSelect: () => navigateTo(adminRoutes.schema.detail(collection.id).href),
+      subtitle: `Edit ${collection.definition.fields.length} schema fields.`,
+      title: `Schema: ${collection.definition.label}`,
+    }));
     const recordCommands: CommandPaletteItem[] = currentCollection
       ? workspace.records.map((record) => ({
           group: "records",
@@ -259,7 +143,7 @@ export function AdminWorkspaceCommandPalette({
           onSelect: () =>
             navigateTo(
               adminRoutes.content.record(
-                currentCollection.definition.name,
+                currentCollection.id,
                 record.id,
               ).href,
             ),
@@ -267,17 +151,6 @@ export function AdminWorkspaceCommandPalette({
           title: summarizeRecord(currentCollection.definition, record),
         }))
       : [];
-    const refreshCommand: CommandPaletteItem = {
-      disabled: isRouteRefreshDisabled,
-      group: "refresh",
-      id: `refresh-${route.id}`,
-      keywords: ["refresh", "reload", route.id, route.section, route.label],
-      onSelect: refreshCurrentRoute,
-      subtitle: isRouteRefreshDisabled
-        ? "Refresh is unavailable for the current route state."
-        : "Reload the data used by the current route.",
-      title: routeRefreshLabel,
-    };
     const accountCommands: CommandPaletteItem[] = [
       {
         group: "account",
@@ -298,7 +171,6 @@ export function AdminWorkspaceCommandPalette({
     ];
 
     return [
-      refreshCommand,
       ...routeCommands,
       ...createCommands,
       ...collectionCommands,
@@ -307,12 +179,6 @@ export function AdminWorkspaceCommandPalette({
     ];
   }, [
     currentCollection,
-    isRouteRefreshDisabled,
-    refreshCurrentRoute,
-    route.id,
-    route.label,
-    route.section,
-    routeRefreshLabel,
     workspace.collections,
     workspace.permissions.canCreateCollections,
     workspace.permissions.canCreateRecords,

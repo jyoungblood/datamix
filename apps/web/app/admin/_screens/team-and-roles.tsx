@@ -61,8 +61,6 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
     loadAvailableRoles,
     loadUserList,
     permissions,
-    refreshAvailableRoles,
-    refreshUserList,
     role,
     rolesLoadError,
     sendInvite,
@@ -146,10 +144,8 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
                 <AdminMiniListSkeleton rows={3} />
               ) : usersLoadError && users.length === 0 ? (
                 <AdminStateBox
-                  actionLabel="Try again"
                   body={usersLoadError}
                   compact
-                  onAction={() => void refreshUserList()}
                   title="User list is unavailable"
                   tone="error"
                 />
@@ -226,11 +222,9 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
               {usersLoadError && users.length > 0 ? (
                 <div className="mt-4">
                   <AdminStateBox
-                    actionLabel="Retry users"
                     body={usersLoadError}
                     compact
-                    onAction={() => void refreshUserList()}
-                    title="User refresh did not finish"
+                    title="User list may be out of date"
                     tone="warning"
                   />
                 </div>
@@ -313,10 +307,8 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
             <AdminMiniListSkeleton rows={4} />
           ) : rolesLoadError && availableRoles.length === 0 ? (
             <AdminStateBox
-              actionLabel="Try again"
               body={rolesLoadError}
               compact
-              onAction={() => void refreshAvailableRoles()}
               title="Role list is unavailable"
               tone="error"
             />
@@ -344,11 +336,9 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
           {rolesLoadError && availableRoles.length > 0 ? (
             <div className="mt-4">
               <AdminStateBox
-                actionLabel="Retry roles"
                 body={rolesLoadError}
                 compact
-                onAction={() => void refreshAvailableRoles()}
-                title="Role refresh did not finish"
+                title="Role list may be out of date"
                 tone="warning"
               />
             </div>

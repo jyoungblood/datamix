@@ -3,8 +3,8 @@ import { AdminWorkspacePage } from "@/app/admin/_workspace/admin-workspace-page"
 
 type AdminRecordDetailPageProps = {
   params: {
-    collection: string;
     recordId: string;
+    schemaId: string;
   };
 };
 
@@ -14,9 +14,9 @@ export default function AdminRecordDetailPage({
   return (
     <AdminWorkspacePage>
       <ContentEditorRoute
-        collectionName={params.collection}
         mode="edit"
         recordId={params.recordId}
+        schemaId={params.schemaId}
       />
     </AdminWorkspacePage>
   );

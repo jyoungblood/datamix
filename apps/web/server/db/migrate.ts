@@ -16,6 +16,11 @@ type ColumnRow = {
   name: string;
 };
 
+type CollectionIdRow = {
+  id: string | null;
+  name: string;
+};
+
 const fixedTableNames = [
   "user",
   "session",
@@ -149,6 +154,7 @@ const createFixedSchemaStatements = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "dmx_media_assets_storage_key_unique" ON ${quoteIdentifier(datamixMediaAssetsTableName)} ("storage_key")`,
   `
     CREATE TABLE IF NOT EXISTS ${quoteIdentifier(datamixCollectionDefinitionsTableName)} (
+      "id" TEXT NOT NULL UNIQUE,
       "name" TEXT PRIMARY KEY,
       "label" TEXT NOT NULL,
       "description" TEXT,
@@ -158,6 +164,7 @@ const createFixedSchemaStatements = [
       "updated_at" TEXT NOT NULL
     )
   `,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "dmx_collections_id_unique" ON ${quoteIdentifier(datamixCollectionDefinitionsTableName)} ("id")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "dmx_collections_table_name_unique" ON ${quoteIdentifier(datamixCollectionDefinitionsTableName)} ("table_name")`,
 ].map((statement) => statement.trim());
 
@@ -173,6 +180,55 @@ async function ensureUserRoleColumn(database: D1Database) {
   return true;
 }
 
+async function ensureCollectionDefinitionIdColumn(database: D1Database) {
+  const columns = await listTableColumns(
+    database,
+    datamixCollectionDefinitionsTableName,
+  );
+  let changed = false;
+
+  if (!columns.has("id")) {
+    await database
+      .prepare(
+        `ALTER TABLE ${quoteIdentifier(datamixCollectionDefinitionsTableName)} ADD COLUMN "id" TEXT`,
+      )
+      .run();
+    changed = true;
+  }
+
+  const rows = await database
+    .prepare(
+      `
+        SELECT name, id
+        FROM ${quoteIdentifier(datamixCollectionDefinitionsTableName)}
+        WHERE id IS NULL OR id = ''
+      `.trim(),
+    )
+    .all<CollectionIdRow>();
+
+  for (const row of rows.results) {
+    await database
+      .prepare(
+        `
+          UPDATE ${quoteIdentifier(datamixCollectionDefinitionsTableName)}
+          SET id = ?
+          WHERE name = ?
+        `.trim(),
+      )
+      .bind(crypto.randomUUID(), row.name)
+      .run();
+    changed = true;
+  }
+
+  await database
+    .prepare(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "dmx_collections_id_unique" ON ${quoteIdentifier(datamixCollectionDefinitionsTableName)} ("id")`,
+    )
+    .run();
+
+  return changed;
+}
+
 export async function bootstrapFixedSchema(env: DatamixBindings) {
   const existingTables = await listExistingTables(env.DB);
 
@@ -180,7 +236,12 @@ export async function bootstrapFixedSchema(env: DatamixBindings) {
     createFixedSchemaStatements.map((statement) => env.DB.prepare(statement)),
   );
 
-  const alteredTables = (await ensureUserRoleColumn(env.DB)) ? ["user"] : [];
+  const alteredTables = [
+    ...((await ensureUserRoleColumn(env.DB)) ? ["user"] : []),
+    ...((await ensureCollectionDefinitionIdColumn(env.DB))
+      ? [datamixCollectionDefinitionsTableName]
+      : []),
+  ];
 
   return {
     alteredTables,

@@ -53,7 +53,6 @@ type DatasetStatusInput = {
   hasLoaded: boolean;
   isAllowed: boolean;
   isLoading: boolean;
-  isRefreshing?: boolean;
   loadedBody: string;
   loadingBody: string;
   restrictedBody: string;
@@ -106,7 +105,6 @@ function createDatasetStatus({
   hasLoaded,
   isAllowed,
   isLoading,
-  isRefreshing = false,
   loadedBody,
   loadingBody,
   restrictedBody,
@@ -131,14 +129,6 @@ function createDatasetStatus({
     return {
       body: loadingBody,
       label: "Loading",
-      variant: "secondary",
-    };
-  }
-
-  if (isRefreshing) {
-    return {
-      body: "Refreshing the latest overview data.",
-      label: "Refreshing",
       variant: "secondary",
     };
   }
@@ -176,13 +166,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     isLoadingMediaAssets,
     isLoadingRoles,
     isLoadingUsers,
-    isRefreshingCollections,
-    isRefreshingMediaAssets,
     mediaAssets,
     mediaLoadError,
     permissions,
     prefetchAdminRoute,
-    refreshCollections,
     rolesLoadError,
     users,
     usersLoadError,
@@ -222,7 +209,6 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     hasLoaded: hasLoadedCollections,
     isAllowed: permissions.canViewCollections,
     isLoading: isLoadingCollections,
-    isRefreshing: isRefreshingCollections,
     loadedBody: `${formatCount(collections.length, "schema")} and ${formatCount(
       totalFieldCount,
       "field",
@@ -235,7 +221,6 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
     hasLoaded: hasLoadedMediaAssets,
     isAllowed: permissions.canViewMedia,
     isLoading: isLoadingMediaAssets,
-    isRefreshing: isRefreshingMediaAssets,
     loadedBody: `${formatCount(mediaAssets.length, "asset")} loaded from the media workspace.`,
     loadingBody: "Loading media assets for the overview.",
     restrictedBody: permissions.canUploadMedia
@@ -500,10 +485,8 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                 />
               ) : collectionLoadError && collections.length === 0 ? (
                 <AdminStateBox
-                  actionLabel="Try again"
                   body={collectionLoadError}
                   compact
-                  onAction={() => void refreshCollections()}
                   title="Schemas are unavailable"
                   tone="error"
                 />
@@ -528,7 +511,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                   {recentSchemas.map((collection) => (
                     <Link
                       className="grid gap-2 px-4 py-3 text-xs transition hover:bg-muted/60"
-                      href={adminRoutes.schema.detail(collection.definition.name).href}
+                      href={adminRoutes.schema.detail(collection.id).href}
                       key={collection.definition.name}
                       prefetch={true}
                     >

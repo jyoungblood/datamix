@@ -1,10 +1,13 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { AdminPageHeader } from "../_components/admin-design";
 import { AdminTableSkeleton } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
+import { formatRecordTimestamp } from "../_lib/media-formatting";
+import { summarizeRecord } from "../_lib/record-drafts";
 import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
   adminRoutes,
@@ -14,23 +17,27 @@ import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
 } from "../_workspace/admin-workspace-hooks";
-import { formatCollectionSummary } from "../_lib/schema-drafts";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { StoredCollectionDefinition } from "@/lib/collection-definitions";
+import {
+  listCollectionRecords,
+  type StoredCollectionRecord,
+} from "@/lib/records";
 
-function formatContentTimestamp(value: string) {
-  const date = new Date(value);
+type ContentIndexRecordRow = {
+  collection: StoredCollectionDefinition;
+  record: StoredCollectionRecord;
+};
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+function formatContentRecordError(error: unknown) {
+  return error instanceof Error ? error.message : "Unable to load content.";
+}
 
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
+function createCollectionSignature(collections: StoredCollectionDefinition[]) {
+  return collections
+    .map((collection) => `${collection.id}:${collection.updatedAt}`)
+    .join("|");
 }
 
 function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
@@ -41,14 +48,106 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
     collections,
     hasLoadedCollections,
     isLoadingCollections,
-    isRefreshingCollections,
     loadCollections,
     permissions,
-    refreshCollections,
+    role,
+    selectRecord,
   } = workspace;
+  const [recordRows, setRecordRows] = React.useState<ContentIndexRecordRow[]>([]);
+  const [recordLoadError, setRecordLoadError] = React.useState<string | null>(null);
+  const [hasLoadedContentRecords, setHasLoadedContentRecords] =
+    React.useState(false);
+  const [loadedCollectionSignature, setLoadedCollectionSignature] = React.useState<
+    string | null
+  >(null);
+  const [isLoadingContentRecords, setIsLoadingContentRecords] =
+    React.useState(false);
+  const recordsLoadRequestId = React.useRef(0);
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
-  const shouldShowCollectionSkeleton =
-    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
+  const collectionSignature = createCollectionSignature(collections);
+  const hasCurrentContentRecords =
+    hasLoadedContentRecords && loadedCollectionSignature === collectionSignature;
+  const shouldShowSkeleton =
+    isInitialCollectionLoad ||
+    (!hasCurrentContentRecords && isLoadingContentRecords);
+
+  const loadContentRecords = React.useCallback(
+    async () => {
+      if (
+        !permissions.canViewCollections ||
+        !permissions.canViewRecords ||
+        collections.length === 0
+      ) {
+        setRecordRows([]);
+        setRecordLoadError(null);
+        setHasLoadedContentRecords(false);
+        setLoadedCollectionSignature(null);
+        return;
+      }
+
+      const requestId = recordsLoadRequestId.current + 1;
+
+      recordsLoadRequestId.current = requestId;
+      setIsLoadingContentRecords(true);
+      setHasLoadedContentRecords(false);
+      setRecordRows([]);
+      setRecordLoadError(null);
+
+      const results = await Promise.all(
+        collections.map(async (collection) => {
+          try {
+            const result = await listCollectionRecords(collection.definition.name);
+
+            return {
+              collection,
+              error: null,
+              records: result.records,
+            };
+          } catch (error) {
+            return {
+              collection,
+              error: formatContentRecordError(error),
+              records: [] as StoredCollectionRecord[],
+            };
+          }
+        }),
+      );
+
+      if (recordsLoadRequestId.current !== requestId) {
+        return;
+      }
+
+      const nextRows = results
+        .flatMap((result) =>
+          result.records.map((record) => ({
+            collection: result.collection,
+            record,
+          })),
+        )
+        .sort(
+          (left, right) =>
+            new Date(right.record.updatedAt).getTime() -
+            new Date(left.record.updatedAt).getTime(),
+        );
+      const failedLoads = results.filter((result) => result.error);
+
+      setRecordRows(nextRows);
+      setHasLoadedContentRecords(true);
+      setLoadedCollectionSignature(collectionSignature);
+      setRecordLoadError(
+        failedLoads.length > 0
+          ? `${failedLoads.length} schema${failedLoads.length === 1 ? "" : "s"} could not load content.`
+          : null,
+      );
+      setIsLoadingContentRecords(false);
+    },
+    [
+      collectionSignature,
+      collections,
+      permissions.canViewCollections,
+      permissions.canViewRecords,
+    ],
+  );
 
   React.useEffect(() => {
     if (
@@ -67,17 +166,44 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
     permissions.canViewCollections,
   ]);
 
+  React.useEffect(() => {
+    if (
+      !permissions.canViewCollections ||
+      !permissions.canViewRecords ||
+      !hasLoadedCollections ||
+      collections.length === 0 ||
+      hasCurrentContentRecords ||
+      isLoadingContentRecords
+    ) {
+      return;
+    }
+
+    void loadContentRecords();
+  }, [
+    collections.length,
+    hasCurrentContentRecords,
+    hasLoadedCollections,
+    isLoadingContentRecords,
+    loadContentRecords,
+    permissions.canViewCollections,
+    permissions.canViewRecords,
+  ]);
+
   return (
     <AdminWorkspaceRouteFrame route={route}>
       <AdminPageHeader
         action={
           permissions.canCreateRecords ? (
             <Button asChild>
-              <a href={adminRoutes.schema.index().href}>Choose schema</a>
+              <a href={adminRoutes.content.newRecord().href}>
+                <Plus />
+                New content
+              </a>
             </Button>
           ) : (
             <Button disabled type="button">
-              Choose schema
+              <Plus />
+              New content
             </Button>
           )
         }
@@ -85,112 +211,154 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
       />
 
       {!access.isAllowed ? (
-          <AdminStateBox body={access.body} title={access.title} tone="warning" />
-        ) : !permissions.canViewCollections ? (
-          <AdminStateBox
-            body="Your current role can access content, but it cannot browse saved schema definitions."
-            title="Content picker is restricted"
-            tone="warning"
-          />
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-border bg-white">
-            <div className="grid grid-cols-[minmax(0,1.4fr)_0.8fr_0.9fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-[11px] font-bold text-slate-500">
-              <span>Schema</span>
-              <span>Fields</span>
-              <span>Storage</span>
-              <span>Status</span>
-              <span>Updated</span>
+        <AdminStateBox body={access.body} title={access.title} tone="warning" />
+      ) : !permissions.canViewCollections ? (
+        <AdminStateBox
+          body="Your current role can access content, but it cannot browse saved schema definitions."
+          title="Content list is restricted"
+          tone="warning"
+        />
+      ) : !permissions.canViewRecords && permissions.canCreateRecords ? (
+        <AdminStateBox
+          actionLabel="New content"
+          body={`Your ${role.label} role can create content, but it cannot browse saved content.`}
+          onAction={() => {
+            window.location.href = adminRoutes.content.newRecord().href;
+          }}
+          title="Content list is restricted"
+          tone="warning"
+        />
+      ) : !permissions.canViewRecords ? (
+        <AdminStateBox
+          body={`Your ${role.label} role cannot browse saved content.`}
+          title="Content list is restricted"
+          tone="warning"
+        />
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-border bg-white">
+          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-[11px] font-bold text-slate-500">
+            <span>Content</span>
+            <span>Schema</span>
+            <span>Updated</span>
+            <span>Created</span>
+            <span>Record ID</span>
+          </div>
+
+          {shouldShowSkeleton ? (
+            <AdminTableSkeleton columns={5} rows={5} />
+          ) : collectionLoadError && collections.length === 0 ? (
+            <div className="p-4">
+              <AdminStateBox
+                body={collectionLoadError}
+                compact
+                title="Content schemas are unavailable"
+                tone="error"
+              />
             </div>
-
-            {shouldShowCollectionSkeleton || isInitialCollectionLoad ? (
-              <AdminTableSkeleton columns={5} rows={4} />
-            ) : collectionLoadError && collections.length === 0 ? (
-              <div className="p-4">
+          ) : collections.length === 0 ? (
+            <div className="p-4">
+              {permissions.canCreateCollections ? (
                 <AdminStateBox
-                  actionLabel="Try again"
-                  body={collectionLoadError}
+                  actionLabel="Create first schema"
+                  body="Create a schema before adding content."
                   compact
-                  onAction={() => void refreshCollections()}
-                  title="Content schemas are unavailable"
-                  tone="error"
+                  onAction={() => {
+                    window.location.href = adminRoutes.schema.new().href;
+                  }}
+                  title="No content schemas yet"
                 />
-              </div>
-            ) : collections.length === 0 ? (
-              <div className="p-4">
-                {permissions.canCreateCollections ? (
-                  <AdminStateBox
-                    actionLabel="Create first schema"
-                    body="Create a schema before adding content."
-                    compact
-                    onAction={() => {
-                      window.location.href = adminRoutes.schema.new().href;
-                    }}
-                    title="No content schemas yet"
-                  />
-                ) : (
-                  <AdminStateBox
-                    body="Create a schema before adding content."
-                    compact
-                    title="No content schemas yet"
-                  />
-                )}
-              </div>
-            ) : (
-              <>
-                {collections.map((collection) => {
-                  const definition = collection.definition;
+              ) : (
+                <AdminStateBox
+                  body="Create a schema before adding content."
+                  compact
+                  title="No content schemas yet"
+                />
+              )}
+            </div>
+          ) : recordLoadError && recordRows.length === 0 ? (
+            <div className="p-4">
+              <AdminStateBox
+                body={recordLoadError}
+                compact
+                title="Content list is unavailable"
+                tone="error"
+              />
+            </div>
+          ) : recordRows.length === 0 ? (
+            <div className="p-4">
+              {permissions.canCreateRecords ? (
+                <AdminStateBox
+                  actionLabel="Create first content"
+                  body="Create a first content entry from any saved schema."
+                  compact
+                  onAction={() => {
+                    window.location.href = adminRoutes.content.newRecord().href;
+                  }}
+                  title="No saved content yet"
+                />
+              ) : (
+                <AdminStateBox
+                  body="No saved content entries are available yet."
+                  compact
+                  title="No saved content yet"
+                />
+              )}
+            </div>
+          ) : (
+            <>
+              {recordRows.map(({ collection, record }) => {
+                const definition = collection.definition;
 
-                  return (
+                return (
+                  <div
+                    className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-xs last:border-b-0 hover:bg-muted/60"
+                    key={`${collection.id}:${record.id}`}
+                  >
                     <a
-                      className="grid grid-cols-[minmax(0,1.4fr)_0.8fr_0.9fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-xs transition last:border-b-0 hover:bg-muted/60"
-                      href={adminRoutes.content.collection(definition.name).href}
-                      key={definition.name}
+                      className="min-w-0 font-medium text-slate-950 transition hover:text-slate-700"
+                      href={adminRoutes.content.record(collection.id, record.id).href}
+                      onClick={() => selectRecord(collection, record)}
                     >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-slate-950">
-                          {definition.label}
-                        </span>
-                        <span className="block truncate font-data text-[10px] text-slate-500">
-                          {definition.name}
-                        </span>
-                      </span>
-                      <span className="text-slate-500">
-                        {formatCollectionSummary(collection)}
-                      </span>
-                      <span className="truncate font-data text-[10px] text-slate-500">
-                        {collection.tableName}
-                      </span>
-                      <span>
-                        <Badge variant="outline">
-                          {definition.fields.length > 0 ? "Ready" : "No fields"}
-                        </Badge>
-                      </span>
-                      <span className="text-slate-500">
-                        {formatContentTimestamp(collection.updatedAt)}
+                      <span className="block truncate">
+                        {summarizeRecord(definition, record)}
                       </span>
                     </a>
-                  );
-                })}
-                {isRefreshingCollections ? (
-                  <p className="border-t px-4 py-3 text-xs text-slate-500">
-                    Refreshing content schemas...
-                  </p>
-                ) : null}
-                {collectionLoadError ? (
-                  <div className="border-t p-4">
-                    <AdminStateBox
-                      actionLabel="Retry refresh"
-                      body={`${collectionLoadError} Showing the last content schema list that loaded successfully.`}
-                      compact
-                      onAction={() => void refreshCollections()}
-                      title="Content schema refresh did not finish"
-                      tone="error"
-                    />
+                    <a
+                      className="min-w-0 transition hover:text-slate-700"
+                      href={adminRoutes.schema.detail(collection.id).href}
+                    >
+                      <span className="block truncate font-medium text-slate-950">
+                        {definition.label}
+                      </span>
+                      <span className="block truncate font-data text-[10px] text-slate-500">
+                        {definition.name}
+                      </span>
+                    </a>
+                    <span className="text-slate-500">
+                      {formatRecordTimestamp(record.updatedAt)}
+                    </span>
+                    <span className="text-slate-500">
+                      {formatRecordTimestamp(record.createdAt)}
+                    </span>
+                    <span className="truncate font-data text-[10px] text-slate-500">
+                      {record.id}
+                    </span>
                   </div>
-                ) : null}
-              </>
-            )}
-          </div>
+                );
+              })}
+              {recordLoadError ? (
+                <div className="border-t p-4">
+                  <AdminStateBox
+                    body={`${recordLoadError} Showing the content that loaded successfully.`}
+                    compact
+                    title="Content list may be out of date"
+                    tone="error"
+                  />
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
       )}
     </AdminWorkspaceRouteFrame>
   );

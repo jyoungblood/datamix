@@ -101,15 +101,12 @@ export default function SetupPage() {
             <AlertDescription>
               {setupStatus.statusCode === 503
                 ? "Set BETTER_AUTH_SECRET on the Datamix Worker, then reload this page."
-                : "Datamix could not confirm first-run setup just now. Retry once the Worker app is reachable again."}
+                : "Datamix will retry automatically once the Worker app is reachable again."}
             </AlertDescription>
           </Alert>
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="outline">
               <a href="/">Back home</a>
-            </Button>
-            <Button onClick={setupStatus.reload} type="button">
-              Retry status
             </Button>
           </div>
         </CenteredCardPage>

@@ -7,6 +7,7 @@ import {
 } from "@datamix/core";
 
 import { createAuth, type DatamixSession } from "../auth";
+import { bootstrapFixedSchema } from "../db/migrate";
 import { AuthConfigError, type DatamixBindings } from "../env";
 import { getAvailableRoleDefinition } from "../roles";
 import { jsonResponse } from "./http";
@@ -34,6 +35,8 @@ export async function resolveAuthorizedSession(
   env: DatamixBindings,
 ): Promise<AdminAccessResult> {
   try {
+    await bootstrapFixedSchema(env);
+
     const session = await createAuth(env, {
       baseURL: new URL(request.url).origin,
     }).api.getSession({

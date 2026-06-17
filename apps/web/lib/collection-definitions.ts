@@ -8,6 +8,7 @@ import { buildDatamixAdminApiUrl } from "./runtime";
 export type StoredCollectionDefinition = {
   createdAt: string;
   definition: DatamixCollectionDefinition;
+  id: string;
   tableName: string;
   updatedAt: string;
 };

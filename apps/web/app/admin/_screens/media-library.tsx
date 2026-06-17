@@ -37,7 +37,6 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
     copyMediaStorageKey,
     hasLoadedMediaAssets,
     isLoadingMediaAssets,
-    isRefreshingMediaAssets,
     isUploadingMedia,
     loadMediaAssets,
     mediaAssets,
@@ -46,7 +45,6 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
     mediaMessage,
     mediaSearchQuery,
     permissions,
-    refreshMediaAssets,
     role,
     selectedMediaAssetId,
     selectedMediaFile,
@@ -168,12 +166,6 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
                     compact
                     title="Media upload flow needs attention"
                     tone="error"
-                    {...(permissions.canViewMedia
-                      ? {
-                          actionLabel: "Refresh uploads",
-                          onAction: () => void refreshMediaAssets(),
-                        }
-                      : {})}
                   />
                 ) : null}
 
@@ -215,10 +207,8 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
                       <AdminMiniListSkeleton rows={4} />
                     ) : mediaLoadError && mediaAssets.length === 0 ? (
                       <AdminStateBox
-                        actionLabel="Try again"
                         body={mediaLoadError}
                         compact
-                        onAction={() => void refreshMediaAssets()}
                         title="Media library is unavailable"
                         tone="error"
                       />
@@ -260,18 +250,11 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
                             <small>{formatRecordTimestamp(asset.createdAt)}</small>
                           </button>
                         ))}
-                        {isRefreshingMediaAssets ? (
-                          <p className="px-1 text-xs text-slate-500">
-                            Refreshing media assets...
-                          </p>
-                        ) : null}
                         {mediaLoadError ? (
                           <AdminStateBox
-                            actionLabel="Retry refresh"
                             body={`${mediaLoadError} Showing the last media list that loaded successfully.`}
                             compact
-                            onAction={() => void refreshMediaAssets()}
-                            title="Media refresh did not finish"
+                            title="Media library may be out of date"
                             tone="error"
                           />
                         ) : null}

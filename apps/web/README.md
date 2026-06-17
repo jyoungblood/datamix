@@ -26,10 +26,9 @@ The authenticated admin workspace is routed through the shared
 | `/admin/schema` | Schema overview |
 | `/admin/schema/new` | New schema builder |
 | `/admin/schema/[schemaId]` | Existing schema builder |
-| `/admin/content` | Content schema picker |
-| `/admin/content/[collection]` | Record browser for a schema |
-| `/admin/content/[collection]/new` | New generated record editor |
-| `/admin/content/[collection]/[recordId]` | Existing generated record editor |
+| `/admin/content` | All content browser |
+| `/admin/content/new` | New generated record editor with schema selection |
+| `/admin/content/[schemaId]/[recordId]` | Existing generated record editor |
 | `/admin/media` | Media library |
 | `/admin/team` | Users, invites, and role assignment |
 | `/admin/settings` | API keys, OAuth posture, and role definitions |
@@ -40,8 +39,8 @@ The authenticated admin workspace is routed through the shared
 | `/admin/reset-password` | Password reset completion |
 
 The command palette is mounted by the shared workspace frame. It provides routed
-navigation, route-aware refresh actions, dynamic schema/content jumps when data is
-loaded, account access, and sign-out.
+navigation, dynamic schema/content jumps when data is loaded, account access,
+and sign-out.
 
 ## Verification
 

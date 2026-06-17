@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 export type CommandPaletteItem = {
   disabled?: boolean;
-  group: "account" | "collections" | "create" | "navigation" | "records" | "refresh";
+  group: "account" | "collections" | "create" | "navigation" | "records";
   id: string;
   keywords: string[];
   onSelect: () => Promise<void> | void;
@@ -64,7 +64,6 @@ export function CommandPaletteDialog({
     create: "Create",
     navigation: "Navigation",
     records: "Records",
-    refresh: "Refresh",
   } as const satisfies Record<CommandPaletteItem["group"], string>;
 
   useEffect(() => {

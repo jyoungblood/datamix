@@ -51,10 +51,8 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
     collections,
     hasLoadedCollections,
     isLoadingCollections,
-    isRefreshingCollections,
     loadCollections,
     permissions,
-    refreshCollections,
   } = workspace;
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const shouldShowCollectionSkeleton =
@@ -127,10 +125,8 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
             ) : collectionLoadError && collections.length === 0 ? (
               <div className="p-4">
                 <AdminStateBox
-                  actionLabel="Try again"
                   body={formatSchemaLanguage(collectionLoadError)}
                   compact
-                  onAction={() => void refreshCollections()}
                   title="Schema list is unavailable"
                   tone="error"
                 />
@@ -163,7 +159,7 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
                   return (
                     <a
                       className="grid grid-cols-[minmax(0,1.5fr)_0.8fr_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-xs transition last:border-b-0 hover:bg-muted/60"
-                      href={adminRoutes.schema.detail(definition.name).href}
+                      href={adminRoutes.schema.detail(collection.id).href}
                       key={definition.name}
                     >
                       <span className="min-w-0">
@@ -187,19 +183,12 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
                     </a>
                   );
                 })}
-                {isRefreshingCollections ? (
-                  <p className="border-t px-4 py-3 text-xs text-slate-500">
-                    Refreshing the saved schema list...
-                  </p>
-                ) : null}
                 {collectionLoadError ? (
                   <div className="border-t p-4">
                     <AdminStateBox
-                      actionLabel="Retry refresh"
                       body={`${formatSchemaLanguage(collectionLoadError)} Showing the last schema list that loaded successfully.`}
                       compact
-                      onAction={() => void refreshCollections()}
-                      title="Schema refresh did not finish"
+                      title="Schema list may be out of date"
                       tone="error"
                     />
                   </div>

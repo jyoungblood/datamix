@@ -15,6 +15,7 @@ import {
 import type { DatamixBindings } from "./env";
 import {
   getCollectionDefinitionRow,
+  getCollectionDefinitionRowById,
   listCollectionDefinitionRows,
   type CollectionDefinitionRow,
 } from "./db/collection-definitions";
@@ -29,6 +30,7 @@ import {
 type RawCollectionDefinitionRow = {
   created_at: string;
   description: string | null;
+  id: string;
   label: string;
   name: string;
   schema_json: string;
@@ -39,6 +41,7 @@ type RawCollectionDefinitionRow = {
 export type StoredCollectionDefinition = {
   createdAt: string;
   definition: DatamixCollectionDefinition;
+  id: string;
   tableName: string;
   updatedAt: string;
 };
@@ -102,6 +105,7 @@ function mapStoredRow(row: CollectionDefinitionRow): StoredCollectionDefinition 
   return {
     createdAt: row.createdAt,
     definition: parseStoredDefinition(row.schemaJson),
+    id: row.id,
     tableName: row.tableName,
     updatedAt: row.updatedAt,
   };
@@ -111,6 +115,7 @@ function mapRawStoredRow(row: RawCollectionDefinitionRow): StoredCollectionDefin
   return {
     createdAt: row.created_at,
     definition: parseStoredDefinition(row.schema_json),
+    id: row.id,
     tableName: row.table_name,
     updatedAt: row.updated_at,
   };
@@ -123,7 +128,7 @@ async function readStoredCollectionDefinition(
   const row = await database
     .prepare(
       `
-        SELECT name, label, description, schema_json, table_name, created_at, updated_at
+        SELECT id, name, label, description, schema_json, table_name, created_at, updated_at
         FROM ${quoteIdentifier(datamixCollectionDefinitionsTableName)}
         WHERE name = ?
       `.trim(),
@@ -162,6 +167,7 @@ function createSchemaUpdateStatements(
   database: D1StatementRunner,
   definition: DatamixCollectionDefinition,
   existing: StoredCollectionDefinition | null,
+  id: string,
   plan: DatamixCollectionStoragePlan,
   now: string,
 ) {
@@ -187,6 +193,7 @@ function createSchemaUpdateStatements(
       .prepare(
         `
           INSERT INTO ${quoteIdentifier(datamixCollectionDefinitionsTableName)} (
+            id,
             name,
             label,
             description,
@@ -194,7 +201,7 @@ function createSchemaUpdateStatements(
             table_name,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(name) DO UPDATE SET
             label = excluded.label,
             description = excluded.description,
@@ -204,6 +211,7 @@ function createSchemaUpdateStatements(
         `.trim(),
       )
       .bind(
+        id,
         definition.name,
         definition.label,
         definition.description ?? null,
@@ -273,6 +281,12 @@ export async function getCollectionDefinition(env: DatamixBindings, name: string
   return row ? mapStoredRow(row) : null;
 }
 
+export async function getCollectionDefinitionById(env: DatamixBindings, id: string) {
+  const row = await getCollectionDefinitionRowById(env, id);
+
+  return row ? mapStoredRow(row) : null;
+}
+
 export async function saveCollectionDefinition(
   env: DatamixBindings,
   input: unknown,
@@ -320,7 +334,15 @@ export async function saveCollectionDefinition(
   }
 
   const now = new Date().toISOString();
-  const statements = createSchemaUpdateStatements(session, definition, existing, plan, now);
+  const id = existing?.id ?? crypto.randomUUID();
+  const statements = createSchemaUpdateStatements(
+    session,
+    definition,
+    existing,
+    id,
+    plan,
+    now,
+  );
 
   await session.batch(statements);
 
@@ -328,6 +350,7 @@ export async function saveCollectionDefinition(
     collection: {
       createdAt: existing?.createdAt ?? now,
       definition,
+      id,
       tableName: plan.tableName,
       updatedAt: now,
     },
@@ -340,6 +363,7 @@ export function formatCollectionDefinitionResponse(result: SaveCollectionDefinit
     collection: {
       createdAt: result.collection.createdAt,
       definition: result.collection.definition,
+      id: result.collection.id,
       tableName: result.collection.tableName,
       updatedAt: result.collection.updatedAt,
     },

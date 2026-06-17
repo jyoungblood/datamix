@@ -7,6 +7,7 @@ import {
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { listMediaAssets } from "@/lib/media";
 import { GeneratedRecordFieldInput } from "../_components/generated-record-field-input";
 import {
@@ -34,17 +35,28 @@ import {
 type ContentEditorMode = "create" | "edit";
 
 type ContentEditorContentProps = {
-  collectionName: string;
   mode: ContentEditorMode;
   recordId: string | undefined;
   route: AdminWorkspaceRoute;
+  schemaId: string | undefined;
 };
 
+const selectClassName =
+  "h-9 w-full rounded-md border border-input bg-white px-2.5 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50";
+
+function decodeSchemaId(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function ContentEditorContent({
-  collectionName,
   mode,
   recordId,
   route,
+  schemaId,
 }: ContentEditorContentProps) {
   const workspace = useAdminWorkspace();
   const access = useAdminWorkspaceRouteAccess(route);
@@ -55,7 +67,6 @@ function ContentEditorContent({
     hasLoadedRecords,
     isLoadingCollections,
     isLoadingRecords,
-    isRefreshingRecords,
     isSavingRecord,
     loadCollections,
     loadRecords,
@@ -67,7 +78,6 @@ function ContentEditorContent({
     recordMessage,
     records,
     recordSupportedFieldNames,
-    refreshRecords,
     role,
     saveRecord,
     selectedRecord,
@@ -75,15 +85,23 @@ function ContentEditorContent({
     startNewRecord,
     updateRecordDraftValue,
   } = workspace;
+  const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
+  const [selectedSchemaId, setSelectedSchemaId] = React.useState<string | null>(
+    decodedSchemaId,
+  );
   const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>([]);
   const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(null);
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = React.useState(false);
   const mediaLoadRequestId = React.useRef(0);
+  const activeSchemaId = decodedSchemaId ?? selectedSchemaId;
   const collection =
-    collections.find((item) => item.definition.name === collectionName) ?? null;
+    activeSchemaId === null
+      ? null
+      : collections.find((item) => item.id === activeSchemaId) ?? null;
   const isEditMode = mode === "edit";
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
-  const isActiveRecordCollection = recordCollectionName === collectionName;
+  const isActiveRecordCollection =
+    collection !== null && recordCollectionName === collection.definition.name;
   const visibleRecords = isActiveRecordCollection ? records : [];
   const activeSelectedRecord =
     isActiveRecordCollection && selectedRecord ? selectedRecord : null;
@@ -106,6 +124,10 @@ function ContentEditorContent({
     : permissions.canCreateRecords;
   const isInitialRecordLoad =
     isActiveRecordCollection && isLoadingRecords && !hasLoadedRecords;
+
+  React.useEffect(() => {
+    setSelectedSchemaId(decodedSchemaId);
+  }, [decodedSchemaId]);
 
   React.useEffect(() => {
     if (
@@ -255,7 +277,7 @@ function ContentEditorContent({
     }
 
     window.location.href = adminRoutes.content.record(
-      collection.definition.name,
+      collection.id,
       nextRecord.id,
     ).href;
   };
@@ -264,24 +286,18 @@ function ContentEditorContent({
     <AdminWorkspaceRouteFrame route={route}>
         <AdminPageHeader
           action={
-            collection ? (
-              <Button asChild variant="outline">
-                <a href={adminRoutes.content.collection(collection.definition.name).href}>
-                  Back to content
-                </a>
-              </Button>
-            ) : (
-              <Button asChild variant="outline">
-                <a href={adminRoutes.content.index().href}>Choose content</a>
-              </Button>
-            )
+            <Button asChild variant="outline">
+              <a href={adminRoutes.content.index().href}>All content</a>
+            </Button>
           }
           title={
             collection
               ? isEditMode
                 ? `Edit ${collection.definition.label} content`
                 : `New ${collection.definition.label} content`
-              : "Content editor"
+              : isEditMode
+                ? "Content editor"
+                : "New content"
           }
         />
 
@@ -294,16 +310,47 @@ function ContentEditorContent({
           />
         ) : collectionLoadError && collections.length === 0 ? (
           <AdminStateBox
-            actionLabel="Try again"
             body={collectionLoadError}
-            onAction={() => void loadCollections({ refresh: true })}
             title="Content schema is unavailable"
             tone="error"
           />
+        ) : !collection && !activeSchemaId && mode === "create" ? (
+          <AdminSectionCard title="Choose schema">
+            {collections.length === 0 ? (
+              <AdminStateBox
+                actionLabel="Create first schema"
+                body="Create a schema before adding content."
+                compact
+                onAction={() => {
+                  window.location.href = adminRoutes.schema.new().href;
+                }}
+                title="No schemas yet"
+              />
+            ) : (
+              <div className="max-w-md space-y-2">
+                <Label htmlFor="content-schema-id">Schema</Label>
+                <select
+                  className={selectClassName}
+                  id="content-schema-id"
+                  onChange={(event) =>
+                    setSelectedSchemaId(event.target.value || null)
+                  }
+                  value={selectedSchemaId ?? ""}
+                >
+                  <option value="">Select schema</option>
+                  {collections.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.definition.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </AdminSectionCard>
         ) : !collection ? (
           <AdminStateBox
-            actionLabel="Choose content"
-            body={`No saved schema named "${collectionName}" was found.`}
+            actionLabel="All content"
+            body={`No saved schema with id "${activeSchemaId ?? "this route"}" was found.`}
             onAction={() => {
               window.location.href = adminRoutes.content.index().href;
             }}
@@ -331,11 +378,7 @@ function ContentEditorContent({
           />
         ) : isEditMode && recordLoadError && visibleRecords.length === 0 ? (
           <AdminStateBox
-            actionLabel="Try again"
             body={recordLoadError}
-            onAction={() =>
-              void refreshRecords(collection, { selectedRecordId: recordId ?? null })
-            }
             title="Content is unavailable"
             tone="error"
           />
@@ -344,9 +387,7 @@ function ContentEditorContent({
             actionLabel="Back to content"
             body={`No saved content with record id "${recordId}" was found for ${collection.definition.label}.`}
             onAction={() => {
-              window.location.href = adminRoutes.content.collection(
-                collection.definition.name,
-              ).href;
+              window.location.href = adminRoutes.content.index().href;
             }}
             title="Content not found"
             tone="warning"
@@ -394,7 +435,7 @@ function ContentEditorContent({
                     body="Add fields to this schema before creating content."
                     onAction={() => {
                       window.location.href = adminRoutes.schema.detail(
-                        collection.definition.name,
+                        collection.id,
                       ).href;
                     }}
                     title="This schema has no fields yet"
@@ -437,13 +478,7 @@ function ContentEditorContent({
                 ) : null}
                 {recordLoadError && visibleRecords.length > 0 ? (
                   <AdminStateBox
-                    actionLabel="Retry content"
-                    body={`${recordLoadError} You can keep editing the current form while Datamix retries the latest content list.`}
-                    onAction={() =>
-                      void refreshRecords(collection, {
-                        selectedRecordId: isEditMode ? (recordId ?? null) : null,
-                      })
-                    }
+                    body={`${recordLoadError} You can keep editing the current form with the last content list that loaded.`}
                     title="Saved content may be out of date"
                     tone="warning"
                   />
@@ -501,9 +536,6 @@ function ContentEditorContent({
                     <strong>{formatRecordTimestamp(editorRecord.updatedAt)}</strong>
                   </p>
                 ) : null}
-                {isRefreshingRecords ? (
-                  <p className="section-copy">Refreshing saved content...</p>
-                ) : null}
                 <p className="section-copy">
                   Stored fields: <strong>{recordSupportedFieldNames}</strong>
                 </p>
@@ -530,25 +562,25 @@ function ContentEditorContent({
 }
 
 export function ContentEditorRoute({
-  collectionName,
   mode,
   recordId,
+  schemaId,
 }: {
-  collectionName: string;
   mode: ContentEditorMode;
   recordId?: string;
+  schemaId?: string;
 }) {
   const route =
     mode === "create"
-      ? adminRoutes.content.newRecord(collectionName)
-      : adminRoutes.content.record(collectionName, recordId ?? "");
+      ? adminRoutes.content.newRecord()
+      : adminRoutes.content.record(schemaId ?? "", recordId ?? "");
 
   return (
     <ContentEditorContent
-      collectionName={collectionName}
       mode={mode}
       recordId={recordId}
       route={route}
+      schemaId={schemaId}
     />
   );
 }

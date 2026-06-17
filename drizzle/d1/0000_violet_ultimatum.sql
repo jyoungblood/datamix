@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `dmx_api_keys` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS `dmx_api_keys_secret_hash_unique` ON `dmx_api_keys` (`secret_hash`);--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS `dmx_collections` (
+	`id` text NOT NULL,
 	`name` text PRIMARY KEY NOT NULL,
 	`label` text NOT NULL,
 	`description` text,
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS `dmx_collections` (
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS `dmx_collections_id_unique` ON `dmx_collections` (`id`);--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS `dmx_collections_table_name_unique` ON `dmx_collections` (`table_name`);--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS `dmx_media_assets` (
 	`id` text PRIMARY KEY NOT NULL,

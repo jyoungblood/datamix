@@ -112,6 +112,7 @@ export const datamixMediaAssets = sqliteTable(datamixMediaAssetsTableName, {
 });
 
 export const datamixCollections = sqliteTable(datamixCollectionDefinitionsTableName, {
+  id: text("id").notNull().unique(),
   name: text("name").primaryKey().notNull(),
   label: text("label").notNull(),
   description: text("description"),

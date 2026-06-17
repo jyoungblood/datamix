@@ -17,7 +17,6 @@ type SetupStatusState = {
   errorMessage: string | null;
   isPending: boolean;
   oauth: DatamixAuthRuntimeSummary | null;
-  reload: () => void;
   statusCode: number | null;
 };
 
@@ -63,9 +62,6 @@ export function useSetupStatus() {
     errorMessage: null,
     isPending: true,
     oauth: null,
-    reload: () => {
-      setReloadToken((currentValue) => currentValue + 1);
-    },
     statusCode: null,
   });
 
@@ -94,9 +90,6 @@ export function useSetupStatus() {
           errorMessage: null,
           isPending: false,
           oauth: auth.oauth,
-          reload: () => {
-            setReloadToken((currentValue) => currentValue + 1);
-          },
           statusCode: null,
         });
       } catch (error) {
@@ -109,9 +102,6 @@ export function useSetupStatus() {
           errorMessage: error instanceof Error ? error.message : "Unable to load setup status.",
           isPending: false,
           oauth: null,
-          reload: () => {
-            setReloadToken((currentValue) => currentValue + 1);
-          },
           statusCode: error instanceof SetupStatusError ? error.statusCode : null,
         });
       }
