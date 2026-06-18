@@ -136,7 +136,7 @@ Expected:
 Switched to a new branch 'astro'
 ```
 
-- [ ] **Step 2: Confirm clean starting state**
+- [x] **Step 2: Confirm clean starting state**
 
 Run:
 
@@ -156,7 +156,7 @@ or:
 ## astro...origin/astro
 ```
 
-- [ ] **Step 3: Run current baseline checks**
+- [x] **Step 3: Run current baseline checks**
 
 Run:
 
