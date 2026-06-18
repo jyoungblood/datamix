@@ -459,7 +459,7 @@ git commit -m "chore: add astro worker foundation"
 - Modify: `apps/web/server/routes/auth-handlers.ts`
 - Test: build and targeted curl requests
 
-- [ ] **Step 1: Create Astro route adapter helpers**
+- [x] **Step 1: Create Astro route adapter helpers**
 
 Create `apps/web/server/routes/astro.ts`:
 
@@ -500,7 +500,7 @@ export function getAstroExecutionContext(context: APIContext) {
 }
 ```
 
-- [ ] **Step 2: Refactor auth to accept `ExecutionContext`**
+- [x] **Step 2: Refactor auth to accept `ExecutionContext`**
 
 Modify `apps/web/server/auth.ts` by removing:
 
@@ -551,7 +551,7 @@ export function createAuth(
 }
 ```
 
-- [ ] **Step 3: Pass execution context from auth handler**
+- [x] **Step 3: Pass execution context from auth handler**
 
 Modify `apps/web/server/routes/auth-handlers.ts`:
 
@@ -585,7 +585,7 @@ export async function handleAuth(
 }
 ```
 
-- [ ] **Step 4: Port core API endpoints**
+- [x] **Step 4: Port core API endpoints**
 
 Create `apps/web/src/pages/api/health.ts`:
 
@@ -658,7 +658,7 @@ export const GET = defineAstroRequestRoute(getSetupStatus);
 export const OPTIONS = defineAstroRequestRoute(adminOptions);
 ```
 
-- [ ] **Step 5: Build and typecheck the core adapter**
+- [x] **Step 5: Build and typecheck the core adapter**
 
 Run:
 
@@ -669,7 +669,7 @@ npm run build --workspace @datamix/web
 
 Expected: both commands exit `0`.
 
-- [ ] **Step 6: Commit Slice 2**
+- [x] **Step 6: Commit Slice 2**
 
 Run:
 

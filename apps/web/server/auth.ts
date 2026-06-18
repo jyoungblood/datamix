@@ -11,7 +11,6 @@ import {
   datamixAuthPath,
   datamixProduct,
 } from "@datamix/core";
-import { getRequestExecutionContext } from "vinext/shims/request-context";
 
 import { sendAuthEmail } from "./email";
 import { readApiAuthRuntime, type DatamixBindings } from "./env";
@@ -31,6 +30,7 @@ export function createAuthOptions(
   env: DatamixBindings,
   options?: {
     baseURL?: string;
+    executionContext?: ExecutionContext;
   },
 ): BetterAuthOptions {
   const authRuntime = readApiAuthRuntime(env);
@@ -108,10 +108,8 @@ export function createAuthOptions(
     advanced: {
       backgroundTasks: {
         handler(promise) {
-          const executionContext = getRequestExecutionContext();
-
-          if (executionContext) {
-            executionContext.waitUntil(promise);
+          if (options?.executionContext) {
+            options.executionContext.waitUntil(promise);
             return;
           }
 
@@ -153,6 +151,7 @@ export function createAuth(
   env: DatamixBindings,
   options?: {
     baseURL?: string;
+    executionContext?: ExecutionContext;
   },
 ) {
   return betterAuth(createAuthOptions(env, options));
