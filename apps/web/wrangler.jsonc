@@ -3,7 +3,7 @@
   // Top-level config is the deployed Datamix app contract.
   // Local development overrides runtime values from apps/web/.dev.vars.
   "name": "datamix-app",
-  "main": "worker/index.ts",
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-05-06",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
@@ -23,9 +23,8 @@
     "PUBLIC_API_WRITE_ACCESS": "disabled"
   },
   "assets": {
-    "directory": "dist/client",
-    "binding": "ASSETS",
-    "not_found_handling": "none"
+    "directory": "dist",
+    "binding": "ASSETS"
   },
   "images": {
     "binding": "IMAGES"

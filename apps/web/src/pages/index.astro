@@ -1,0 +1,26 @@
+---
+import { datamixProduct } from "@datamix/core";
+import { Blocks } from "lucide-react";
+
+import DatamixRootLayout from "../layouts/DatamixRootLayout.astro";
+---
+
+<DatamixRootLayout>
+  <main
+    class="flex min-h-svh items-center justify-center bg-[var(--sidebar)] px-6 py-8"
+    data-page-canvas="sidebar"
+  >
+    <a
+      aria-label={`Open ${datamixProduct.name} admin`}
+      class="flex items-center gap-4 text-white opacity-85 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-blue-300/50"
+      href="/admin"
+    >
+      <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--primary)]">
+        <Blocks aria-hidden="true" className="h-7 w-7 text-blue-100" />
+      </span>
+      <span class="font-heading text-xl font-extrabold tracking-wide text-white">
+        {datamixProduct.name.toUpperCase()}
+      </span>
+    </a>
+  </main>
+</DatamixRootLayout>

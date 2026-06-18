@@ -1,0 +1,12 @@
+---
+import "../../styles/globals.css";
+
+const initialPageCanvasStyle = "background-color: var(--page-canvas, #080f1f)";
+---
+
+<!doctype html>
+<html lang="en" style={initialPageCanvasStyle}>
+  <body style={initialPageCanvasStyle}>
+    <slot />
+  </body>
+</html>
