@@ -12,7 +12,6 @@ export default defineConfig({
     imageService: "cloudflare-binding",
     imagesBindingName: "IMAGES",
     persistState: persistStatePath ? { path: persistStatePath } : undefined,
-    prerenderEnvironment: "node",
   }),
   integrations: [react()],
   output: "server",

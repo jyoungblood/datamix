@@ -203,7 +203,7 @@ Do not fix unrelated baseline failures inside the Astro migration slice unless t
 - Modify: `apps/web/wrangler.jsonc`
 - Test: `npm run build --workspace @datamix/web`
 
-- [ ] **Step 1: Install Astro dependencies**
+- [x] **Step 1: Install Astro dependencies**
 
 Run:
 
@@ -220,7 +220,7 @@ added
 
 The exact package count can vary. The pass condition is exit code `0` and updates to `package-lock.json`.
 
-- [ ] **Step 2: Replace web scripts**
+- [x] **Step 2: Replace web scripts**
 
 Edit `apps/web/package.json` scripts to:
 
@@ -237,7 +237,7 @@ Edit `apps/web/package.json` scripts to:
 
 Keep existing dependencies in place for now. Vinext and RSC dependencies are removed in Slice 7 after parity is verified.
 
-- [ ] **Step 3: Create Astro config**
+- [x] **Step 3: Create Astro config**
 
 Create `apps/web/astro.config.mjs`:
 
@@ -270,7 +270,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 4: Create the root layout**
+- [x] **Step 4: Create the root layout**
 
 Create `apps/web/src/layouts/DatamixRootLayout.astro`:
 
@@ -289,7 +289,7 @@ const initialPageCanvasStyle = "background-color: var(--page-canvas, #080f1f)";
 </html>
 ```
 
-- [ ] **Step 5: Create the root splash page**
+- [x] **Step 5: Create the root splash page**
 
 Create `apps/web/src/pages/index.astro`:
 
@@ -322,7 +322,7 @@ import DatamixRootLayout from "../layouts/DatamixRootLayout.astro";
 </DatamixRootLayout>
 ```
 
-- [ ] **Step 6: Create the not-found page**
+- [x] **Step 6: Create the not-found page**
 
 Create `apps/web/src/pages/404.astro`:
 
@@ -348,7 +348,7 @@ import DatamixRootLayout from "../layouts/DatamixRootLayout.astro";
 </DatamixRootLayout>
 ```
 
-- [ ] **Step 7: Update Wrangler for Astro Workers**
+- [x] **Step 7: Update Wrangler for Astro Workers**
 
 Modify `apps/web/wrangler.jsonc`:
 
@@ -368,7 +368,7 @@ Modify `apps/web/wrangler.jsonc`:
 
 Keep the existing `vars`, `images`, `d1_databases`, and `r2_buckets` blocks exactly as they are.
 
-- [ ] **Step 8: Update TypeScript include paths**
+- [x] **Step 8: Update TypeScript include paths**
 
 Modify `apps/web/tsconfig.json`:
 
@@ -416,7 +416,7 @@ Modify `apps/web/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 9: Build the foundation**
+- [x] **Step 9: Build the foundation**
 
 Run:
 
@@ -432,7 +432,7 @@ astro
 
 The exact output can vary. The pass condition is exit code `0`.
 
-- [ ] **Step 10: Commit Slice 1**
+- [x] **Step 10: Commit Slice 1**
 
 Run:
 
