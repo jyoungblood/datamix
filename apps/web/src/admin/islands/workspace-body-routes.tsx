@@ -9,8 +9,12 @@ import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
 import { UserAccountRoute } from "@/admin/_screens/user-account";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
 
-export function AdminHomeBody() {
-  return <AdminHomeRoute />;
+export function AdminHomeBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? <AdminHomeRoute routeAccess={routeAccess} /> : <AdminHomeRoute />;
 }
 
 export function SchemaOverviewBody({

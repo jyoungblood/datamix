@@ -24,6 +24,7 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -62,6 +63,14 @@ type DatasetStatusInput = {
   loadedBody: string;
   loadingBody: string;
   restrictedBody: string;
+};
+
+type AdminHomeContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type AdminHomeRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
 };
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
@@ -154,9 +163,9 @@ function createDatasetStatus({
   };
 }
 
-export function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
+export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     apiKeys,
     apiKeysLoadError,
@@ -656,6 +665,18 @@ export function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
   );
 }
 
-export function AdminHomeRoute() {
-  return <AdminHomeContent route={adminRoutes.home()} />;
+function AdminHomeRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <AdminHomeContent routeAccess={providerAccess} />;
+}
+
+export function AdminHomeRoute({ routeAccess }: AdminHomeRouteProps = {}) {
+  const route = adminRoutes.home();
+
+  return routeAccess ? (
+    <AdminHomeContent routeAccess={routeAccess} />
+  ) : (
+    <AdminHomeRouteWithProviderAccess route={route} />
+  );
 }

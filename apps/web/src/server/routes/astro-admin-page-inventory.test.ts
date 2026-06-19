@@ -67,6 +67,9 @@ const workspaceResolverPath = path.resolve(
 const mediaLibrarySourcePath = path.resolve(
   "apps/web/src/admin/_screens/media-library.tsx",
 );
+const adminHomeSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/admin-home.tsx",
+);
 const schemaOverviewSourcePath = path.resolve(
   "apps/web/src/admin/_screens/schema-overview.tsx",
 );
@@ -456,6 +459,39 @@ test("Slice 9 content editor islands derive route access from server workspace p
     contentEditorSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "ContentEditorContent should not derive content editor route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 10 admin home island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const adminHomeSource = await readFile(adminHomeSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function AdminHomeIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<AdminHomeBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "AdminHomeIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<AdminHomeRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "AdminHomeBody should forward route access into the retained admin home route",
+  );
+  assert.match(
+    adminHomeSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "AdminHomeContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    adminHomeSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "AdminHomeContent should not derive dashboard route access from AdminWorkspaceProvider",
   );
 });
 

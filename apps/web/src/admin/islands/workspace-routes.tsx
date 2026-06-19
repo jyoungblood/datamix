@@ -33,11 +33,15 @@ function AdminWorkspaceIslandFrame({ children }: { children: ReactNode }) {
   );
 }
 
-export function AdminHomeIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function AdminHomeIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <AdminHomeBody />
+        {routeAccess ? <AdminHomeBody routeAccess={routeAccess} /> : <AdminHomeBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
