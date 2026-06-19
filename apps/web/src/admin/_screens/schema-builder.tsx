@@ -23,6 +23,7 @@ import {
   adminRoutes,
   type AdminWorkspaceRoute,
 } from "../_workspace/admin-routes";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
@@ -53,7 +54,7 @@ const fieldTypeOptions = [...datamixFieldTypes];
 const selectClassName =
   "h-9 w-full rounded-md border border-input bg-white px-2.5 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50";
 
-type SchemaBuilderRouteProps =
+type SchemaBuilderRouteModeProps =
   | {
       mode: "create";
     }
@@ -61,6 +62,16 @@ type SchemaBuilderRouteProps =
       mode: "edit";
       schemaId: string;
     };
+
+type SchemaBuilderContentProps = {
+  mode: SchemaBuilderRouteModeProps["mode"];
+  routeAccess: AdminWorkspaceRouteAccessState;
+  schemaId?: string;
+};
+
+type SchemaBuilderRouteProps = SchemaBuilderRouteModeProps & {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
 
 function formatFieldTypeLabel(type: DatamixFieldType) {
   switch (type) {
@@ -104,15 +115,11 @@ function createFieldSummary(field: CollectionFieldDraft) {
 
 export function SchemaBuilderContent({
   mode,
-  route,
+  routeAccess,
   schemaId,
-}: {
-  mode: SchemaBuilderRouteProps["mode"];
-  route: AdminWorkspaceRoute;
-  schemaId?: string;
-}) {
+}: SchemaBuilderContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     collectionLoadError,
     collections,
@@ -900,11 +907,29 @@ export function SchemaBuilderContent({
   );
 }
 
-export function SchemaBuilderRoute(props: SchemaBuilderRouteProps) {
+function SchemaBuilderRouteWithProviderAccess({
+  route,
+  ...props
+}: SchemaBuilderRouteModeProps & {
+  route: AdminWorkspaceRoute;
+}) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <SchemaBuilderContent routeAccess={providerAccess} {...props} />;
+}
+
+export function SchemaBuilderRoute({
+  routeAccess,
+  ...props
+}: SchemaBuilderRouteProps) {
   const route =
     props.mode === "create"
       ? adminRoutes.schema.new()
       : adminRoutes.schema.detail(props.schemaId);
 
-  return <SchemaBuilderContent route={route} {...props} />;
+  return routeAccess ? (
+    <SchemaBuilderContent routeAccess={routeAccess} {...props} />
+  ) : (
+    <SchemaBuilderRouteWithProviderAccess route={route} {...props} />
+  );
 }

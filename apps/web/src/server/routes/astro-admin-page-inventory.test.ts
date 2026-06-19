@@ -70,6 +70,9 @@ const mediaLibrarySourcePath = path.resolve(
 const schemaOverviewSourcePath = path.resolve(
   "apps/web/src/admin/_screens/schema-overview.tsx",
 );
+const schemaBuilderSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/schema-builder.tsx",
+);
 const teamAndRolesSourcePath = path.resolve(
   "apps/web/src/admin/_screens/team-and-roles.tsx",
 );
@@ -328,6 +331,49 @@ test("Slice 6 schema overview island derives route access from server workspace 
     schemaOverviewSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SchemaOverviewContent should not derive schema overview route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 7 schema builder islands derive route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const schemaBuilderSource = await readFile(schemaBuilderSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function NewSchemaIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<NewSchemaBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "NewSchemaIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    workspaceSource,
+    /export function SchemaDetailIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{ schemaId: string \}\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SchemaDetailBody\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>[\s\S]*?\}/,
+    "SchemaDetailIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<SchemaBuilderRoute\s+mode="create"\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "NewSchemaBody should forward route access into the retained schema builder route",
+  );
+  assert.match(
+    bodySource,
+    /<SchemaBuilderRoute\s+mode="edit"\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>/,
+    "SchemaDetailBody should forward route access into the retained schema builder route",
+  );
+  assert.match(
+    schemaBuilderSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "SchemaBuilderContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    schemaBuilderSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "SchemaBuilderContent should not derive schema builder route access from AdminWorkspaceProvider",
   );
 });
 

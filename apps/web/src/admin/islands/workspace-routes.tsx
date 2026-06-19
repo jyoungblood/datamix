@@ -61,11 +61,15 @@ export function SchemaOverviewIsland({ workspace }: AdminWorkspaceIslandProps) {
   );
 }
 
-export function NewSchemaIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function NewSchemaIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <NewSchemaBody />
+        {routeAccess ? <NewSchemaBody routeAccess={routeAccess} /> : <NewSchemaBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -73,12 +77,20 @@ export function NewSchemaIsland({ workspace: _workspace }: AdminWorkspaceIslandP
 
 export function SchemaDetailIsland({
   schemaId,
-  workspace: _workspace,
+  workspace,
 }: AdminWorkspaceIslandProps & { schemaId: string }) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <SchemaDetailBody schemaId={schemaId} />
+        {routeAccess ? (
+          <SchemaDetailBody routeAccess={routeAccess} schemaId={schemaId} />
+        ) : (
+          <SchemaDetailBody schemaId={schemaId} />
+        )}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

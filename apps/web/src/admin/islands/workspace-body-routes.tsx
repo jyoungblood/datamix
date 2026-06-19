@@ -25,12 +25,30 @@ export function SchemaOverviewBody({
   );
 }
 
-export function NewSchemaBody() {
-  return <SchemaBuilderRoute mode="create" />;
+export function NewSchemaBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <SchemaBuilderRoute mode="create" routeAccess={routeAccess} />
+  ) : (
+    <SchemaBuilderRoute mode="create" />
+  );
 }
 
-export function SchemaDetailBody({ schemaId }: { schemaId: string }) {
-  return <SchemaBuilderRoute mode="edit" schemaId={schemaId} />;
+export function SchemaDetailBody({
+  routeAccess,
+  schemaId,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+  schemaId: string;
+}) {
+  return routeAccess ? (
+    <SchemaBuilderRoute mode="edit" routeAccess={routeAccess} schemaId={schemaId} />
+  ) : (
+    <SchemaBuilderRoute mode="edit" schemaId={schemaId} />
+  );
 }
 
 export function ContentIndexBody() {
