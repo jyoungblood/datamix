@@ -16,6 +16,6 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <AccountIsland client:only="react" />
+    <AccountIsland client:only="react" workspace={page.workspace} />
   </AdminWorkspaceShell>
 </DatamixRootLayout>

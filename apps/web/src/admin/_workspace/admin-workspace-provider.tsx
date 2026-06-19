@@ -80,6 +80,10 @@ import {
   type RoleDraft,
 } from "../_lib/role-drafts";
 import type { AdminWorkspaceRouteSection } from "./admin-routes";
+import {
+  createAdminWorkspacePermissions,
+  type AdminWorkspacePermissions,
+} from "./admin-permissions";
 
 type AdminWorkspaceUser = {
   displayName: string;
@@ -92,28 +96,6 @@ type AdminWorkspaceUser = {
 type AdminWorkspaceAccountProfile = {
   image: string | null;
   name: string;
-};
-
-export type AdminWorkspacePermissions = {
-  canAccessCollectionBuilder: boolean;
-  canAccessMediaWorkspace: boolean;
-  canAccessRecordsWorkspace: boolean;
-  canAccessSettingsWorkspace: boolean;
-  canAccessTeamAccess: boolean;
-  canCreateCollections: boolean;
-  canCreateRecords: boolean;
-  canDeleteUsers: boolean;
-  canInviteUsers: boolean;
-  canUpdateCollections: boolean;
-  canUpdateRecords: boolean;
-  canUpdateSettings: boolean;
-  canUpdateUsers: boolean;
-  canUploadMedia: boolean;
-  canViewCollections: boolean;
-  canViewMedia: boolean;
-  canViewRecords: boolean;
-  canViewSettings: boolean;
-  canViewUsers: boolean;
 };
 
 export type AdminWorkspaceContextValue = {
@@ -311,49 +293,6 @@ function createWorkspaceUser(
     id,
     image,
     initials: createInitials({ email, name }),
-  };
-}
-
-export function createAdminWorkspacePermissions(
-  authorization: DatamixAuthorizationSummary,
-): AdminWorkspacePermissions {
-  const permissionMap = authorization.permissionMap;
-  const canViewCollections = permissionMap["collections.read"] ?? false;
-  const canCreateCollections = permissionMap["collections.create"] ?? false;
-  const canUpdateCollections = permissionMap["collections.update"] ?? false;
-  const canViewRecords = permissionMap["records.read"] ?? false;
-  const canCreateRecords = permissionMap["records.create"] ?? false;
-  const canUpdateRecords = permissionMap["records.update"] ?? false;
-  const canViewMedia = permissionMap["media.read"] ?? false;
-  const canUploadMedia = permissionMap["media.upload"] ?? false;
-  const canViewUsers = permissionMap["users.read"] ?? false;
-  const canInviteUsers = permissionMap["users.invite"] ?? false;
-  const canUpdateUsers = permissionMap["users.update"] ?? false;
-  const canDeleteUsers = permissionMap["users.delete"] ?? false;
-  const canViewSettings = permissionMap["settings.read"] ?? false;
-  const canUpdateSettings = permissionMap["settings.update"] ?? false;
-
-  return {
-    canAccessCollectionBuilder:
-      canViewCollections || canCreateCollections || canUpdateCollections,
-    canAccessMediaWorkspace: canViewMedia || canUploadMedia,
-    canAccessRecordsWorkspace: canViewRecords || canCreateRecords || canUpdateRecords,
-    canAccessSettingsWorkspace: canViewSettings || canUpdateSettings,
-    canAccessTeamAccess: canViewUsers || canInviteUsers || canUpdateUsers || canDeleteUsers,
-    canCreateCollections,
-    canCreateRecords,
-    canDeleteUsers,
-    canInviteUsers,
-    canUpdateCollections,
-    canUpdateRecords,
-    canUpdateSettings,
-    canUpdateUsers,
-    canUploadMedia,
-    canViewCollections,
-    canViewMedia,
-    canViewRecords,
-    canViewSettings,
-    canViewUsers,
   };
 }
 

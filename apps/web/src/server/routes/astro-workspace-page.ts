@@ -4,6 +4,11 @@ import {
   type AdminWorkspaceRoute,
   type AdminWorkspaceRouteSection,
 } from "@/admin/_workspace/admin-routes";
+import {
+  createAdminWorkspaceProps,
+  type AdminWorkspaceAccountProps,
+  type AdminWorkspaceProps,
+} from "@/admin/_workspace/admin-workspace-props";
 
 import { getAuthSetupStatus } from "../auth";
 import { AuthConfigError, type DatamixBindings } from "../env";
@@ -46,6 +51,7 @@ type WorkspacePageResult =
   | {
       kind: "shell";
       shell: WorkspaceShellProps;
+      workspace: AdminWorkspaceProps | null;
     };
 
 const loginPath = "/admin/login";
@@ -130,7 +136,7 @@ async function readAccessError(response: Response): Promise<string> {
 
 function createAccountSummary(
   access: Awaited<ReturnType<typeof resolveAuthorizedSession>> & { success: true },
-): WorkspaceShellAccount {
+): AdminWorkspaceAccountProps {
   const email = access.session.user.email ?? null;
   const image = access.session.user.image ?? "";
   const name = access.session.user.name || email || "Datamix Admin";
@@ -138,6 +144,7 @@ function createAccountSummary(
   return {
     email,
     href: adminRoutes.account().href,
+    id: access.session.user.id ?? null,
     image,
     initials: createInitials({ email, name }),
     name,
@@ -164,6 +171,7 @@ async function resolveSetupGate(
     return {
       kind: "shell",
       shell: createAuthConfigErrorShell(route, error),
+      workspace: null,
     };
   }
 }
@@ -199,11 +207,19 @@ export async function resolveWorkspacePage(
             ? "Datamix setup is missing required configuration"
             : "Unable to authorize this workspace",
       }),
+      workspace: null,
     };
   }
 
+  const account = createAccountSummary(access);
+
   return {
     kind: "shell",
-    shell: createWorkspaceShellProps(route, createAccountSummary(access)),
+    shell: createWorkspaceShellProps(route, account),
+    workspace: createAdminWorkspaceProps({
+      account,
+      authorization: access.authorization,
+      route,
+    }),
   };
 }

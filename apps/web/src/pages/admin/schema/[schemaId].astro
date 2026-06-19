@@ -17,6 +17,10 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <SchemaDetailIsland client:only="react" schemaId={schemaId ?? ""} />
+    <SchemaDetailIsland
+      client:only="react"
+      schemaId={schemaId ?? ""}
+      workspace={page.workspace}
+    />
   </AdminWorkspaceShell>
 </DatamixRootLayout>

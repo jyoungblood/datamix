@@ -17,7 +17,7 @@ if (page.kind === "redirect") {
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
     <div data-admin-homepage="overview-v1">
-      <AdminHomeIsland client:only="react" />
+      <AdminHomeIsland client:only="react" workspace={page.workspace} />
     </div>
   </AdminWorkspaceShell>
 </DatamixRootLayout>

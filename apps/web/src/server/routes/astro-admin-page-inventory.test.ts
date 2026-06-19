@@ -61,6 +61,9 @@ const workspaceScreenPaths = [
 
 const pagesAdminDirectory = path.resolve("apps/web/src/pages/admin");
 const adminIslandsDirectory = path.resolve("apps/web/src/admin/islands");
+const workspaceResolverPath = path.resolve(
+  "apps/web/src/server/routes/astro-workspace-page.ts",
+);
 
 test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
@@ -83,6 +86,53 @@ test("Slice 3 Astro admin workspace pages render the Astro shell and retained Re
         `${route} should use the shared Astro root layout`,
       );
     }),
+  );
+});
+
+test("Slice 1 protected admin pages pass server workspace props to retained islands", async () => {
+  await Promise.all(
+    workspacePageExpectations.map(async ({ island, route }) => {
+      const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
+
+      assert.match(
+        source,
+        new RegExp(`<${island}\\b(?=[^>]*${reactClientDirective})(?=[^>]*workspace=\\{page\\.workspace\\})[^>]*`),
+        `${route} should pass page.workspace into ${island}`,
+      );
+    }),
+  );
+});
+
+test("Slice 1 workspace islands accept explicit server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+
+  assert.match(
+    workspaceSource,
+    /import type \{ AdminWorkspaceProps \} from "@\/admin\/_workspace\/admin-workspace-props"/,
+    "workspace-routes.tsx should import the shared serializable workspace prop type",
+  );
+  assert.match(
+    workspaceSource,
+    /type AdminWorkspaceIslandProps = \{\s*workspace: AdminWorkspaceProps \| null;\s*\}/,
+    "workspace-routes.tsx should define a common workspace prop type for retained islands",
+  );
+});
+
+test("Slice 1 workspace resolver returns serializable workspace data on successful shell results", async () => {
+  const resolverSource = await readFile(workspaceResolverPath, "utf8");
+
+  assert.match(
+    resolverSource,
+    /createAdminWorkspaceProps/,
+    "resolveWorkspacePage should build workspace props through the shared pure helper",
+  );
+  assert.match(
+    resolverSource,
+    /workspace:\s*createAdminWorkspaceProps\(/,
+    "successful resolveWorkspacePage shell results should include workspace props",
   );
 });
 

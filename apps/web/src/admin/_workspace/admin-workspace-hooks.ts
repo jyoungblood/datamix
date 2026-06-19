@@ -2,30 +2,15 @@
 
 import * as React from "react";
 
-import type {
-  AdminWorkspaceRoute,
-  AdminWorkspaceRouteAccess,
-} from "./admin-routes";
+import type { AdminWorkspaceRoute } from "./admin-routes";
+import {
+  resolveAdminWorkspaceRouteAccess,
+  type AdminWorkspaceRouteAccessState,
+} from "./admin-permissions";
 import {
   AdminWorkspaceContext,
   type AdminWorkspaceContextValue,
 } from "./admin-workspace-provider";
-
-type AdminWorkspaceRouteAccessState = {
-  body: string;
-  isAllowed: boolean;
-  title: string;
-};
-
-const routeAccessLabels = {
-  account: "an active admin session",
-  content: "content permissions",
-  home: "an active admin session",
-  media: "media permissions",
-  schema: "schema permissions",
-  settings: "settings permissions",
-  team: "team permissions",
-} as const satisfies Record<AdminWorkspaceRouteAccess, string>;
 
 export function useAdminWorkspace(): AdminWorkspaceContextValue {
   const context = React.useContext(AdminWorkspaceContext);
@@ -41,30 +26,6 @@ export function useAdminWorkspaceRouteAccess(
   route: Pick<AdminWorkspaceRoute, "access">,
 ): AdminWorkspaceRouteAccessState {
   const { permissions } = useAdminWorkspace();
-  const isAllowed =
-    route.access === "account" || route.access === "home"
-      ? true
-      : route.access === "schema"
-        ? permissions.canAccessCollectionBuilder
-        : route.access === "content"
-          ? permissions.canAccessRecordsWorkspace
-          : route.access === "media"
-            ? permissions.canAccessMediaWorkspace
-            : route.access === "team"
-              ? permissions.canAccessTeamAccess
-              : permissions.canAccessSettingsWorkspace;
 
-  if (isAllowed) {
-    return {
-      body: "This route is available for the current role.",
-      isAllowed: true,
-      title: "Route is available",
-    };
-  }
-
-  return {
-    body: `Your current role does not include ${routeAccessLabels[route.access]}.`,
-    isAllowed: false,
-    title: "This route is restricted",
-  };
+  return resolveAdminWorkspaceRouteAccess(route, permissions);
 }

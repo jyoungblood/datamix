@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import { AdminWorkspacePage } from "@/admin/_workspace/admin-workspace-page";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 import {
   AccountBody,
   AdminHomeBody,
@@ -16,6 +17,10 @@ import {
   TeamBody,
 } from "./workspace-body-routes";
 
+type AdminWorkspaceIslandProps = {
+  workspace: AdminWorkspaceProps | null;
+};
+
 function AdminWorkspaceIslandFrame({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -27,7 +32,7 @@ function AdminWorkspaceIslandFrame({ children }: { children: ReactNode }) {
   );
 }
 
-export function AdminHomeIsland() {
+export function AdminHomeIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -37,7 +42,7 @@ export function AdminHomeIsland() {
   );
 }
 
-export function SchemaOverviewIsland() {
+export function SchemaOverviewIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -47,7 +52,7 @@ export function SchemaOverviewIsland() {
   );
 }
 
-export function NewSchemaIsland() {
+export function NewSchemaIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -57,7 +62,10 @@ export function NewSchemaIsland() {
   );
 }
 
-export function SchemaDetailIsland({ schemaId }: { schemaId: string }) {
+export function SchemaDetailIsland({
+  schemaId,
+  workspace: _workspace,
+}: AdminWorkspaceIslandProps & { schemaId: string }) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -67,7 +75,7 @@ export function SchemaDetailIsland({ schemaId }: { schemaId: string }) {
   );
 }
 
-export function ContentIndexIsland() {
+export function ContentIndexIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -77,7 +85,7 @@ export function ContentIndexIsland() {
   );
 }
 
-export function NewContentIsland() {
+export function NewContentIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -90,7 +98,8 @@ export function NewContentIsland() {
 export function ContentRecordIsland({
   recordId,
   schemaId,
-}: {
+  workspace: _workspace,
+}: AdminWorkspaceIslandProps & {
   recordId: string;
   schemaId: string;
 }) {
@@ -103,7 +112,7 @@ export function ContentRecordIsland({
   );
 }
 
-export function MediaIsland() {
+export function MediaIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -113,7 +122,7 @@ export function MediaIsland() {
   );
 }
 
-export function TeamIsland() {
+export function TeamIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -123,7 +132,7 @@ export function TeamIsland() {
   );
 }
 
-export function SettingsIsland() {
+export function SettingsIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
@@ -133,7 +142,7 @@ export function SettingsIsland() {
   );
 }
 
-export function AccountIsland() {
+export function AccountIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
