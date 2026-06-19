@@ -394,6 +394,39 @@ test("Slice 16 schema builder bodies require explicit route access from the serv
   );
 });
 
+test("Slice 17 content index body requires explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<ContentIndexBody\s*\/>/,
+    "ContentIndexIsland should not render ContentIndexBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function ContentIndexBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "ContentIndexBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<ContentIndexRoute\s*\/>/,
+    "ContentIndexBody should not rely on the content index route provider fallback",
+  );
+  assert.match(
+    contentIndexSource,
+    /function ContentIndexRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<ContentIndexContent\s+routeAccess=\{providerAccess\}/,
+    "ContentIndexRoute should keep the provider fallback wrapper for direct production hook hits",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

@@ -102,7 +102,7 @@ export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <ContentIndexBody routeAccess={routeAccess} /> : <ContentIndexBody />}
+        {routeAccess ? <ContentIndexBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
