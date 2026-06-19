@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-first API routes, D1 for structured data, and R2 for media. The admin UI and API now ship together as one Vinext App Router Worker on one domain.
+Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-first API endpoints, D1 for structured data, and R2 for media. The admin UI and API ship together as one Astro Cloudflare Worker on one domain.
 
 ## Non-Negotiable Constraints
 
@@ -15,7 +15,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Workspace Map
 
 - `apps/web`
-  Unified Vinext App Router Worker. UI routes live under `app/**`, API route handlers live under `app/api/**`, private admin screens live under `app/admin/_screens/**`, shared server logic lives under `server/**`, and client request helpers live under `lib/**`.
+  Unified Astro Cloudflare Worker. Astro route wrappers live under `src/pages/**`, private admin screens live under `app/admin/_screens/**`, shared server logic lives under `server/**`, and client request helpers live under `lib/**`.
 - `packages/core`
   Shared domain vocabulary for collections, RBAC, media, API keys, and runtime helpers. This package exists to keep contracts consistent, not to centralize everything by default.
 - `packages/create-datamix`
@@ -27,18 +27,18 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 ## Runtime Shape
 
-1. The browser loads Vinext App Router pages from `apps/web`.
+1. The browser loads Astro pages from `apps/web/src/pages/**`.
 2. The admin talks back to the same origin for auth, content, media, setup, users, roles, invites, and API keys.
-3. App Router route handlers under `app/api/**` call shared helpers under `server/routes/**`.
+3. Astro endpoint wrappers under `src/pages/api/**` call shared helpers under `server/routes/**`.
 4. Server modules under `server/**` persist structured data in D1 and binary media in R2.
 5. Public content routes and media object routes still flow through the Worker so the browser never talks directly to D1 or R2.
 
 ## Where To Start Reading
 
 - App entrypoints:
-  [apps/web/app/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/page.tsx:1),
-  [apps/web/app/admin/setup/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/setup/page.tsx:1),
-  [apps/web/app/admin/page.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/page.tsx:1),
+  [apps/web/src/pages/index.astro](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/index.astro:1),
+  [apps/web/src/pages/admin/setup.astro](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/admin/setup.astro:1),
+  [apps/web/src/pages/admin/index.astro](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/admin/index.astro:1),
   [apps/web/app/admin/_screens/admin-home.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/admin-home.tsx:1)
 - Admin client helpers:
   [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1),
@@ -46,10 +46,10 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
   [apps/web/lib/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/records.ts:1),
   [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1)
 - API route handlers:
-  [apps/web/app/api/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/route.ts:1),
-  [apps/web/app/api/health/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/health/route.ts:1),
-  [apps/web/app/api/auth/[...auth]/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/auth/[...auth]/route.ts:1),
-  [apps/web/app/api/collections/route.ts](/Users/jy/Desktop/projects/datamix/apps/web/app/api/collections/route.ts:1)
+  [apps/web/src/pages/api/index.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/index.ts:1),
+  [apps/web/src/pages/api/health.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/health.ts:1),
+  [apps/web/src/pages/api/auth/[...auth].ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/auth/[...auth].ts:1),
+  [apps/web/src/pages/api/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/collections.ts:1)
 - Server route helpers:
   [apps/web/server/routes/http.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/http.ts:1),
   [apps/web/server/routes/admin-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-handlers.ts:1),
