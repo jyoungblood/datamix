@@ -5,7 +5,11 @@ import type {
 } from "@datamix/core";
 
 import type { AdminWorkspaceRoute } from "./admin-routes";
-import { createAdminWorkspacePermissions } from "./admin-permissions";
+import {
+  createAdminWorkspacePermissions,
+  resolveAdminWorkspaceRouteAccess,
+  type AdminWorkspaceRouteAccessState,
+} from "./admin-permissions";
 
 export type AdminWorkspacePermissions = {
   canAccessCollectionBuilder: boolean;
@@ -56,6 +60,7 @@ export type AdminWorkspaceProps = {
   activeRoute: AdminWorkspaceRouteMetadata;
   authorization: DatamixAuthorizationSummary;
   permissions: AdminWorkspacePermissions;
+  routeAccess: AdminWorkspaceRouteAccessState;
   role: AdminWorkspaceRoleSummary;
 };
 
@@ -64,11 +69,14 @@ export function createAdminWorkspaceProps(input: {
   authorization: DatamixAuthorizationSummary;
   route: AdminWorkspaceRoute;
 }): AdminWorkspaceProps {
+  const permissions = createAdminWorkspacePermissions(input.authorization);
+
   return {
     account: { ...input.account },
     activeRoute: { ...input.route },
     authorization: input.authorization,
-    permissions: createAdminWorkspacePermissions(input.authorization),
+    permissions,
+    routeAccess: resolveAdminWorkspaceRouteAccess(input.route, permissions),
     role: {
       description: input.authorization.role.description,
       id: input.authorization.role.id,

@@ -64,6 +64,9 @@ const adminIslandsDirectory = path.resolve("apps/web/src/admin/islands");
 const workspaceResolverPath = path.resolve(
   "apps/web/src/server/routes/astro-workspace-page.ts",
 );
+const workspacePropsSourcePath = path.resolve(
+  "apps/web/src/admin/_workspace/admin-workspace-props.ts",
+);
 const mediaLibrarySourcePath = path.resolve(
   "apps/web/src/admin/_screens/media-library.tsx",
 );
@@ -163,7 +166,7 @@ test("Slice 1 workspace resolver returns serializable workspace data on successf
   );
 });
 
-test("Slice 2 media island derives route access from server workspace props", async () => {
+test("Slice 2 media island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -174,21 +177,6 @@ test("Slice 2 media island derives route access from server workspace props", as
   );
   const mediaSource = await readFile(mediaLibrarySourcePath, "utf8");
 
-  assert.match(
-    workspaceSource,
-    /resolveAdminWorkspaceRouteAccess/,
-    "MediaIsland should import the pure route access resolver for server workspace props",
-  );
-  assert.match(
-    workspaceSource,
-    /workspace\.activeRoute/,
-    "MediaIsland should read the active route from the server workspace prop",
-  );
-  assert.match(
-    workspaceSource,
-    /workspace\.permissions/,
-    "MediaIsland should read permissions from the server workspace prop",
-  );
   assert.match(
     workspaceSource,
     /<MediaBody\s+routeAccess=\{routeAccess\}\s*\/>/,
@@ -235,6 +223,44 @@ test("Slice 11 media body requires explicit route access from the server workspa
     bodySource,
     /<MediaLibraryRoute\s*\/>/,
     "MediaBody should not rely on the media route provider fallback",
+  );
+});
+
+test("Slice 19 media island consumes serialized workspace route access", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const workspacePropsSource = await readFile(workspacePropsSourcePath, "utf8");
+  const mediaIslandSource =
+    workspaceSource.match(
+      /export function MediaIsland\([\s\S]*?\nexport function TeamIsland/,
+    )?.[0] ?? "";
+
+  assert.match(
+    workspacePropsSource,
+    /routeAccess: AdminWorkspaceRouteAccessState;/,
+    "AdminWorkspaceProps should serialize the active route access decision",
+  );
+  assert.match(
+    workspacePropsSource,
+    /routeAccess:\s*resolveAdminWorkspaceRouteAccess\(input\.route,\s*permissions\)/,
+    "createAdminWorkspaceProps should derive route access before serializing workspace props",
+  );
+  assert.match(
+    mediaIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "MediaIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    mediaIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "MediaIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    mediaIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "MediaIsland should not read route metadata or permissions to derive access",
   );
 });
 
