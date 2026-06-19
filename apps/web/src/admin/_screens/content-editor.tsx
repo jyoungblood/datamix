@@ -30,6 +30,7 @@ import {
   adminRoutes,
   type AdminWorkspaceRoute,
 } from "../_workspace/admin-routes";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
@@ -39,9 +40,16 @@ type ContentEditorMode = "create" | "edit";
 
 type ContentEditorContentProps = {
   mode: ContentEditorMode;
-  recordId: string | undefined;
-  route: AdminWorkspaceRoute;
-  schemaId: string | undefined;
+  recordId?: string;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  schemaId?: string;
+};
+
+type ContentEditorRouteProps = {
+  mode: ContentEditorMode;
+  recordId?: string;
+  routeAccess?: AdminWorkspaceRouteAccessState;
+  schemaId?: string;
 };
 
 const selectClassName =
@@ -58,11 +66,11 @@ function decodeSchemaId(value: string) {
 export function ContentEditorContent({
   mode,
   recordId,
-  route,
+  routeAccess,
   schemaId,
 }: ContentEditorContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     collectionLoadError,
     collections,
@@ -584,26 +592,29 @@ export function ContentEditorContent({
   );
 }
 
-export function ContentEditorRoute({
-  mode,
-  recordId,
-  schemaId,
-}: {
-  mode: ContentEditorMode;
-  recordId?: string;
-  schemaId?: string;
+function ContentEditorRouteWithProviderAccess({
+  route,
+  ...props
+}: Omit<ContentEditorRouteProps, "routeAccess"> & {
+  route: AdminWorkspaceRoute;
 }) {
-  const route =
-    mode === "create"
-      ? adminRoutes.content.newRecord()
-      : adminRoutes.content.record(schemaId ?? "", recordId ?? "");
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
 
-  return (
-    <ContentEditorContent
-      mode={mode}
-      recordId={recordId}
-      route={route}
-      schemaId={schemaId}
-    />
+  return <ContentEditorContent routeAccess={providerAccess} {...props} />;
+}
+
+export function ContentEditorRoute({
+  routeAccess,
+  ...props
+}: ContentEditorRouteProps) {
+  const route =
+    props.mode === "create"
+      ? adminRoutes.content.newRecord()
+      : adminRoutes.content.record(props.schemaId ?? "", props.recordId ?? "");
+
+  return routeAccess ? (
+    <ContentEditorContent routeAccess={routeAccess} {...props} />
+  ) : (
+    <ContentEditorRouteWithProviderAccess route={route} {...props} />
   );
 }

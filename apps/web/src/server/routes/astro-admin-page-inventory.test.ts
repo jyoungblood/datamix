@@ -76,6 +76,9 @@ const schemaBuilderSourcePath = path.resolve(
 const contentIndexSourcePath = path.resolve(
   "apps/web/src/admin/_screens/content-index.tsx",
 );
+const contentEditorSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/content-editor.tsx",
+);
 const teamAndRolesSourcePath = path.resolve(
   "apps/web/src/admin/_screens/team-and-roles.tsx",
 );
@@ -410,6 +413,49 @@ test("Slice 8 content index island derives route access from server workspace pr
     contentIndexSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "ContentIndexContent should not derive content index route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 9 content editor islands derive route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const contentEditorSource = await readFile(contentEditorSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function NewContentIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<NewContentBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "NewContentIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    workspaceSource,
+    /export function ContentRecordIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{[\s\S]*?recordId: string;[\s\S]*?schemaId: string;[\s\S]*?\}\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<ContentRecordBody\s+routeAccess=\{routeAccess\}\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>[\s\S]*?\}/,
+    "ContentRecordIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<ContentEditorRoute\s+mode="create"\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "NewContentBody should forward route access into the retained content editor route",
+  );
+  assert.match(
+    bodySource,
+    /<ContentEditorRoute\s+mode="edit"\s+recordId=\{recordId\}\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>/,
+    "ContentRecordBody should forward route access into the retained content editor route",
+  );
+  assert.match(
+    contentEditorSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "ContentEditorContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    contentEditorSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "ContentEditorContent should not derive content editor route access from AdminWorkspaceProvider",
   );
 });
 

@@ -110,11 +110,15 @@ export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
   );
 }
 
-export function NewContentIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function NewContentIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <NewContentBody />
+        {routeAccess ? <NewContentBody routeAccess={routeAccess} /> : <NewContentBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -123,15 +127,27 @@ export function NewContentIsland({ workspace: _workspace }: AdminWorkspaceIsland
 export function ContentRecordIsland({
   recordId,
   schemaId,
-  workspace: _workspace,
+  workspace,
 }: AdminWorkspaceIslandProps & {
   recordId: string;
   schemaId: string;
 }) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <ContentRecordBody recordId={recordId} schemaId={schemaId} />
+        {routeAccess ? (
+          <ContentRecordBody
+            routeAccess={routeAccess}
+            recordId={recordId}
+            schemaId={schemaId}
+          />
+        ) : (
+          <ContentRecordBody recordId={recordId} schemaId={schemaId} />
+        )}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

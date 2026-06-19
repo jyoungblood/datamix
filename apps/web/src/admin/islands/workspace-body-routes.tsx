@@ -63,18 +63,35 @@ export function ContentIndexBody({
   );
 }
 
-export function NewContentBody() {
-  return <ContentEditorRoute mode="create" />;
+export function NewContentBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <ContentEditorRoute mode="create" routeAccess={routeAccess} />
+  ) : (
+    <ContentEditorRoute mode="create" />
+  );
 }
 
 export function ContentRecordBody({
   recordId,
+  routeAccess,
   schemaId,
 }: {
   recordId: string;
+  routeAccess?: AdminWorkspaceRouteAccessState;
   schemaId: string;
 }) {
-  return (
+  return routeAccess ? (
+    <ContentEditorRoute
+      mode="edit"
+      recordId={recordId}
+      routeAccess={routeAccess}
+      schemaId={schemaId}
+    />
+  ) : (
     <ContentEditorRoute mode="edit" recordId={recordId} schemaId={schemaId} />
   );
 }
