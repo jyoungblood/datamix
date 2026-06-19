@@ -1,9 +1,21 @@
 ---
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
 import { ContentIndexIsland } from "@/admin/islands/workspace-routes";
+import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
+import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
 
 import DatamixRootLayout from "../../../layouts/DatamixRootLayout.astro";
+
+const route = adminRoutes.content.index();
+const page = await resolveWorkspacePage(Astro.request, route);
+
+if (page.kind === "redirect") {
+  return Astro.redirect(page.location);
+}
 ---
 
 <DatamixRootLayout>
-  <ContentIndexIsland client:only="react" />
+  <AdminWorkspaceShell {...page.shell}>
+    <ContentIndexIsland client:only="react" />
+  </AdminWorkspaceShell>
 </DatamixRootLayout>

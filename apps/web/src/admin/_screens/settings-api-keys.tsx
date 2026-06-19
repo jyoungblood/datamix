@@ -29,7 +29,6 @@ import {
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { formatIssuePath } from "../_lib/schema-drafts";
 import { rolePermissionSections } from "../_lib/role-drafts";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -139,7 +138,7 @@ function SettingsApiKeyRow({ apiKey }: { apiKey: DatamixApiKeySummary }) {
   );
 }
 
-function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
+export function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
   const setupStatus = useSetupStatus();
   const access = useAdminWorkspaceRouteAccess(route);
@@ -248,7 +247,7 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
   };
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
       <AdminPageHeader title="Settings" />
 
         {!access.isAllowed ? (
@@ -651,7 +650,7 @@ function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
             </AdminSectionCard>
           </>
         )}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

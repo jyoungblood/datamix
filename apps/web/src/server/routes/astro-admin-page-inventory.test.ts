@@ -46,18 +46,35 @@ const authPageRoutes = [
   "reset-password.astro",
 ];
 
+const workspaceScreenPaths = [
+  "apps/web/src/admin/_screens/admin-home.tsx",
+  "apps/web/src/admin/_screens/schema-overview.tsx",
+  "apps/web/src/admin/_screens/schema-builder.tsx",
+  "apps/web/src/admin/_screens/content-index.tsx",
+  "apps/web/src/admin/_screens/content-editor.tsx",
+  "apps/web/src/admin/_screens/media-library.tsx",
+  "apps/web/src/admin/_screens/team-and-roles.tsx",
+  "apps/web/src/admin/_screens/settings-api-keys.tsx",
+  "apps/web/src/admin/_screens/user-account.tsx",
+];
+
 const pagesAdminDirectory = path.resolve("apps/web/src/pages/admin");
 const adminIslandsDirectory = path.resolve("apps/web/src/admin/islands");
 
-test("Slice 2 Astro admin workspace pages keep their planned React islands", async () => {
+test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
     workspacePageExpectations.map(async ({ island, route }) => {
       const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
 
       assert.match(
         source,
+        /AdminWorkspaceShell/,
+        `${route} should render the Astro workspace shell`,
+      );
+      assert.match(
+        source,
         new RegExp(`<${island}\\b[^>]*client:only="react"`),
-        `${route} should mount ${island} as a React client-only island`,
+        `${route} should mount ${island} as the retained React body island`,
       );
       assert.match(
         source,
@@ -117,14 +134,23 @@ test("Slice 2 React workspace island wrappers export every planned workspace isl
   }
 });
 
-test("Slice 2 retained React components no longer import Next Link", async () => {
-  const retainedReactComponents = [
-    "apps/web/src/admin/_screens/admin-home.tsx",
-    "apps/web/src/admin/_components/admin-frame.tsx",
-  ];
-
+test("Slice 3 retained React workspace screens do not render the workspace shell", async () => {
   await Promise.all(
-    retainedReactComponents.map(async (componentPath) => {
+    workspaceScreenPaths.map(async (screenPath) => {
+      const source = await readFile(path.resolve(screenPath), "utf8");
+
+      assert.doesNotMatch(
+        source,
+        /AdminWorkspaceRouteFrame|AdminFrame/,
+        `${screenPath} should not render the workspace shell from React`,
+      );
+    }),
+  );
+});
+
+test("Slice 2 retained React components no longer import Next Link", async () => {
+  await Promise.all(
+    workspaceScreenPaths.map(async (componentPath) => {
       const source = await readFile(path.resolve(componentPath), "utf8");
 
       assert.doesNotMatch(

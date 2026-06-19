@@ -1,0 +1,84 @@
+---
+import AdminWorkspaceSidebar from "./AdminWorkspaceSidebar.astro";
+import type { WorkspaceShellProps } from "@/server/routes/astro-workspace-page";
+
+type Props = WorkspaceShellProps;
+
+const { account, activeSection, error, routes, title } = Astro.props;
+---
+
+<div
+  class="flex min-h-screen bg-[var(--background)] font-body text-[var(--foreground)]"
+  data-page-canvas="muted"
+>
+  <AdminWorkspaceSidebar
+    account={account}
+    activeSection={activeSection}
+    routes={routes}
+  />
+  <main class="flex-1 bg-[var(--muted)] p-6" aria-label={title}>
+    {
+      error ? (
+        <section class="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl items-center">
+          <div class="w-full rounded-lg border border-border bg-white p-6 shadow-sm">
+            <p class="text-xs font-semibold uppercase text-slate-500">
+              {error.statusCode ? `Status ${error.statusCode}` : "Admin"}
+            </p>
+            <h1 class="mt-2 text-2xl font-semibold text-slate-950">{error.title}</h1>
+            <p class="mt-3 text-sm leading-6 text-slate-600">{error.body}</p>
+            <a
+              class="mt-5 inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+              href="/admin/login"
+            >
+              Back to login
+            </a>
+          </div>
+        </section>
+      ) : (
+        <slot />
+      )
+    }
+  </main>
+</div>
+
+<script>
+  function createAccountInitials(value: string) {
+    const source = value || "Datamix Admin";
+    const parts = source
+      .split(/[\s@._-]+/)
+      .map((part: string) => part.trim())
+      .filter(Boolean);
+    const initials = parts
+      .slice(0, 2)
+      .map((part: string) => part[0]?.toUpperCase())
+      .join("");
+
+    return initials || "DM";
+  }
+
+  window.addEventListener("datamix:account-profile-updated", (event) => {
+    if (!(event instanceof CustomEvent) || !event.detail) {
+      return;
+    }
+
+    const name = typeof event.detail.name === "string" ? event.detail.name : "";
+    const image = typeof event.detail.image === "string" ? event.detail.image : "";
+    const imageElement = document.querySelector("[data-admin-account-image]");
+    const initialsElement = document.querySelector("[data-admin-account-initials]");
+    const nameElement = document.querySelector("[data-admin-account-name]");
+
+    if (nameElement) {
+      nameElement.textContent = name || "Datamix Admin";
+    }
+
+    if (imageElement instanceof HTMLImageElement) {
+      imageElement.src = image;
+      imageElement.classList.toggle("hidden", !image);
+    }
+
+    if (initialsElement) {
+      initialsElement.textContent = createAccountInitials(name);
+      initialsElement.classList.toggle("hidden", Boolean(image));
+    }
+  });
+</script>

@@ -24,9 +24,11 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
-import { useAdminWorkspace } from "../_workspace/admin-workspace-hooks";
+import {
+  useAdminWorkspace,
+  useAdminWorkspaceRouteAccess,
+} from "../_workspace/admin-workspace-hooks";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -152,8 +154,9 @@ function createDatasetStatus({
   };
 }
 
-function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
+export function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
+  const access = useAdminWorkspaceRouteAccess(route);
   const {
     apiKeys,
     apiKeysLoadError,
@@ -433,8 +436,11 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
   }, [prefetchAdminRoute]);
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
       <AdminPageHeader title="Workspace overview" />
+      {!access.isAllowed ? (
+        <AdminStateBox body={access.body} title={access.title} tone="warning" />
+      ) : null}
 
         <div>
           <Button asChild><a href="/api">Open API root</a></Button>
@@ -646,7 +652,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
             </div>
           </AdminSectionCard>
         ) : null}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

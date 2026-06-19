@@ -19,7 +19,6 @@ import {
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -47,7 +46,7 @@ function createRolePermissionSummary(role: DatamixRoleDefinition) {
     .join(" / ");
 }
 
-function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
+export function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
   const access = useAdminWorkspaceRouteAccess(route);
   const {
@@ -123,7 +122,7 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
   };
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
       <AdminPageHeader title="Team" />
 
         {!access.isAllowed ? (
@@ -363,7 +362,7 @@ function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
             </div>
           ) : null}
         </AdminSectionCard>
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

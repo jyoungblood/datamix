@@ -1,0 +1,108 @@
+---
+import type {
+  WorkspaceShellAccount,
+  WorkspaceShellRoute,
+} from "@/server/routes/astro-workspace-page";
+import type { AdminWorkspaceRouteSection } from "@/admin/_workspace/admin-routes";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
+
+type Props = {
+  account: WorkspaceShellAccount;
+  activeSection: AdminWorkspaceRouteSection;
+  routes: WorkspaceShellRoute[];
+};
+
+const { account, activeSection, routes } = Astro.props;
+const brandRoute = adminRoutes.home();
+
+const navMarks: Record<AdminWorkspaceRouteSection, string> = {
+  account: "AC",
+  content: "CO",
+  home: "DM",
+  media: "ME",
+  schema: "SC",
+  settings: "SE",
+  team: "TE",
+};
+---
+
+<aside
+  class="sticky top-0 flex h-screen w-[176px] shrink-0 flex-col overflow-y-auto bg-[var(--sidebar)] px-4 py-[18px] text-[var(--sidebar-foreground)]"
+>
+  <a
+    aria-current={activeSection === "home" ? "page" : undefined}
+    class="mb-8 flex items-center gap-2.5 border-0 bg-transparent p-0 text-left text-inherit"
+    href={brandRoute.href}
+  >
+    <span class="flex h-[27px] w-[27px] items-center justify-center rounded-md bg-[var(--primary)] text-[10px] font-extrabold text-blue-100">
+      DM
+    </span>
+    <span class="font-heading text-sm font-extrabold tracking-wide text-white">
+      DATAMIX
+    </span>
+  </a>
+
+  <nav class="space-y-3" aria-label="Admin">
+    {
+      routes.map((route) => {
+        const isActive = route.section === activeSection;
+        const mark = navMarks[route.section];
+
+        return (
+          <a
+            aria-current={isActive ? "page" : undefined}
+            class={`flex h-[34px] w-full items-center gap-2.5 rounded-[7px] border px-2.5 text-left text-xs transition ${
+              isActive
+                ? "border-[var(--sidebar-border)] bg-[var(--sidebar-accent)] font-bold text-white"
+                : "border-transparent text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]"
+            }`}
+            href={route.href}
+          >
+            <span
+              class={`flex h-[15px] w-[15px] items-center justify-center rounded-[3px] text-[6px] font-bold ${
+                isActive
+                  ? "bg-blue-400 text-[var(--sidebar)]"
+                  : "bg-transparent text-[var(--sidebar-muted)]"
+              }`}
+            >
+              {mark}
+            </span>
+            <span>{route.label}</span>
+          </a>
+        );
+      })
+    }
+  </nav>
+
+  <a
+    aria-current={activeSection === "account" ? "page" : undefined}
+    class="mt-auto flex h-14 w-full shrink-0 items-center gap-2.5 rounded-[9px] border border-[var(--sidebar-border)] bg-[var(--sidebar-accent)] px-2.5 text-left"
+    href={account.href}
+  >
+    <span class="relative flex h-[30px] w-[30px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)]">
+      <img
+        alt=""
+        class={`h-full w-full object-cover ${account.image ? "" : "hidden"}`}
+        data-admin-account-image
+        src={account.image || undefined}
+      />
+      <span
+        class={`text-[10px] font-bold text-white ${account.image ? "hidden" : ""}`}
+        data-admin-account-initials
+      >
+        {account.initials}
+      </span>
+    </span>
+    <span class="min-w-0">
+      <span
+        class="block truncate text-[10px] font-bold text-white"
+        data-admin-account-name
+      >
+        {account.name}
+      </span>
+      <span class="block truncate text-[7px] text-[var(--sidebar-muted)]">
+        {account.roleLabel}
+      </span>
+    </span>
+  </a>
+</aside>

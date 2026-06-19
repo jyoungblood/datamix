@@ -26,7 +26,6 @@ import {
   summarizeRecord,
 } from "../_lib/record-drafts";
 import { formatIssuePath } from "../_lib/schema-drafts";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
   adminRoutes,
   type AdminWorkspaceRoute,
@@ -56,7 +55,7 @@ function decodeSchemaId(value: string) {
   }
 }
 
-function ContentEditorContent({
+export function ContentEditorContent({
   mode,
   recordId,
   route,
@@ -299,7 +298,7 @@ function ContentEditorContent({
   };
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
         <AdminPageHeader
           action={
             <Button asChild variant="outline">
@@ -581,7 +580,7 @@ function ContentEditorContent({
             </div>
           </AdminSectionCard>
         )}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

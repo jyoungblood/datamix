@@ -19,7 +19,6 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
   adminRoutes,
   type AdminWorkspaceRoute,
@@ -103,7 +102,7 @@ function createFieldSummary(field: CollectionFieldDraft) {
   return `${field.type} · ${field.required ? "Required" : "Optional"}`;
 }
 
-function SchemaBuilderContent({
+export function SchemaBuilderContent({
   mode,
   route,
   schemaId,
@@ -352,7 +351,7 @@ function SchemaBuilderContent({
   };
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
         <AdminPageHeader
           action={
             <div className="flex flex-wrap gap-2">
@@ -897,7 +896,7 @@ function SchemaBuilderContent({
             </AdminSectionCard>
           </form>
         )}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

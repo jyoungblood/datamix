@@ -9,7 +9,6 @@ import {
   AdminSectionCard,
 } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -19,7 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
-function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
+export function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
   const access = useAdminWorkspaceRouteAccess(route);
   const {
@@ -42,7 +41,7 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
   };
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
         <AdminPageHeader
           action={
             <Button onClick={() => void signOut()} type="button" variant="outline">
@@ -163,7 +162,7 @@ function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
             </Button>
           </div>
         </AdminSectionCard>
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

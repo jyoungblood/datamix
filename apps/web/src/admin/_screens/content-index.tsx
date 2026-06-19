@@ -12,7 +12,6 @@ import {
 import { AdminStateBox } from "../_components/admin-state";
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { summarizeRecord } from "../_lib/record-drafts";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
   adminRoutes,
   type AdminWorkspaceRoute,
@@ -44,7 +43,7 @@ function createCollectionSignature(collections: StoredCollectionDefinition[]) {
     .join("|");
 }
 
-function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
+export function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
   const access = useAdminWorkspaceRouteAccess(route);
   const {
@@ -203,7 +202,7 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
   ]);
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
       <AdminPageHeader
         action={
           permissions.canCreateRecords ? (
@@ -377,7 +376,7 @@ function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
           )}
         </div>
       )}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

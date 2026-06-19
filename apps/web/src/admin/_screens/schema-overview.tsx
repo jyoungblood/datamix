@@ -9,7 +9,6 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import {
   adminRoutes,
   type AdminWorkspaceRoute,
@@ -47,7 +46,7 @@ function formatSchemaLanguage(value: string) {
     .replaceAll("collection", "schema");
 }
 
-function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
+export function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
   const access = useAdminWorkspaceRouteAccess(route);
   const {
@@ -83,7 +82,7 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
   ]);
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
       <AdminPageHeader
         action={
           permissions.canCreateCollections ? (
@@ -208,7 +207,7 @@ function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
             )}
           </div>
       )}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 

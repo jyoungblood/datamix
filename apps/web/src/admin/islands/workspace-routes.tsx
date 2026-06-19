@@ -1,18 +1,38 @@
-import { AdminHomeRoute } from "@/admin/_screens/admin-home";
-import { ContentEditorRoute } from "@/admin/_screens/content-editor";
-import { ContentIndexRoute } from "@/admin/_screens/content-index";
-import { MediaLibraryRoute } from "@/admin/_screens/media-library";
-import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
-import { SchemaOverviewRoute } from "@/admin/_screens/schema-overview";
-import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
-import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
-import { UserAccountRoute } from "@/admin/_screens/user-account";
+import type { ReactNode } from "react";
+
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import { AdminWorkspacePage } from "@/admin/_workspace/admin-workspace-page";
+import {
+  AccountBody,
+  AdminHomeBody,
+  ContentIndexBody,
+  ContentRecordBody,
+  MediaBody,
+  NewContentBody,
+  NewSchemaBody,
+  SchemaDetailBody,
+  SchemaOverviewBody,
+  SettingsBody,
+  TeamBody,
+} from "./workspace-body-routes";
+
+function AdminWorkspaceIslandFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <div className="flex justify-end">
+        <AdminWorkspaceCommandPalette />
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export function AdminHomeIsland() {
   return (
     <AdminWorkspacePage>
-      <AdminHomeRoute />
+      <AdminWorkspaceIslandFrame>
+        <AdminHomeBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -20,7 +40,9 @@ export function AdminHomeIsland() {
 export function SchemaOverviewIsland() {
   return (
     <AdminWorkspacePage>
-      <SchemaOverviewRoute />
+      <AdminWorkspaceIslandFrame>
+        <SchemaOverviewBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -28,7 +50,9 @@ export function SchemaOverviewIsland() {
 export function NewSchemaIsland() {
   return (
     <AdminWorkspacePage>
-      <SchemaBuilderRoute mode="create" />
+      <AdminWorkspaceIslandFrame>
+        <NewSchemaBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -36,7 +60,9 @@ export function NewSchemaIsland() {
 export function SchemaDetailIsland({ schemaId }: { schemaId: string }) {
   return (
     <AdminWorkspacePage>
-      <SchemaBuilderRoute mode="edit" schemaId={schemaId} />
+      <AdminWorkspaceIslandFrame>
+        <SchemaDetailBody schemaId={schemaId} />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -44,7 +70,9 @@ export function SchemaDetailIsland({ schemaId }: { schemaId: string }) {
 export function ContentIndexIsland() {
   return (
     <AdminWorkspacePage>
-      <ContentIndexRoute />
+      <AdminWorkspaceIslandFrame>
+        <ContentIndexBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -52,7 +80,9 @@ export function ContentIndexIsland() {
 export function NewContentIsland() {
   return (
     <AdminWorkspacePage>
-      <ContentEditorRoute mode="create" />
+      <AdminWorkspaceIslandFrame>
+        <NewContentBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -66,7 +96,9 @@ export function ContentRecordIsland({
 }) {
   return (
     <AdminWorkspacePage>
-      <ContentEditorRoute mode="edit" recordId={recordId} schemaId={schemaId} />
+      <AdminWorkspaceIslandFrame>
+        <ContentRecordBody recordId={recordId} schemaId={schemaId} />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -74,7 +106,9 @@ export function ContentRecordIsland({
 export function MediaIsland() {
   return (
     <AdminWorkspacePage>
-      <MediaLibraryRoute />
+      <AdminWorkspaceIslandFrame>
+        <MediaBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -82,7 +116,9 @@ export function MediaIsland() {
 export function TeamIsland() {
   return (
     <AdminWorkspacePage>
-      <TeamAndRolesRoute />
+      <AdminWorkspaceIslandFrame>
+        <TeamBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -90,7 +126,9 @@ export function TeamIsland() {
 export function SettingsIsland() {
   return (
     <AdminWorkspacePage>
-      <SettingsApiKeysRoute />
+      <AdminWorkspaceIslandFrame>
+        <SettingsBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }
@@ -98,7 +136,9 @@ export function SettingsIsland() {
 export function AccountIsland() {
   return (
     <AdminWorkspacePage>
-      <UserAccountRoute />
+      <AdminWorkspaceIslandFrame>
+        <AccountBody />
+      </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
 }

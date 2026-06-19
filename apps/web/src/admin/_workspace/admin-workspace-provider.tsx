@@ -1563,6 +1563,14 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
         name: result.user.name,
       });
       setAccountMessage(result.message);
+      window.dispatchEvent(
+        new CustomEvent("datamix:account-profile-updated", {
+          detail: {
+            image: result.user.image ?? "",
+            name: result.user.name || result.user.email,
+          },
+        }),
+      );
 
       return result.user;
     } catch (error) {

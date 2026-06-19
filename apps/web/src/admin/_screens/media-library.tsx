@@ -21,7 +21,6 @@ import {
   formatByteSize,
   formatRecordTimestamp,
 } from "../_lib/media-formatting";
-import { AdminWorkspaceRouteFrame } from "../_workspace/admin-workspace-route-frame";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -31,7 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
+export function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
   const workspace = useAdminWorkspace();
   const access = useAdminWorkspaceRouteAccess(route);
   const mediaFileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -104,7 +103,7 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
   };
 
   return (
-    <AdminWorkspaceRouteFrame route={route}>
+    <>
       <AdminPageHeader title="Media library" />
 
         {!access.isAllowed ? (
@@ -380,7 +379,7 @@ function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
             ) : null}
           </>
         )}
-    </AdminWorkspaceRouteFrame>
+    </>
   );
 }
 
