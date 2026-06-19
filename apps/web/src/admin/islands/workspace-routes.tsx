@@ -55,11 +55,7 @@ export function SchemaOverviewIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? (
-          <SchemaOverviewBody routeAccess={routeAccess} />
-        ) : (
-          <SchemaOverviewBody />
-        )}
+        {routeAccess ? <SchemaOverviewBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

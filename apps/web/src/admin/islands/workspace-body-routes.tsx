@@ -20,13 +20,9 @@ export function AdminHomeBody({
 export function SchemaOverviewBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <SchemaOverviewRoute routeAccess={routeAccess} />
-  ) : (
-    <SchemaOverviewRoute />
-  );
+  return <SchemaOverviewRoute routeAccess={routeAccess} />;
 }
 
 export function NewSchemaBody({

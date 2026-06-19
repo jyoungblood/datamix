@@ -461,10 +461,25 @@ test("Slice 6 schema overview island derives route access from server workspace 
     /export function SchemaOverviewIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
     "SchemaOverviewIsland should derive route access from the server workspace prop",
   );
+  assert.doesNotMatch(
+    workspaceSource,
+    /<SchemaOverviewBody\s*\/>/,
+    "SchemaOverviewIsland should not render SchemaOverviewBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function SchemaOverviewBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "SchemaOverviewBody should require explicit route access",
+  );
   assert.match(
     bodySource,
     /<SchemaOverviewRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
     "SchemaOverviewBody should forward route access into the retained schema overview route",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<SchemaOverviewRoute\s*\/>/,
+    "SchemaOverviewBody should not rely on the schema overview route provider fallback",
   );
   assert.match(
     schemaOverviewSource,
