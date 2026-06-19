@@ -119,13 +119,9 @@ export function TeamBody({
 export function SettingsBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <SettingsApiKeysRoute routeAccess={routeAccess} />
-  ) : (
-    <SettingsApiKeysRoute />
-  );
+  return <SettingsApiKeysRoute routeAccess={routeAccess} />;
 }
 
 export function AccountBody({

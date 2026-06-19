@@ -265,6 +265,33 @@ test("Slice 12 team body requires explicit route access from the server workspac
   );
 });
 
+test("Slice 13 settings body requires explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<SettingsBody\s*\/>/,
+    "SettingsIsland should not render SettingsBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function SettingsBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "SettingsBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<SettingsApiKeysRoute\s*\/>/,
+    "SettingsBody should not rely on the settings route provider fallback",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

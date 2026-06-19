@@ -193,7 +193,7 @@ export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <SettingsBody routeAccess={routeAccess} /> : <SettingsBody />}
+        {routeAccess ? <SettingsBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
