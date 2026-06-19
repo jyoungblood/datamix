@@ -211,6 +211,33 @@ test("Slice 2 media island derives route access from server workspace props", as
   );
 });
 
+test("Slice 11 media body requires explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<MediaBody\s*\/>/,
+    "MediaIsland should not render MediaBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function MediaBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "MediaBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<MediaLibraryRoute\s*\/>/,
+    "MediaBody should not rely on the media route provider fallback",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

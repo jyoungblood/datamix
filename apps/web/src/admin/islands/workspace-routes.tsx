@@ -165,7 +165,7 @@ export function MediaIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <MediaBody routeAccess={routeAccess} /> : <MediaBody />}
+        {routeAccess ? <MediaBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

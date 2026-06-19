@@ -103,13 +103,9 @@ export function ContentRecordBody({
 export function MediaBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <MediaLibraryRoute routeAccess={routeAccess} />
-  ) : (
-    <MediaLibraryRoute />
-  );
+  return <MediaLibraryRoute routeAccess={routeAccess} />;
 }
 
 export function TeamBody({
