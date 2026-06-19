@@ -207,7 +207,7 @@ export function AccountIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <AccountBody routeAccess={routeAccess} /> : <AccountBody />}
+        {routeAccess ? <AccountBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

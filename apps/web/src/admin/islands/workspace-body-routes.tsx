@@ -127,11 +127,7 @@ export function SettingsBody({
 export function AccountBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <UserAccountRoute routeAccess={routeAccess} />
-  ) : (
-    <UserAccountRoute />
-  );
+  return <UserAccountRoute routeAccess={routeAccess} />;
 }
