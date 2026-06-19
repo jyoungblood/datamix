@@ -96,11 +96,15 @@ export function SchemaDetailIsland({
   );
 }
 
-export function ContentIndexIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <ContentIndexBody />
+        {routeAccess ? <ContentIndexBody routeAccess={routeAccess} /> : <ContentIndexBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

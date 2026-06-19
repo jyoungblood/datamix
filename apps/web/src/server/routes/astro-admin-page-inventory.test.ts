@@ -73,6 +73,9 @@ const schemaOverviewSourcePath = path.resolve(
 const schemaBuilderSourcePath = path.resolve(
   "apps/web/src/admin/_screens/schema-builder.tsx",
 );
+const contentIndexSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/content-index.tsx",
+);
 const teamAndRolesSourcePath = path.resolve(
   "apps/web/src/admin/_screens/team-and-roles.tsx",
 );
@@ -374,6 +377,39 @@ test("Slice 7 schema builder islands derive route access from server workspace p
     schemaBuilderSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SchemaBuilderContent should not derive schema builder route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 8 content index island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function ContentIndexIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<ContentIndexBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "ContentIndexIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<ContentIndexRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "ContentIndexBody should forward route access into the retained content index route",
+  );
+  assert.match(
+    contentIndexSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "ContentIndexContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    contentIndexSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "ContentIndexContent should not derive content index route access from AdminWorkspaceProvider",
   );
 });
 

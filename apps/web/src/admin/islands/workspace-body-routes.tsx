@@ -51,8 +51,16 @@ export function SchemaDetailBody({
   );
 }
 
-export function ContentIndexBody() {
-  return <ContentIndexRoute />;
+export function ContentIndexBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <ContentIndexRoute routeAccess={routeAccess} />
+  ) : (
+    <ContentIndexRoute />
+  );
 }
 
 export function NewContentBody() {

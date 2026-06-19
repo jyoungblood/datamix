@@ -12,6 +12,7 @@ import {
 import { AdminStateBox } from "../_components/admin-state";
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { summarizeRecord } from "../_lib/record-drafts";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import {
   adminRoutes,
   type AdminWorkspaceRoute,
@@ -33,6 +34,14 @@ type ContentIndexRecordRow = {
   record: StoredCollectionRecord;
 };
 
+type ContentIndexContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type ContentIndexRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
+
 function formatContentRecordError(error: unknown) {
   return error instanceof Error ? error.message : "Unable to load content.";
 }
@@ -43,9 +52,9 @@ function createCollectionSignature(collections: StoredCollectionDefinition[]) {
     .join("|");
 }
 
-export function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
+export function ContentIndexContent({ routeAccess }: ContentIndexContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     collectionLoadError,
     collections,
@@ -380,8 +389,18 @@ export function ContentIndexContent({ route }: { route: AdminWorkspaceRoute }) {
   );
 }
 
-export function ContentIndexRoute() {
+function ContentIndexRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <ContentIndexContent routeAccess={providerAccess} />;
+}
+
+export function ContentIndexRoute({ routeAccess }: ContentIndexRouteProps = {}) {
   const route = adminRoutes.content.index();
 
-  return <ContentIndexContent route={route} />;
+  return routeAccess ? (
+    <ContentIndexContent routeAccess={routeAccess} />
+  ) : (
+    <ContentIndexRouteWithProviderAccess route={route} />
+  );
 }
