@@ -1,0 +1,9 @@
+---
+import { LoginIsland } from "@/src/admin-routes/auth-routes";
+
+import DatamixRootLayout from "../../layouts/DatamixRootLayout.astro";
+---
+
+<DatamixRootLayout>
+  <LoginIsland client:only="react" />
+</DatamixRootLayout>

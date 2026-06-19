@@ -1,0 +1,15 @@
+---
+import { ContentRecordIsland } from "@/src/admin-routes/workspace-routes";
+
+import DatamixRootLayout from "../../../../layouts/DatamixRootLayout.astro";
+
+const { recordId, schemaId } = Astro.params;
+---
+
+<DatamixRootLayout>
+  <ContentRecordIsland
+    client:only="react"
+    recordId={recordId ?? ""}
+    schemaId={schemaId ?? ""}
+  />
+</DatamixRootLayout>

@@ -1,0 +1,11 @@
+---
+import { AdminHomeIsland } from "@/src/admin-routes/workspace-routes";
+
+import DatamixRootLayout from "../../layouts/DatamixRootLayout.astro";
+---
+
+<DatamixRootLayout>
+  <div data-admin-homepage="overview-v1">
+    <AdminHomeIsland client:only="react" />
+  </div>
+</DatamixRootLayout>

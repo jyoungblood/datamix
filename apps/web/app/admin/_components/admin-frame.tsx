@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import {
   Blocks,
   Database,
@@ -144,16 +143,15 @@ function DatamixSidebar({
       {...props}
     >
       {resolvedBrandHref ? (
-        <Link
+        <a
           className={brandClassName}
           href={resolvedBrandHref}
           onClick={() => onBrandClick?.()}
           onFocus={prefetchBrandRoute}
           onMouseEnter={prefetchBrandRoute}
-          prefetch={brandRoute?.prefetch ?? true}
         >
           {brandContent}
-        </Link>
+        </a>
       ) : onBrandClick ? (
         <button className={brandClassName} onClick={onBrandClick} type="button">
           {brandContent}
@@ -189,7 +187,7 @@ function DatamixSidebar({
 
           if (item.href) {
             return (
-              <Link
+              <a
                 aria-current={isActive ? "page" : undefined}
                 className={navClassName}
                 href={item.href}
@@ -197,10 +195,9 @@ function DatamixSidebar({
                 onClick={() => onNavigate?.(item)}
                 onFocus={() => onPrefetch?.(item)}
                 onMouseEnter={() => onPrefetch?.(item)}
-                prefetch={item.prefetch ?? true}
               >
                 {navContent}
-              </Link>
+              </a>
             )
           }
 
@@ -231,15 +228,14 @@ function DatamixSidebar({
       </nav>
 
       {account.href ? (
-        <Link
+        <a
           className={accountClassName}
           href={account.href}
           onFocus={prefetchAccountRoute}
           onMouseEnter={prefetchAccountRoute}
-          prefetch={account.prefetch ?? true}
         >
           {accountContent}
-        </Link>
+        </a>
       ) : onAccountClick ? (
         <button
           className={accountClassName}

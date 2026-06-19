@@ -1,0 +1,11 @@
+---
+import { SchemaDetailIsland } from "@/src/admin-routes/workspace-routes";
+
+import DatamixRootLayout from "../../../layouts/DatamixRootLayout.astro";
+
+const { schemaId } = Astro.params;
+---
+
+<DatamixRootLayout>
+  <SchemaDetailIsland client:only="react" schemaId={schemaId ?? ""} />
+</DatamixRootLayout>

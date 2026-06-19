@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   ArrowRight,
   Database,
@@ -450,11 +449,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
           >
             <div className="grid gap-2">
               {routeItems.map((item) => (
-                <Link
+                <a
                   className="group grid gap-3 rounded-lg border border-border bg-white px-4 py-3 text-xs transition hover:bg-muted/60 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
                   href={item.route.href}
                   key={item.route.id}
-                  prefetch={item.route.section !== route.section}
                 >
                   <span className="flex size-9 items-center justify-center rounded-md border border-border bg-slate-50 text-slate-600">
                     <item.icon className="h-4 w-4" />
@@ -474,7 +472,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                     </Badge>
                     <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:text-slate-600" />
                   </span>
-                </Link>
+                </a>
               ))}
             </div>
           </AdminSectionCard>
@@ -510,9 +508,9 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
               action={
                 permissions.canCreateCollections ? (
                   <Button asChild size="sm">
-                    <Link href={adminRoutes.schema.new().href} prefetch={true}>
+                    <a href={adminRoutes.schema.new().href}>
                       New schema
-                    </Link>
+                    </a>
                   </Button>
                 ) : null
               }
@@ -557,11 +555,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
               ) : (
                 <div className="divide-y rounded-lg border border-border bg-white">
                   {recentSchemas.map((collection) => (
-                    <Link
+                    <a
                       className="grid gap-2 px-4 py-3 text-xs transition hover:bg-muted/60"
                       href={adminRoutes.schema.detail(collection.id).href}
                       key={collection.definition.name}
-                      prefetch={true}
                     >
                       <span className="flex min-w-0 items-center justify-between gap-3">
                         <span className="truncate font-medium text-slate-950">
@@ -580,7 +577,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                           Updated {formatHomeTimestamp(collection.updatedAt)}
                         </span>
                       </span>
-                    </Link>
+                    </a>
                   ))}
                 </div>
               )}
@@ -603,10 +600,9 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                   {workspace.authorization.permissions.length} permissions granted.
                 </p>
               </div>
-              <Link
+              <a
                 className="rounded-lg border border-border bg-white p-4 transition hover:bg-muted/60"
                 href={adminRoutes.settings().href}
-                prefetch={true}
               >
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-950">
                   <KeyRound className="h-4 w-4 text-slate-500" />
@@ -623,11 +619,10 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
                   Active public API keys.
                 </p>
-              </Link>
-              <Link
+              </a>
+              <a
                 className="rounded-lg border border-border bg-white p-4 transition hover:bg-muted/60"
                 href={adminRoutes.team().href}
-                prefetch={true}
               >
                 <div className="flex items-center gap-2 text-xs font-medium text-slate-950">
                   <Users className="h-4 w-4 text-slate-500" />
@@ -647,7 +642,7 @@ function AdminHomeContent({ route }: { route: AdminWorkspaceRoute }) {
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
                   Users visible to this role.
                 </p>
-              </Link>
+              </a>
             </div>
           </AdminSectionCard>
         ) : null}

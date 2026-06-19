@@ -1,0 +1,9 @@
+---
+import { NewSchemaIsland } from "@/src/admin-routes/workspace-routes";
+
+import DatamixRootLayout from "../../../layouts/DatamixRootLayout.astro";
+---
+
+<DatamixRootLayout>
+  <NewSchemaIsland client:only="react" />
+</DatamixRootLayout>
