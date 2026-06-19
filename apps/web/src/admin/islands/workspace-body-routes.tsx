@@ -13,8 +13,16 @@ export function AdminHomeBody() {
   return <AdminHomeRoute />;
 }
 
-export function SchemaOverviewBody() {
-  return <SchemaOverviewRoute />;
+export function SchemaOverviewBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <SchemaOverviewRoute routeAccess={routeAccess} />
+  ) : (
+    <SchemaOverviewRoute />
+  );
 }
 
 export function NewSchemaBody() {

@@ -13,6 +13,7 @@ import {
   adminRoutes,
   type AdminWorkspaceRoute,
 } from "../_workspace/admin-routes";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import {
   useAdminWorkspace,
   useAdminWorkspaceRouteAccess,
@@ -21,6 +22,14 @@ import { formatCollectionSummary } from "../_lib/schema-drafts";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+type SchemaOverviewContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type SchemaOverviewRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
 
 function formatSchemaTimestamp(value: string) {
   const date = new Date(value);
@@ -46,9 +55,9 @@ function formatSchemaLanguage(value: string) {
     .replaceAll("collection", "schema");
 }
 
-export function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute }) {
+export function SchemaOverviewContent({ routeAccess }: SchemaOverviewContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     collectionLoadError,
     collections,
@@ -211,8 +220,24 @@ export function SchemaOverviewContent({ route }: { route: AdminWorkspaceRoute })
   );
 }
 
-export function SchemaOverviewRoute() {
+function SchemaOverviewRouteWithProviderAccess({
+  route,
+}: {
+  route: AdminWorkspaceRoute;
+}) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <SchemaOverviewContent routeAccess={providerAccess} />;
+}
+
+export function SchemaOverviewRoute({
+  routeAccess,
+}: SchemaOverviewRouteProps = {}) {
   const route = adminRoutes.schema.index();
 
-  return <SchemaOverviewContent route={route} />;
+  return routeAccess ? (
+    <SchemaOverviewContent routeAccess={routeAccess} />
+  ) : (
+    <SchemaOverviewRouteWithProviderAccess route={route} />
+  );
 }

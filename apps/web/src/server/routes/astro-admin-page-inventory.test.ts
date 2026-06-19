@@ -67,6 +67,9 @@ const workspaceResolverPath = path.resolve(
 const mediaLibrarySourcePath = path.resolve(
   "apps/web/src/admin/_screens/media-library.tsx",
 );
+const schemaOverviewSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/schema-overview.tsx",
+);
 const teamAndRolesSourcePath = path.resolve(
   "apps/web/src/admin/_screens/team-and-roles.tsx",
 );
@@ -292,6 +295,39 @@ test("Slice 5 account island derives route access from server workspace props", 
     accountSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "AccountContent should not derive account route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 6 schema overview island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const schemaOverviewSource = await readFile(schemaOverviewSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function SchemaOverviewIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "SchemaOverviewIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<SchemaOverviewRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "SchemaOverviewBody should forward route access into the retained schema overview route",
+  );
+  assert.match(
+    schemaOverviewSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "SchemaOverviewContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    schemaOverviewSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "SchemaOverviewContent should not derive schema overview route access from AdminWorkspaceProvider",
   );
 });
 
