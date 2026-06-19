@@ -280,6 +280,8 @@ async function main() {
         `MEDIA_PUBLIC_ORIGIN=${appOrigin}`,
         "NEXT_PUBLIC_APP_ENV=development",
         `NEXT_PUBLIC_APP_ORIGIN=${appOrigin}`,
+        "PUBLIC_DATAMIX_APP_ENV=development",
+        `PUBLIC_DATAMIX_APP_ORIGIN=${appOrigin}`,
         `BETTER_AUTH_SECRET=${smokeAuthSecret}`,
         "PUBLIC_API_READ_ACCESS=public",
         "PUBLIC_API_WRITE_ACCESS=disabled",
@@ -298,16 +300,16 @@ async function main() {
           DATAMIX_PERSIST_TO: smokePersistPath,
           MEDIA_PUBLIC_ORIGIN: appOrigin,
           NEXT_PUBLIC_APP_ORIGIN: appOrigin,
+          PUBLIC_DATAMIX_APP_ENV: "development",
+          PUBLIC_DATAMIX_APP_ORIGIN: appOrigin,
         },
         name: "app",
       },
     );
 
-    await waitForUrl(appOrigin, {
+    const healthResponse = await waitForUrl(`${appOrigin}/api/health`, {
       timeoutMs: 120_000,
     });
-
-    const healthResponse = await request(`${appOrigin}/api/health`);
     assertOk(healthResponse, "Expected the in-process API health route to load.");
     const healthJson = await readJsonResponse(healthResponse);
 

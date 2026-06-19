@@ -5,8 +5,10 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 ## Current Contract
 
 - `npm run dev` starts one local Datamix app on `http://127.0.0.1:3000`.
-- `apps/web` runs through Vinext and the Cloudflare Vite plugin as the unified Worker app.
+- `apps/web` runs through Astro and the Cloudflare Workers adapter as the unified Worker app.
 - The same app serves `/admin/*`, `/api/*`, auth, media object routes, D1, R2, and Cloudflare Images bindings.
+- Astro API endpoints live under `apps/web/src/pages/api/**`.
+- Astro admin route wrappers live under `apps/web/src/pages/admin/**`; React admin screens remain under `apps/web/app/admin/_screens/**`.
 - The single deployed-app topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
 
 ## First-Time Setup

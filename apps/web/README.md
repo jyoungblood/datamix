@@ -1,14 +1,14 @@
 # `@datamix/web`
 
-Unified Vinext App Router Worker for Datamix.
+Unified Astro Cloudflare Worker for Datamix.
 
 This workspace serves the browser-first admin UI and every JSON/auth/media route from
-one Cloudflare Worker app. App Router route handlers live under `app/api/**`, shared
-server helpers live under `server/**`, routed admin pages live under `app/admin/**`,
-and private admin screen components live under `app/admin/_screens/**`.
+one Cloudflare Worker app. Astro API endpoints live under `src/pages/api/**`, shared
+server helpers live under `server/**`, Astro admin route wrappers live under
+`src/pages/admin/**`; React admin screens remain under `app/admin/_screens/**`.
 
 Use `npm run dev` from the repository root for local development on
-`http://127.0.0.1:3000`. The root command delegates to this workspace's Vinext dev
+`http://127.0.0.1:3000`. The root command delegates to this workspace's Astro dev
 server.
 
 Fixed D1 infrastructure tables are defined with Drizzle in `server/db/schema.ts`.
