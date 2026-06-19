@@ -4,21 +4,22 @@ Unified Astro Cloudflare Worker for Datamix.
 
 This workspace serves the browser-first admin UI and every JSON/auth/media route from
 one Cloudflare Worker app. Astro API endpoints live under `src/pages/api/**`, shared
-server helpers live under `server/**`, Astro admin route wrappers live under
-`src/pages/admin/**`; React admin screens remain under `app/admin/_screens/**`.
+server helpers live under `src/server/**`, Astro admin route templates live under
+`src/pages/admin/**`, and retained React workspace bodies live under `src/admin/**`.
 
 Use `npm run dev` from the repository root for local development on
 `http://127.0.0.1:3000`. The root command delegates to this workspace's Astro dev
 server.
 
-Fixed D1 infrastructure tables are defined with Drizzle in `server/db/schema.ts`.
+Fixed D1 infrastructure tables are defined with Drizzle in `src/server/db/schema.ts`.
 Use the root `db:*` scripts to generate and apply checked-in migrations under
 `drizzle/d1`.
 
 ## Admin Routes
 
 The authenticated admin workspace is routed through the shared
-`AdminWorkspaceProvider` and workspace frame:
+Astro workspace shell, with `AdminWorkspaceProvider` mounted inside the retained
+React route body island:
 
 | Route | Screen |
 | --- | --- |
@@ -38,7 +39,7 @@ The authenticated admin workspace is routed through the shared
 | `/admin/forgot-password` | Password reset request |
 | `/admin/reset-password` | Password reset completion |
 
-The command palette is mounted by the shared workspace frame. It provides routed
+The command palette is mounted by the shared workspace island. It provides routed
 navigation, dynamic schema/content jumps when data is loaded, account access,
 and sign-out.
 

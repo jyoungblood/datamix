@@ -64,7 +64,7 @@ Suggested remote resource names:
 - Worker local env example:
   [apps/web/.dev.vars.example](/Users/jy/Desktop/projects/datamix/apps/web/.dev.vars.example:1)
 - Drizzle schema and generated D1 migrations:
-  [apps/web/server/db/schema.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/db/schema.ts:1),
+  [apps/web/src/server/db/schema.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/db/schema.ts:1),
   [drizzle/d1](/Users/jy/Desktop/projects/datamix/drizzle/d1)
 ## Important Constraints
 
@@ -90,7 +90,7 @@ Suggested remote resource names:
 - Auth sessions persist as cookies on the same app origin and are consumed by same-origin credentialed `fetch`.
 - Protected admin pages must verify session state through Worker routes; the browser does not read D1 directly.
 - `GET /api/admin/setup/status` is the browser-first bootstrap route. It verifies the fixed-schema bootstrap and reports whether the instance still needs its first admin user.
-- Better Auth uses the Drizzle adapter against the D1 `DB` binding. Fixed-schema migrations are generated from `apps/web/server/db/schema.ts` into `drizzle/d1`.
+- Better Auth uses the Drizzle adapter against the D1 `DB` binding. Fixed-schema migrations are generated from `apps/web/src/server/db/schema.ts` into `drizzle/d1`.
 - Public email/password sign-up is only permitted for the very first account. After that, the sign-up route is blocked until a later invite/user-management slice expands it intentionally.
 - Auth email delivery is provider-swappable through env-only configuration:
   `AUTH_EMAIL_PROVIDER=resend` uses the Resend HTTPS API.

@@ -45,6 +45,7 @@ const authPageRoutes = [
   "forgot-password.astro",
   "reset-password.astro",
 ];
+const reactClientDirective = `client:only=${'"react"'}`;
 
 const workspaceScreenPaths = [
   "apps/web/src/admin/_screens/admin-home.tsx",
@@ -73,7 +74,7 @@ test("Slice 3 Astro admin workspace pages render the Astro shell and retained Re
       );
       assert.match(
         source,
-        new RegExp(`<${island}\\b[^>]*client:only="react"`),
+        new RegExp(`<${island}\\b[^>]*${reactClientDirective}`),
         `${route} should mount ${island} as the retained React body island`,
       );
       assert.match(
@@ -92,7 +93,7 @@ test("Slice 2 Astro admin auth pages render as Astro templates", async () => {
 
       assert.doesNotMatch(
         source,
-        /client:only="react"/,
+        new RegExp(reactClientDirective),
         `${route} should not mount a React client-only island`,
       );
       assert.doesNotMatch(

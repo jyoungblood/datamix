@@ -15,7 +15,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Workspace Map
 
 - `apps/web`
-  Unified Astro Cloudflare Worker. Astro route wrappers live under `src/pages/**`, private admin screens live under `app/admin/_screens/**`, shared server logic lives under `server/**`, and client request helpers live under `lib/**`.
+  Unified Astro Cloudflare Worker. App source lives under `src/**`: Astro pages and API endpoints live under `src/pages/**`, retained React admin workspace code lives under `src/admin/**`, shared server logic lives under `src/server/**`, and client request helpers live under `src/lib/**`.
 - `packages/core`
   Shared domain vocabulary for collections, RBAC, media, API keys, and runtime helpers. This package exists to keep contracts consistent, not to centralize everything by default.
 - `packages/create-datamix`
@@ -29,8 +29,8 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 1. The browser loads Astro pages from `apps/web/src/pages/**`.
 2. The admin talks back to the same origin for auth, content, media, setup, users, roles, invites, and API keys.
-3. Astro endpoint wrappers under `src/pages/api/**` call shared helpers under `server/routes/**`.
-4. Server modules under `server/**` persist structured data in D1 and binary media in R2.
+3. Astro endpoint wrappers under `src/pages/api/**` call shared helpers under `src/server/routes/**`.
+4. Server modules under `src/server/**` persist structured data in D1 and binary media in R2.
 5. Public content routes and media object routes still flow through the Worker so the browser never talks directly to D1 or R2.
 
 ## Where To Start Reading
@@ -86,7 +86,8 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 
 ## Code Shape Guidance
 
-- Routed admin screens share `apps/web/src/admin/_workspace/admin-workspace-provider.tsx` and `apps/web/src/admin/_workspace/admin-workspace-route-frame.tsx`; keep shared session, permission, data loading, and navigation behavior there instead of duplicating it in individual screens.
+- Auth pages are Astro templates under `apps/web/src/pages/admin/**` using the shared auth card template and small DOM scripts.
+- Authenticated admin pages render `apps/web/src/components/admin/AdminWorkspaceShell.astro`; retained React route bodies live under `apps/web/src/admin/**` and mount `apps/web/src/admin/_workspace/admin-workspace-provider.tsx` inside the workspace island.
 - `apps/web/src/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/src/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 

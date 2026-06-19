@@ -8,7 +8,9 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 - `apps/web` runs through Astro and the Cloudflare Workers adapter as the unified Worker app.
 - The same app serves `/admin/*`, `/api/*`, auth, media object routes, D1, R2, and Cloudflare Images bindings.
 - Astro API endpoints live under `apps/web/src/pages/api/**`.
-- Astro admin route wrappers live under `apps/web/src/pages/admin/**`; React admin screens remain under `apps/web/src/admin/_screens/**`.
+- Admin route templates live under `apps/web/src/pages/admin/**`.
+- Auth pages are Astro templates with small DOM scripts under `apps/web/src/scripts/admin-auth/**`.
+- Authenticated workspace pages render an Astro shell and keep provider-backed React route bodies under `apps/web/src/admin/**`.
 - The single deployed-app topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
 
 ## First-Time Setup

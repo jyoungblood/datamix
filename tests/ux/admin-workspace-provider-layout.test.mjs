@@ -6,10 +6,13 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const buttonComponent = path.join(repoRoot, "apps/web/src/components/ui/button.tsx");
 const globalStyles = path.join(repoRoot, "apps/web/src/styles/globals.css");
 const adminRoot = path.join(repoRoot, "apps/web/src/admin");
-const workspaceGroup = path.join(adminRoot, "(workspace)");
-const workspaceLayout = path.join(workspaceGroup, "layout.tsx");
+const adminPagesRoot = path.join(repoRoot, "apps/web/src/pages/admin");
+const adminShell = path.join(repoRoot, "apps/web/src/components/admin/AdminWorkspaceShell.astro");
+const adminSidebar = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
+);
 const workspacePage = path.join(adminRoot, "_workspace/admin-workspace-page.tsx");
-const adminFrame = path.join(adminRoot, "_components/admin-frame.tsx");
 const adminSkeleton = path.join(adminRoot, "_components/admin-skeleton.tsx");
 const commandPaletteDialog = path.join(
   adminRoot,
@@ -20,10 +23,7 @@ const adminCommandPalette = path.join(
   "_workspace/admin-command-palette.tsx",
 );
 const userAccountScreen = path.join(adminRoot, "_screens/user-account.tsx");
-const workspaceRouteFrame = path.join(
-  adminRoot,
-  "_workspace/admin-workspace-route-frame.tsx",
-);
+const workspaceRoutesIsland = path.join(adminRoot, "islands/workspace-routes.tsx");
 const adminRoutesSourcePath = path.join(
   adminRoot,
   "_workspace/admin-routes.ts",
@@ -71,27 +71,28 @@ const workspaceProvider = path.join(
   adminRoot,
   "_workspace/admin-workspace-provider.tsx",
 );
-const nextShimTypes = path.join(repoRoot, "apps/web/src/types/next-shims.d.ts");
+const reactClientDirective = `client:only=${'"react"'}`;
+const nextLinkImport = `from "next${"/"}link"`;
 
 const protectedWorkspacePages = [
-  "page.tsx",
-  "account/page.tsx",
-  "content/page.tsx",
-  "content/new/page.tsx",
-  "content/[schemaId]/[recordId]/page.tsx",
-  "media/page.tsx",
-  "schema/page.tsx",
-  "schema/new/page.tsx",
-  "schema/[schemaId]/page.tsx",
-  "settings/page.tsx",
-  "team/page.tsx",
+  ["index.astro", "AdminHomeIsland"],
+  ["account.astro", "AccountIsland"],
+  ["content/index.astro", "ContentIndexIsland"],
+  ["content/new.astro", "NewContentIsland"],
+  ["content/[schemaId]/[recordId].astro", "ContentRecordIsland"],
+  ["media.astro", "MediaIsland"],
+  ["schema/index.astro", "SchemaOverviewIsland"],
+  ["schema/new.astro", "NewSchemaIsland"],
+  ["schema/[schemaId].astro", "SchemaDetailIsland"],
+  ["settings.astro", "SettingsIsland"],
+  ["team.astro", "TeamIsland"],
 ];
 
 const standaloneAuthPages = [
-  "forgot-password/page.tsx",
-  "login/page.tsx",
-  "reset-password/page.tsx",
-  "setup/page.tsx",
+  "forgot-password.astro",
+  "login.astro",
+  "reset-password.astro",
+  "setup.astro",
 ];
 
 const screenFiles = [
@@ -117,6 +118,16 @@ assert(
   "Protected admin routes should share an explicit AdminWorkspacePage wrapper.",
 );
 
+assert(
+  existsSync(adminShell),
+  "Protected admin routes should share an Astro AdminWorkspaceShell template.",
+);
+
+assert(
+  existsSync(adminSidebar),
+  "Protected admin routes should share an Astro AdminWorkspaceSidebar template.",
+);
+
 const workspacePageSource = readFileSync(workspacePage, "utf8");
 
 assert(
@@ -125,34 +136,51 @@ assert(
   "AdminWorkspacePage should mount the AdminWorkspaceProvider.",
 );
 
-assert(
-  !existsSync(workspaceLayout) ||
-    !readFileSync(workspaceLayout, "utf8").includes("AdminWorkspaceProvider"),
-  "Protected admin routes should not rely on a route-group layout for AdminWorkspaceProvider.",
-);
-
-for (const pagePath of protectedWorkspacePages) {
-  const source = readFileSync(path.join(workspaceGroup, pagePath), "utf8");
+for (const [pagePath, islandName] of protectedWorkspacePages) {
+  const fullPath = path.join(adminPagesRoot, pagePath);
 
   assert(
-    existsSync(path.join(workspaceGroup, pagePath)),
-    `Protected admin page should live under the shared workspace group: ${pagePath}.`,
+    existsSync(fullPath),
+    `Protected admin page should live under Astro admin pages: ${pagePath}.`,
+  );
+
+  const source = readFileSync(fullPath, "utf8");
+
+  assert(
+    source.includes("AdminWorkspaceShell"),
+    `Protected admin page should render the Astro workspace shell: ${pagePath}.`,
   );
   assert(
-    source.includes("AdminWorkspacePage") &&
-      source.includes("<AdminWorkspacePage>"),
-    `Protected admin page should explicitly wrap its screen with AdminWorkspacePage: ${pagePath}.`,
+    new RegExp(`<${islandName}\\b[^>]*${reactClientDirective}`).test(source),
+    `Protected admin page should mount the retained React body island: ${pagePath}.`,
+  );
+  assert(
+    source.includes("resolveWorkspacePage"),
+    `Protected admin page should resolve workspace access in Astro frontmatter: ${pagePath}.`,
   );
   assert(
     !source.includes("AdminWorkspaceProviderFallback"),
-    `Protected admin page should use the shared workspace layout provider instead of a fallback wrapper: ${pagePath}.`,
+    `Protected admin page should use the shared workspace provider instead of a fallback wrapper: ${pagePath}.`,
   );
 }
 
 for (const pagePath of standaloneAuthPages) {
+  const fullPath = path.join(adminPagesRoot, pagePath);
+
   assert(
-    existsSync(path.join(adminRoot, pagePath)),
-    `Auth/setup page should remain outside the protected workspace group: ${pagePath}.`,
+    existsSync(fullPath),
+    `Auth/setup page should remain outside the protected workspace shell: ${pagePath}.`,
+  );
+
+  const source = readFileSync(fullPath, "utf8");
+
+  assert(
+    source.includes("AuthCard"),
+    `Auth/setup page should use the shared Astro auth card: ${pagePath}.`,
+  );
+  assert(
+    !source.includes(reactClientDirective),
+    `Auth/setup page should not mount a React route bridge: ${pagePath}.`,
   );
 }
 
@@ -163,11 +191,16 @@ for (const screenFile of screenFiles) {
     !source.includes("AdminWorkspaceProvider"),
     `${screenFile} should consume the shared provider instead of mounting its own.`,
   );
+  assert(
+    !source.includes("AdminWorkspaceRouteFrame") && !source.includes("AdminFrame"),
+    `${screenFile} should not render the workspace shell from React.`,
+  );
 }
 
 const providerSource = readFileSync(workspaceProvider, "utf8");
-const adminFrameSource = readFileSync(adminFrame, "utf8");
-const workspaceRouteFrameSource = readFileSync(workspaceRouteFrame, "utf8");
+const shellSource = readFileSync(adminShell, "utf8");
+const sidebarSource = readFileSync(adminSidebar, "utf8");
+const workspaceRoutesIslandSource = readFileSync(workspaceRoutesIsland, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
 const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
@@ -191,68 +224,59 @@ for (const transientTitle of ["Checking your session", "Loading access profile"]
 }
 
 assert(
-  adminFrameSource.includes("sticky top-0") &&
-    adminFrameSource.includes("h-screen") &&
-    adminFrameSource.includes("overflow-y-auto"),
+  sidebarSource.includes("sticky top-0") &&
+    sidebarSource.includes("h-screen") &&
+    sidebarSource.includes("overflow-y-auto"),
   "The admin sidebar should stay pinned to the viewport so the account link remains visible on every admin screen.",
 );
 
 assert(
-  adminFrameSource.includes('from "next/link"') &&
-    adminFrameSource.includes("prefetch={item.prefetch") &&
-    adminFrameSource.includes("onMouseEnter") &&
-    adminFrameSource.includes("onFocus") &&
-    adminFrameSource.includes("onPrefetch"),
-  "Sidebar navigation should use Vinext/Next Link prefetching and warm routes on hover/focus.",
+  sidebarSource.includes("<a") &&
+    sidebarSource.includes("href={route.href}") &&
+    sidebarSource.includes('aria-current={isActive ? "page" : undefined}') &&
+    !sidebarSource.includes("next/link") &&
+    !sidebarSource.includes("prefetch"),
+  "Sidebar navigation should use normal Astro anchors with page-current state.",
 );
 
 assert(
-  adminFrameSource.includes("prefetchAccountRoute") &&
-    adminFrameSource.includes("onFocus={prefetchAccountRoute}") &&
-    adminFrameSource.includes("onMouseEnter={prefetchAccountRoute}") &&
-    adminFrameSource.includes("prefetch={account.prefetch ?? true}") &&
-    workspaceRouteFrameSource.includes("section: accountRoute.section"),
-  "The sidebar account link should use Vinext/Next Link prefetching and warm the account route on hover/focus.",
+  sidebarSource.includes("href={account.href}") &&
+    sidebarSource.includes("data-admin-account-image") &&
+    sidebarSource.includes("data-admin-account-initials") &&
+    sidebarSource.includes("data-admin-account-name"),
+  "The Astro sidebar account link should expose hooks for live profile updates.",
 );
 
 assert(
   providerSource.includes("prefetchAdminRoute") &&
-    providerSource.includes("prefetchedRouteSectionsRef") &&
-    workspaceRouteFrameSource.includes("prefetchAdminRoute") &&
-    workspaceRouteFrameSource.includes("onPrefetch"),
-  "The workspace provider and route frame should expose route-aware data prefetching for sidebar hover/focus.",
+    providerSource.includes("prefetchedRouteSectionsRef"),
+  "The workspace provider should retain route-aware data prefetching for route bodies.",
 );
 
 assert(
   adminRoutesSource.includes("// adminRoutes.home(),") &&
-    workspaceRouteFrameSource.includes('brandRoute={adminRoutes.home()}'),
-  "The admin home route should stay commented out of visible sidebar items while the brand link continues to prefetch the dashboard.",
+    sidebarSource.includes("const brandRoute = adminRoutes.home()") &&
+    sidebarSource.includes("href={brandRoute.href}"),
+  "The admin home route should stay commented out of visible sidebar items while the brand link points to the dashboard.",
 );
 
 assert(
   providerSource.includes('route.section === "home"') &&
     providerSource.includes("dashboardPrefetchTasks") &&
     adminHomeSource.includes('void prefetchAdminRoute({ section: "home" })'),
-  "The admin dashboard should use the same route-aware data prefetcher for initial dashboard loads and sidebar hover/focus warmups.",
+  "The admin dashboard should use the route-aware data prefetcher for initial dashboard loads.",
 );
 
 assert(
-  adminHomeSource.includes('from "next/link"') &&
-    adminHomeSource.includes("prefetch={item.route.section !== route.section}") &&
-    adminHomeSource.includes("prefetch={true}"),
-  "Dashboard navigation links should use Vinext/Next Link prefetching instead of plain anchors.",
+  !adminHomeSource.includes(nextLinkImport) &&
+    adminHomeSource.includes("href={item.route.href}"),
+  "Dashboard navigation links should use normal anchors in the Astro app.",
 );
 
 assert(
   !adminHomeSource.includes("Refresh overview") &&
     !adminHomeSource.includes("handleRefreshOverview"),
   "The admin dashboard should not render a manual Refresh overview action or keep its local refresh handler.",
-);
-
-assert(
-  existsSync(nextShimTypes) &&
-    readFileSync(nextShimTypes, "utf8").includes('declare module "next/link"'),
-  "The app should provide TypeScript declarations for the Vinext next/link shim used by the sidebar.",
 );
 
 assert(existsSync(adminSkeleton), "Admin screens should share skeleton primitives.");
@@ -363,16 +387,16 @@ assert(
 assert(
   globalStylesSource.includes('html:has([data-page-canvas="muted"])') &&
     globalStylesSource.includes("--page-canvas: var(--muted);") &&
-    adminFrameSource.includes('data-page-canvas="muted"'),
+    shellSource.includes('data-page-canvas="muted"'),
   "Admin workspace pages should tint the reserved scrollbar gutter to match the muted main canvas.",
 );
 
 assert(
-  workspaceRouteFrameSource.includes("max-w-6xl") &&
-    workspaceRouteFrameSource.includes("mx-auto") &&
-    workspaceRouteFrameSource.includes("AdminWorkspaceCommandPalette") &&
-    workspaceRouteFrameSource.includes("{children}"),
-  "The shared workspace route frame should own one centered max-w-6xl content rail for every admin screen.",
+  workspaceRoutesIslandSource.includes("max-w-6xl") &&
+    workspaceRoutesIslandSource.includes("mx-auto") &&
+    workspaceRoutesIslandSource.includes("AdminWorkspaceCommandPalette") &&
+    workspaceRoutesIslandSource.includes("{children}"),
+  "The retained workspace island should own one centered max-w-6xl content rail for every admin screen.",
 );
 
 for (const screenFile of screenFiles) {

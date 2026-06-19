@@ -26,10 +26,10 @@ assert.ok(
 
 const transitionSource = readSource("apps/web/src/components/loader-view-transition.tsx");
 const globalStylesSource = readSource("apps/web/src/styles/globals.css");
-const centeredCardPageSource = readSource("apps/web/src/components/centered-card-page.tsx");
+const authCardSource = readSource("apps/web/src/components/auth/AuthCard.astro");
 const loaderInterstitialSource = readSource("apps/web/src/components/loader-interstitial.tsx");
-const loginSource = readSource("apps/web/src/admin/_screens/login.tsx");
-const setupSource = readSource("apps/web/src/admin/_screens/setup.tsx");
+const loginSource = readSource("apps/web/src/pages/admin/login.astro");
+const setupSource = readSource("apps/web/src/pages/admin/setup.astro");
 const providerSource = readSource(
   "apps/web/src/admin/_workspace/admin-workspace-provider.tsx",
 );
@@ -125,9 +125,9 @@ assert.match(
   "Sidebar-colored pages should be able to tint the root scrollbar gutter.",
 );
 assert.match(
-  centeredCardPageSource,
+  authCardSource,
   /data-page-canvas="sidebar"/,
-  "The shared auth card shell should tint the root scrollbar gutter to match the sidebar canvas.",
+  "The shared Astro auth card template should tint the root scrollbar gutter to match the sidebar canvas.",
 );
 assert.match(
   loaderInterstitialSource,
@@ -166,8 +166,13 @@ for (const [label, source] of [
 ]) {
   assert.match(
     source,
-    /LoaderViewTransitionBoundary/,
-    `${label} should render auth/session interstitials through the loader transition boundary.`,
+    /AuthCard/,
+    `${label} should render through the shared Astro auth card template.`,
+  );
+  assert.match(
+    source,
+    /data-auth-page=/,
+    `${label} should expose a stable auth page hook for its DOM script.`,
   );
 }
 
@@ -177,13 +182,8 @@ for (const [label, source] of [
 ]) {
   assert.doesNotMatch(
     source,
-    /markAdminLoaderTransition/,
-    `${label} should not write cross-route loader transition markers before navigating.`,
-  );
-  assert.match(
-    source,
-    /setIsRedirectingToAdmin\(true\)/,
-    `${label} should show the auth-side loader while it is redirecting.`,
+    /markAdminLoaderTransition|LoaderViewTransitionBoundary|setIsRedirectingToAdmin/,
+    `${label} should not keep React auth-side loader transition logic.`,
   );
 }
 

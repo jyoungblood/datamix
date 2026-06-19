@@ -77,13 +77,15 @@ Smoke note:
 ## 25-30 Minutes: Learn The Main Paths
 
 - If you are changing admin UI or client fetch behavior:
-  Start in [apps/web/src/admin/_workspace/admin-workspace-provider.tsx](/Users/jy/Desktop/projects/datamix/apps/web/src/admin/_workspace/admin-workspace-provider.tsx:1), the routed screen under `apps/web/src/admin/_screens/`, and the matching helper in `apps/web/src/lib/`.
+  Start in the Astro route template under `apps/web/src/pages/`, the retained admin React code under `apps/web/src/admin/`, and the matching helper in `apps/web/src/lib/`.
 - If you are changing auth or session behavior:
   Start in [apps/web/src/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/auth.ts:1), [apps/web/src/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/auth-handlers.ts:1), [apps/web/src/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/admin-auth.ts:1), and [apps/web/src/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/session.ts:1).
 - If you are changing collection schema or record behavior:
   Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/src/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/collections.ts:1), and [apps/web/src/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/records.ts:1).
 - If you are changing media:
   Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/web/src/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/media.ts:1), [apps/web/src/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/media-handlers.ts:1), and [apps/web/src/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/media.ts:1).
+- If you are adding a new app feature:
+  Start with the entry point under `apps/web/src/pages`, then place shared UI in `apps/web/src/admin` or `apps/web/src/components`, browser helpers in `apps/web/src/lib`, and Worker-only behavior in `apps/web/src/server`.
 - If you are changing the secondary bootstrap path:
   Start in [packages/create-datamix/src/index.ts](/Users/jy/Desktop/projects/datamix/packages/create-datamix/src/index.ts:1) and [scripts/build-create-datamix-template.mjs](/Users/jy/Desktop/projects/datamix/scripts/build-create-datamix-template.mjs:1).
 

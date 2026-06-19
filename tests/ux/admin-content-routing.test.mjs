@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const adminRoot = path.join(repoRoot, "apps/web/src/admin");
-const workspaceContentRoot = path.join(adminRoot, "(workspace)/content");
+const adminPagesRoot = path.join(repoRoot, "apps/web/src/pages/admin");
+const workspaceContentRoot = path.join(adminPagesRoot, "content");
 
 const adminRoutesPath = path.join(adminRoot, "_workspace/admin-routes.ts");
 const contentIndexPath = path.join(adminRoot, "_screens/content-index.tsx");
@@ -46,12 +47,12 @@ assert.match(
 );
 
 assert.ok(
-  existsSync(path.join(workspaceContentRoot, "new/page.tsx")),
-  "The content workspace should provide /admin/content/new for schema selection.",
+  existsSync(path.join(workspaceContentRoot, "new.astro")),
+  "The Astro content workspace should provide /admin/content/new for schema selection.",
 );
 
 assert.ok(
-  !existsSync(path.join(workspaceContentRoot, "[collection]/page.tsx")),
+  !existsSync(path.join(workspaceContentRoot, "[collection].astro")),
   "The old per-schema content overview route should be removed.",
 );
 

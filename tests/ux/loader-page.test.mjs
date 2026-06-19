@@ -10,7 +10,7 @@ const loaderDemoComponent = path.join(
   repoRoot,
   "apps/web/app/loader/demo/loader-demo.tsx",
 );
-const centeredCardPage = path.join(repoRoot, "apps/web/src/components/centered-card-page.tsx");
+const authCard = path.join(repoRoot, "apps/web/src/components/auth/AuthCard.astro");
 const loaderComponent = path.join(repoRoot, "apps/web/src/components/loader-interstitial.tsx");
 
 assert.ok(!existsSync(loaderPage), "The temporary /loader preview route should be removed.");
@@ -22,10 +22,10 @@ assert.ok(
   !existsSync(loaderDemoComponent),
   "The temporary /loader/demo client component should be removed.",
 );
-assert.ok(existsSync(centeredCardPage), "The auth card shell should be shared.");
+assert.ok(existsSync(authCard), "The Astro auth card template should be shared.");
 assert.ok(existsSync(loaderComponent), "The loader UI should be shared.");
 
-const centeredCardPageSource = readFileSync(centeredCardPage, "utf8");
+const authCardSource = readFileSync(authCard, "utf8");
 const componentSource = readFileSync(loaderComponent, "utf8");
 
 assert.match(
@@ -59,9 +59,9 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  centeredCardPageSource,
+  authCardSource,
   /min-h-svh[^"]*bg-\[var\(--sidebar\)\]|bg-\[var\(--sidebar\)\][^"]*min-h-svh/,
-  "The shared auth card shell should use the sidebar background color.",
+  "The shared Astro auth card template should use the sidebar background color.",
 );
 
 assert.match(

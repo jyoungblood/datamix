@@ -4,8 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const rootLayoutPath = path.join(repoRoot, "apps/web/app/layout.tsx");
-const rootPagePath = path.join(repoRoot, "apps/web/app/page.tsx");
+const rootLayoutPath = path.join(repoRoot, "apps/web/src/layouts/DatamixRootLayout.astro");
+const rootPagePath = path.join(repoRoot, "apps/web/src/pages/index.astro");
 
 assert.ok(existsSync(rootLayoutPath), "The app root layout should exist.");
 assert.ok(existsSync(rootPagePath), "The app root page should exist.");
@@ -15,7 +15,7 @@ const rootPageSource = readFileSync(rootPagePath, "utf8");
 
 assert.match(
   rootLayoutSource,
-  /backgroundColor:\s*"var\(--page-canvas, #080f1f\)"/,
+  /background-color:\s*var\(--page-canvas, #080f1f\)/,
   "The document shell should have a dark fallback canvas before app CSS or route content paints.",
 );
 
@@ -27,14 +27,14 @@ assert.match(
 
 assert.match(
   rootPageSource,
-  /from "next\/link"/,
-  "The root page brand should be a single Vinext/Next link.",
+  /<a[\s\S]*href="\/admin"/,
+  "The root page brand should be a single normal anchor to the admin root.",
 );
 
-assert.match(
+assert.doesNotMatch(
   rootPageSource,
-  /href=\{buildDatamixAdminPath\(\)\}/,
-  "The root page brand should link to the admin root.",
+  /from "next\/link"/,
+  "The Astro root page should not import Next link.",
 );
 
 assert.doesNotMatch(
