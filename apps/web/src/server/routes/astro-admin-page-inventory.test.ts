@@ -73,6 +73,9 @@ const teamAndRolesSourcePath = path.resolve(
 const settingsApiKeysSourcePath = path.resolve(
   "apps/web/src/admin/_screens/settings-api-keys.tsx",
 );
+const userAccountSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/user-account.tsx",
+);
 
 test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
@@ -256,6 +259,39 @@ test("Slice 4 settings island derives route access from server workspace props",
     settingsSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SettingsApiKeysContent should not derive settings route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 5 account island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const accountSource = await readFile(userAccountSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function AccountIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<AccountBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "AccountIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<UserAccountRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "AccountBody should forward route access into the retained account route",
+  );
+  assert.match(
+    accountSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "AccountContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    accountSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "AccountContent should not derive account route access from AdminWorkspaceProvider",
   );
 });
 

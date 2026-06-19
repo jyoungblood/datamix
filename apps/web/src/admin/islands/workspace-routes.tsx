@@ -155,11 +155,15 @@ export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
   );
 }
 
-export function AccountIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function AccountIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <AccountBody />
+        {routeAccess ? <AccountBody routeAccess={routeAccess} /> : <AccountBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

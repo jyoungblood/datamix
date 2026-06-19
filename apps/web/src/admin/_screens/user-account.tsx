@@ -9,6 +9,7 @@ import {
   AdminSectionCard,
 } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -18,9 +19,17 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
-export function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
+type AccountContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type UserAccountRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
+
+export function AccountContent({ routeAccess }: AccountContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     accountError,
     accountImage,
@@ -166,6 +175,18 @@ export function AccountContent({ route }: { route: AdminWorkspaceRoute }) {
   );
 }
 
-export function UserAccountRoute() {
-  return <AccountContent route={adminRoutes.account()} />;
+function UserAccountRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <AccountContent routeAccess={providerAccess} />;
+}
+
+export function UserAccountRoute({ routeAccess }: UserAccountRouteProps = {}) {
+  const route = adminRoutes.account();
+
+  return routeAccess ? (
+    <AccountContent routeAccess={routeAccess} />
+  ) : (
+    <UserAccountRouteWithProviderAccess route={route} />
+  );
 }
