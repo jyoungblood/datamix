@@ -1,13 +1,13 @@
-import { AdminHomeRoute } from "@/app/admin/_screens/admin-home";
-import { ContentEditorRoute } from "@/app/admin/_screens/content-editor";
-import { ContentIndexRoute } from "@/app/admin/_screens/content-index";
-import { MediaLibraryRoute } from "@/app/admin/_screens/media-library";
-import { SchemaBuilderRoute } from "@/app/admin/_screens/schema-builder";
-import { SchemaOverviewRoute } from "@/app/admin/_screens/schema-overview";
-import { SettingsApiKeysRoute } from "@/app/admin/_screens/settings-api-keys";
-import { TeamAndRolesRoute } from "@/app/admin/_screens/team-and-roles";
-import { UserAccountRoute } from "@/app/admin/_screens/user-account";
-import { AdminWorkspacePage } from "@/app/admin/_workspace/admin-workspace-page";
+import { AdminHomeRoute } from "@/admin/_screens/admin-home";
+import { ContentEditorRoute } from "@/admin/_screens/content-editor";
+import { ContentIndexRoute } from "@/admin/_screens/content-index";
+import { MediaLibraryRoute } from "@/admin/_screens/media-library";
+import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
+import { SchemaOverviewRoute } from "@/admin/_screens/schema-overview";
+import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
+import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
+import { UserAccountRoute } from "@/admin/_screens/user-account";
+import { AdminWorkspacePage } from "@/admin/_workspace/admin-workspace-page";
 
 export function AdminHomeIsland() {
   return (

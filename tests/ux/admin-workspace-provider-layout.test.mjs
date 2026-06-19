@@ -3,9 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const buttonComponent = path.join(repoRoot, "apps/web/components/ui/button.tsx");
-const globalStyles = path.join(repoRoot, "apps/web/styles/globals.css");
-const adminRoot = path.join(repoRoot, "apps/web/app/admin");
+const buttonComponent = path.join(repoRoot, "apps/web/src/components/ui/button.tsx");
+const globalStyles = path.join(repoRoot, "apps/web/src/styles/globals.css");
+const adminRoot = path.join(repoRoot, "apps/web/src/admin");
 const workspaceGroup = path.join(adminRoot, "(workspace)");
 const workspaceLayout = path.join(workspaceGroup, "layout.tsx");
 const workspacePage = path.join(adminRoot, "_workspace/admin-workspace-page.tsx");
@@ -71,7 +71,7 @@ const workspaceProvider = path.join(
   adminRoot,
   "_workspace/admin-workspace-provider.tsx",
 );
-const nextShimTypes = path.join(repoRoot, "apps/web/types/next-shims.d.ts");
+const nextShimTypes = path.join(repoRoot, "apps/web/src/types/next-shims.d.ts");
 
 const protectedWorkspacePages = [
   "page.tsx",

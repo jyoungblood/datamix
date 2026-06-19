@@ -1,7 +1,7 @@
-import ForgotPasswordRoute from "@/app/admin/_screens/forgot-password";
-import LoginRoute from "@/app/admin/_screens/login";
-import ResetPasswordRoute from "@/app/admin/_screens/reset-password";
-import SetupRoute from "@/app/admin/_screens/setup";
+import ForgotPasswordRoute from "@/admin/_screens/forgot-password";
+import LoginRoute from "@/admin/_screens/login";
+import ResetPasswordRoute from "@/admin/_screens/reset-password";
+import SetupRoute from "@/admin/_screens/setup";
 
 export function LoginIsland() {
   return <LoginRoute />;

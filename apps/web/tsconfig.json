@@ -6,7 +6,7 @@
     "jsxImportSource": "react",
     "lib": ["DOM", "DOM.Iterable", "ES2023"],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "rootDir": ".",
     "types": ["node"],
@@ -15,27 +15,11 @@
   "include": [
     ".astro/types.d.ts",
     "src/**/*.astro",
+    "src/**/*.css",
+    "src/**/*.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "app/admin/_components/**/*.tsx",
-    "app/admin/_lib/**/*.ts",
-    "app/admin/_screens/**/*.tsx",
-    "app/admin/_workspace/**/*.ts",
-    "app/admin/_workspace/**/*.tsx",
-    "components/**/*.tsx",
-    "lib/**/*.ts",
-    "server/**/*.d.ts",
-    "server/**/*.ts",
-    "styles/**/*.css",
-    "types/**/*.d.ts",
     "worker-configuration.d.ts"
   ],
-  "exclude": [
-    "dist",
-    "app/api/**",
-    "app/**/page.tsx",
-    "app/layout.tsx",
-    "worker/index.ts",
-    "vite.config.ts"
-  ]
+  "exclude": ["dist"]
 }

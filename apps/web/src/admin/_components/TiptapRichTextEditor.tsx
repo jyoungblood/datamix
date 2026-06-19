@@ -8,7 +8,7 @@ import { Markdown } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useId, useState } from "react";
 
-import "../../../styles/tiptap-editor.css";
+import "@/styles/tiptap-editor.css";
 
 type TiptapRichTextEditorProps = {
   disabled?: boolean;

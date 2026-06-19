@@ -14,7 +14,7 @@ function assertExists(relativePath, message) {
 }
 
 assertExists(
-  "apps/web/components/loader-view-transition.tsx",
+  "apps/web/src/components/loader-view-transition.tsx",
   "The loader should have a scoped View Transition boundary.",
 );
 assert.ok(
@@ -24,14 +24,14 @@ assert.ok(
   "The temporary /loader preview routes should be removed.",
 );
 
-const transitionSource = readSource("apps/web/components/loader-view-transition.tsx");
-const globalStylesSource = readSource("apps/web/styles/globals.css");
-const centeredCardPageSource = readSource("apps/web/components/centered-card-page.tsx");
-const loaderInterstitialSource = readSource("apps/web/components/loader-interstitial.tsx");
-const loginSource = readSource("apps/web/app/admin/_screens/login.tsx");
-const setupSource = readSource("apps/web/app/admin/_screens/setup.tsx");
+const transitionSource = readSource("apps/web/src/components/loader-view-transition.tsx");
+const globalStylesSource = readSource("apps/web/src/styles/globals.css");
+const centeredCardPageSource = readSource("apps/web/src/components/centered-card-page.tsx");
+const loaderInterstitialSource = readSource("apps/web/src/components/loader-interstitial.tsx");
+const loginSource = readSource("apps/web/src/admin/_screens/login.tsx");
+const setupSource = readSource("apps/web/src/admin/_screens/setup.tsx");
 const providerSource = readSource(
-  "apps/web/app/admin/_workspace/admin-workspace-provider.tsx",
+  "apps/web/src/admin/_workspace/admin-workspace-provider.tsx",
 );
 
 assert.match(
@@ -75,7 +75,7 @@ assert.match(
   "The loader transition boundary should render the shared loader interstitial while active.",
 );
 assert.ok(
-  !existsSync(path.join(repoRoot, "apps/web/lib/admin-loader-transition.ts")),
+  !existsSync(path.join(repoRoot, "apps/web/src/lib/admin-loader-transition.ts")),
   "Admin loader transitions should not use cross-route sessionStorage markers.",
 );
 

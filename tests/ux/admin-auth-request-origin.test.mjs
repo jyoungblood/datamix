@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 const adminAuthSource = readFileSync(
-  path.join(repoRoot, "apps/web/server/routes/admin-auth.ts"),
+  path.join(repoRoot, "apps/web/src/server/routes/admin-auth.ts"),
   "utf8",
 );
 

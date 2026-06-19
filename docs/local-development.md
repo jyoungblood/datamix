@@ -8,7 +8,7 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 - `apps/web` runs through Astro and the Cloudflare Workers adapter as the unified Worker app.
 - The same app serves `/admin/*`, `/api/*`, auth, media object routes, D1, R2, and Cloudflare Images bindings.
 - Astro API endpoints live under `apps/web/src/pages/api/**`.
-- Astro admin route wrappers live under `apps/web/src/pages/admin/**`; React admin screens remain under `apps/web/app/admin/_screens/**`.
+- Astro admin route wrappers live under `apps/web/src/pages/admin/**`; React admin screens remain under `apps/web/src/admin/_screens/**`.
 - The single deployed-app topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
 
 ## First-Time Setup
@@ -34,7 +34,7 @@ command delegates to that workspace command so contributors can start the app fr
 
 ## D1 Schema Workflow
 
-- Fixed Datamix infrastructure tables and `better-auth` tables are defined in Drizzle under `apps/web/server/db/schema.ts`.
+- Fixed Datamix infrastructure tables and `better-auth` tables are defined in Drizzle under `apps/web/src/server/db/schema.ts`.
 - Generate checked-in D1 migration SQL with `npm run db:generate`.
 - Apply checked-in migrations to the local D1 database with `npm run db:migrate:local`.
 - Generated collection record tables still use raw SQL at runtime because collection fields and table names are admin-defined.
@@ -59,7 +59,7 @@ The smoke harness starts the unified local app on its own, so it does not requir
 ## Typed Env Expectations
 
 - Worker bindings and runtime types are generated into `apps/web/worker-configuration.d.ts` via `wrangler types`.
-- Public app env is typed in `apps/web/types/env.d.ts`.
+- Public app env is typed in `apps/web/src/types/env.d.ts`.
 - Shared env shapes live in `packages/core` so server and client helpers reference the same vocabulary.
 
 ## Auth Env Expectations

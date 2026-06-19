@@ -10,8 +10,8 @@ const loaderDemoComponent = path.join(
   repoRoot,
   "apps/web/app/loader/demo/loader-demo.tsx",
 );
-const centeredCardPage = path.join(repoRoot, "apps/web/components/centered-card-page.tsx");
-const loaderComponent = path.join(repoRoot, "apps/web/components/loader-interstitial.tsx");
+const centeredCardPage = path.join(repoRoot, "apps/web/src/components/centered-card-page.tsx");
+const loaderComponent = path.join(repoRoot, "apps/web/src/components/loader-interstitial.tsx");
 
 assert.ok(!existsSync(loaderPage), "The temporary /loader preview route should be removed.");
 assert.ok(

@@ -39,22 +39,22 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
   [apps/web/src/pages/index.astro](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/index.astro:1),
   [apps/web/src/pages/admin/setup.astro](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/admin/setup.astro:1),
   [apps/web/src/pages/admin/index.astro](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/admin/index.astro:1),
-  [apps/web/app/admin/_screens/admin-home.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/admin-home.tsx:1)
+  [apps/web/src/admin/_screens/admin-home.tsx](/Users/jy/Desktop/projects/datamix/apps/web/src/admin/_screens/admin-home.tsx:1)
 - Admin client helpers:
-  [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1),
-  [apps/web/lib/collection-definitions.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/collection-definitions.ts:1),
-  [apps/web/lib/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/records.ts:1),
-  [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1)
+  [apps/web/src/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/session.ts:1),
+  [apps/web/src/lib/collection-definitions.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/collection-definitions.ts:1),
+  [apps/web/src/lib/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/records.ts:1),
+  [apps/web/src/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/media.ts:1)
 - API route handlers:
   [apps/web/src/pages/api/index.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/index.ts:1),
   [apps/web/src/pages/api/health.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/health.ts:1),
   [apps/web/src/pages/api/auth/[...auth].ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/auth/[...auth].ts:1),
   [apps/web/src/pages/api/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/pages/api/collections.ts:1)
 - Server route helpers:
-  [apps/web/server/routes/http.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/http.ts:1),
-  [apps/web/server/routes/admin-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-handlers.ts:1),
-  [apps/web/server/routes/public-collection-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/public-collection-handlers.ts:1),
-  [apps/web/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/media-handlers.ts:1)
+  [apps/web/src/server/routes/http.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/http.ts:1),
+  [apps/web/src/server/routes/admin-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/admin-handlers.ts:1),
+  [apps/web/src/server/routes/public-collection-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/public-collection-handlers.ts:1),
+  [apps/web/src/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/media-handlers.ts:1)
 - Shared contracts:
   [packages/core/src/index.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/index.ts:1),
   [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1),
@@ -67,7 +67,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 - Auth and session flow:
   Better Auth is mounted under `/api/auth/*`. The admin checks session state through `/api/admin/*` routes and redirects between `/admin/setup`, `/admin/login`, and `/admin` based on those responses.
 - Collections and records:
-  Collection definitions are persisted once, then used to generate record editing and CRUD behavior. If a schema change affects stored shape, expect to touch `packages/core`, `apps/web/server/collections.ts`, `apps/web/server/records.ts`, and the admin request/render path together.
+  Collection definitions are persisted once, then used to generate record editing and CRUD behavior. If a schema change affects stored shape, expect to touch `packages/core`, `apps/web/src/server/collections.ts`, `apps/web/src/server/records.ts`, and the admin request/render path together.
 - Media:
   Uploads create D1 metadata and store bytes in R2. Object reads and image transform requests stay behind Worker routes.
 - RBAC and API keys:
@@ -76,18 +76,18 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Common Change Paths
 
 - Changing public or session auth behavior:
-  Start in [apps/web/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/auth.ts:1), [apps/web/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/auth-handlers.ts:1), [apps/web/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/admin-auth.ts:1), and [apps/web/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/session.ts:1).
+  Start in [apps/web/src/server/auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/auth.ts:1), [apps/web/src/server/routes/auth-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/auth-handlers.ts:1), [apps/web/src/server/routes/admin-auth.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/admin-auth.ts:1), and [apps/web/src/lib/session.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/session.ts:1).
 - Changing collection schema or generated record behavior:
-  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/collections.ts:1), [apps/web/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/records.ts:1), [apps/web/app/admin/_screens/schema-builder.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/schema-builder.tsx:1), and [apps/web/app/admin/_screens/content-editor.tsx](/Users/jy/Desktop/projects/datamix/apps/web/app/admin/_screens/content-editor.tsx:1).
+  Start in [packages/core/src/collections.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/collections.ts:1), [apps/web/src/server/collections.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/collections.ts:1), [apps/web/src/server/records.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/records.ts:1), [apps/web/src/admin/_screens/schema-builder.tsx](/Users/jy/Desktop/projects/datamix/apps/web/src/admin/_screens/schema-builder.tsx:1), and [apps/web/src/admin/_screens/content-editor.tsx](/Users/jy/Desktop/projects/datamix/apps/web/src/admin/_screens/content-editor.tsx:1).
 - Changing media behavior:
-  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/web/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/media.ts:1), [apps/web/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/server/routes/media-handlers.ts:1), and [apps/web/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/lib/media.ts:1).
+  Start in [packages/core/src/media.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/media.ts:1), [apps/web/src/server/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/media.ts:1), [apps/web/src/server/routes/media-handlers.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/server/routes/media-handlers.ts:1), and [apps/web/src/lib/media.ts](/Users/jy/Desktop/projects/datamix/apps/web/src/lib/media.ts:1).
 - Changing roles, invites, users, or API keys:
-  Start in [packages/core/src/rbac.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/rbac.ts:1), [packages/core/src/api-keys.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/api-keys.ts:1), and the matching `apps/web/server/*` plus `apps/web/lib/*` modules.
+  Start in [packages/core/src/rbac.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/rbac.ts:1), [packages/core/src/api-keys.ts](/Users/jy/Desktop/projects/datamix/packages/core/src/api-keys.ts:1), and the matching `apps/web/src/server/*` plus `apps/web/src/lib/*` modules.
 
 ## Code Shape Guidance
 
-- Routed admin screens share `apps/web/app/admin/_workspace/admin-workspace-provider.tsx` and `apps/web/app/admin/_workspace/admin-workspace-route-frame.tsx`; keep shared session, permission, data loading, and navigation behavior there instead of duplicating it in individual screens.
-- `apps/web/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/server/*.ts` modules.
+- Routed admin screens share `apps/web/src/admin/_workspace/admin-workspace-provider.tsx` and `apps/web/src/admin/_workspace/admin-workspace-route-frame.tsx`; keep shared session, permission, data loading, and navigation behavior there instead of duplicating it in individual screens.
+- `apps/web/src/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/src/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 
 ## Verification Expectations

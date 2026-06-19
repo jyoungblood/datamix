@@ -101,8 +101,8 @@ test("Slice 4 React island wrappers export every planned admin route island", as
 
 test("Slice 4 retained React components no longer import Next Link", async () => {
   const retainedReactComponents = [
-    "apps/web/app/admin/_screens/admin-home.tsx",
-    "apps/web/app/admin/_components/admin-frame.tsx",
+    "apps/web/src/admin/_screens/admin-home.tsx",
+    "apps/web/src/admin/_components/admin-frame.tsx",
   ];
 
   await Promise.all(

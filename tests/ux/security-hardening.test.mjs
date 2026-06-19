@@ -9,12 +9,12 @@ function readSource(relativePath) {
   return readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
-const adminAuthSource = readSource("apps/web/server/routes/admin-auth.ts");
-const apiKeyClientSource = readSource("apps/web/lib/api-keys.ts");
-const mediaSource = readSource("apps/web/server/media.ts");
-const apiKeysSource = readSource("apps/web/server/api-keys.ts");
-const envSource = readSource("apps/web/server/env.ts");
-const publicApiAuthSource = readSource("apps/web/server/public-api-auth.ts");
+const adminAuthSource = readSource("apps/web/src/server/routes/admin-auth.ts");
+const apiKeyClientSource = readSource("apps/web/src/lib/api-keys.ts");
+const mediaSource = readSource("apps/web/src/server/media.ts");
+const apiKeysSource = readSource("apps/web/src/server/api-keys.ts");
+const envSource = readSource("apps/web/src/server/env.ts");
+const publicApiAuthSource = readSource("apps/web/src/server/public-api-auth.ts");
 const deployRuntimeContractSource = readSource("docs/deploy-runtime-contract.md");
 
 assert.doesNotMatch(

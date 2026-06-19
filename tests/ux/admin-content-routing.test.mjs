@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const adminRoot = path.join(repoRoot, "apps/web/app/admin");
+const adminRoot = path.join(repoRoot, "apps/web/src/admin");
 const workspaceContentRoot = path.join(adminRoot, "(workspace)/content");
 
 const adminRoutesPath = path.join(adminRoot, "_workspace/admin-routes.ts");
@@ -13,7 +13,7 @@ const contentEditorPath = path.join(adminRoot, "_screens/content-editor.tsx");
 const schemaBuilderPath = path.join(adminRoot, "_screens/schema-builder.tsx");
 const collectionDefinitionsPath = path.join(
   repoRoot,
-  "apps/web/lib/collection-definitions.ts",
+  "apps/web/src/lib/collection-definitions.ts",
 );
 
 const adminRoutesSource = readFileSync(adminRoutesPath, "utf8");
