@@ -346,6 +346,54 @@ test("Slice 15 admin home body requires explicit route access from the server wo
   );
 });
 
+test("Slice 16 schema builder bodies require explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const schemaBuilderSource = await readFile(schemaBuilderSourcePath, "utf8");
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<NewSchemaBody\s*\/>/,
+    "NewSchemaIsland should not render NewSchemaBody without server-derived route access",
+  );
+  assert.doesNotMatch(
+    workspaceSource,
+    /<SchemaDetailBody\s+schemaId=\{schemaId\}\s*\/>/,
+    "SchemaDetailIsland should not render SchemaDetailBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function NewSchemaBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "NewSchemaBody should require explicit route access",
+  );
+  assert.match(
+    bodySource,
+    /export function SchemaDetailBody\(\{\s*routeAccess,\s*schemaId,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*schemaId: string;\s*\}\)/,
+    "SchemaDetailBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<SchemaBuilderRoute\s+mode="create"\s*\/>/,
+    "NewSchemaBody should not rely on the schema builder route provider fallback",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<SchemaBuilderRoute\s+mode="edit"\s+schemaId=\{schemaId\}\s*\/>/,
+    "SchemaDetailBody should not rely on the schema builder route provider fallback",
+  );
+  assert.match(
+    schemaBuilderSource,
+    /function SchemaBuilderRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<SchemaBuilderContent\s+routeAccess=\{providerAccess\}/,
+    "SchemaBuilderRoute should keep the provider fallback wrapper for direct production hook hits",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

@@ -69,7 +69,7 @@ export function NewSchemaIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <NewSchemaBody routeAccess={routeAccess} /> : <NewSchemaBody />}
+        {routeAccess ? <NewSchemaBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -88,9 +88,7 @@ export function SchemaDetailIsland({
       <AdminWorkspaceIslandFrame>
         {routeAccess ? (
           <SchemaDetailBody routeAccess={routeAccess} schemaId={schemaId} />
-        ) : (
-          <SchemaDetailBody schemaId={schemaId} />
-        )}
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

@@ -28,26 +28,20 @@ export function SchemaOverviewBody({
 export function NewSchemaBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <SchemaBuilderRoute mode="create" routeAccess={routeAccess} />
-  ) : (
-    <SchemaBuilderRoute mode="create" />
-  );
+  return <SchemaBuilderRoute mode="create" routeAccess={routeAccess} />;
 }
 
 export function SchemaDetailBody({
   routeAccess,
   schemaId,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
   schemaId: string;
 }) {
-  return routeAccess ? (
+  return (
     <SchemaBuilderRoute mode="edit" routeAccess={routeAccess} schemaId={schemaId} />
-  ) : (
-    <SchemaBuilderRoute mode="edit" schemaId={schemaId} />
   );
 }
 
