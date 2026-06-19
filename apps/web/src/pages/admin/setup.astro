@@ -1,9 +1,114 @@
 ---
-import { SetupIsland } from "@/admin/islands/auth-routes";
+import AuthCard from "@/components/auth/AuthCard.astro";
+import { resolveSetupPageState } from "@/server/routes/astro-auth-page";
 
 import DatamixRootLayout from "../../layouts/DatamixRootLayout.astro";
+
+const result = await resolveSetupPageState(Astro.request);
+
+if ("redirect" in result) {
+  return Astro.redirect(result.redirect);
+}
+
+const { state } = result;
+const setupStatusHeading =
+  state.setupStatusCode === 503
+    ? "Auth config is incomplete"
+    : "Datamix is temporarily unavailable";
+const setupRecoveryCopy =
+  state.setupStatusCode === 503
+    ? "Set BETTER_AUTH_SECRET on the Datamix Worker, then reload this page."
+    : "Reload this page when the Worker app is reachable again.";
+const alertClass =
+  "group/alert relative grid w-full gap-0.5 rounded-lg border px-4 py-3 text-left text-sm bg-card text-destructive";
+const alertDescriptionClass = "text-sm text-balance text-destructive/90 md:text-pretty";
+const buttonBaseClass =
+  "inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent bg-clip-padding px-2.5 text-sm font-medium transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50";
+const buttonClass = `${buttonBaseClass} bg-primary text-primary-foreground hover:bg-primary/80`;
+const outlineButtonClass = `${buttonBaseClass} border-border bg-background shadow-xs hover:bg-muted hover:text-foreground`;
+const inputClass =
+  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30";
+const labelClass = "text-sm font-medium leading-none";
 ---
 
 <DatamixRootLayout>
-  <SetupIsland client:only="react" />
+  {
+    state.setupError ? (
+      <AuthCard description={state.setupError} label="Setup" title={setupStatusHeading}>
+        <div class={alertClass} role="alert">
+          <div class={alertDescriptionClass}>{setupRecoveryCopy}</div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <a class={outlineButtonClass} href="/">Back home</a>
+        </div>
+      </AuthCard>
+    ) : (
+      <AuthCard
+        description="Create the first admin account for this instance. After that, public sign-up is disabled and the normal login screen takes over."
+        label="First-run setup"
+        title="Create the first Datamix admin"
+      >
+        <form class="space-y-4" data-auth-page="setup">
+          <div class="grid gap-2">
+            <label class={labelClass} for="name">Name</label>
+            <input
+              autocomplete="name"
+              class={inputClass}
+              id="name"
+              required
+              type="text"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class={labelClass} for="email">Email</label>
+            <input
+              autocomplete="email"
+              class={inputClass}
+              id="email"
+              required
+              type="email"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class={labelClass} for="password">Password</label>
+            <input
+              autocomplete="new-password"
+              class={inputClass}
+              id="password"
+              minlength="8"
+              required
+              type="password"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class={labelClass} for="confirm-password">Confirm password</label>
+            <input
+              autocomplete="new-password"
+              class={inputClass}
+              id="confirm-password"
+              minlength="8"
+              required
+              type="password"
+            />
+          </div>
+
+          <div class={alertClass} data-auth-error hidden role="alert">
+            <div class={alertDescriptionClass} data-auth-error-message></div>
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <a class={outlineButtonClass} href="/">Back home</a>
+            <button class={buttonClass} type="submit">Create admin account</button>
+          </div>
+        </form>
+      </AuthCard>
+    )
+  }
+
+  <script>
+    import "@/scripts/admin-auth/setup";
+  </script>
 </DatamixRootLayout>

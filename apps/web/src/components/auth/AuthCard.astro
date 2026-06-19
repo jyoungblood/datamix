@@ -1,0 +1,35 @@
+---
+type Props = {
+  description?: string;
+  label: string;
+  title: string;
+};
+
+const { description, label, title } = Astro.props;
+---
+
+<main
+  class="min-h-svh bg-[var(--sidebar)] px-4 py-8 sm:px-6 lg:px-8"
+  data-page-canvas="sidebar"
+>
+  <div class="mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-lg items-center">
+    <section class="w-full rounded-lg border border-border/70 bg-card text-card-foreground shadow-sm">
+      <header class="flex flex-col gap-4 p-6">
+        <span class="inline-flex w-fit items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold text-foreground">
+          {label}
+        </span>
+        <div class="space-y-1.5">
+          <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+          {description ? (
+            <p class="max-w-prose text-sm leading-6 text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+        </div>
+      </header>
+      <div class="space-y-6 p-6 pt-0">
+        <slot />
+      </div>
+    </section>
+  </div>
+</main>

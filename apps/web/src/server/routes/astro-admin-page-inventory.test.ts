@@ -3,12 +3,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
-type AdminPageExpectation = {
+type WorkspacePageExpectation = {
   island: string;
   route: string;
 };
 
-const adminPageExpectations: AdminPageExpectation[] = [
+const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "AdminHomeIsland", route: "index.astro" },
   { island: "SchemaOverviewIsland", route: "schema/index.astro" },
   { island: "NewSchemaIsland", route: "schema/new.astro" },
@@ -23,10 +23,6 @@ const adminPageExpectations: AdminPageExpectation[] = [
   { island: "TeamIsland", route: "team.astro" },
   { island: "SettingsIsland", route: "settings.astro" },
   { island: "AccountIsland", route: "account.astro" },
-  { island: "SetupIsland", route: "setup.astro" },
-  { island: "LoginIsland", route: "login.astro" },
-  { island: "ForgotPasswordIsland", route: "forgot-password.astro" },
-  { island: "ResetPasswordIsland", route: "reset-password.astro" },
 ];
 
 const workspaceIslands = [
@@ -43,19 +39,19 @@ const workspaceIslands = [
   "AccountIsland",
 ];
 
-const authIslands = [
-  "SetupIsland",
-  "LoginIsland",
-  "ForgotPasswordIsland",
-  "ResetPasswordIsland",
+const authPageRoutes = [
+  "setup.astro",
+  "login.astro",
+  "forgot-password.astro",
+  "reset-password.astro",
 ];
 
 const pagesAdminDirectory = path.resolve("apps/web/src/pages/admin");
-const adminRoutesDirectory = path.resolve("apps/web/src/admin-routes");
+const adminIslandsDirectory = path.resolve("apps/web/src/admin/islands");
 
-test("Slice 4 Astro admin page inventory matches the planned routes", async () => {
+test("Slice 2 Astro admin workspace pages keep their planned React islands", async () => {
   await Promise.all(
-    adminPageExpectations.map(async ({ island, route }) => {
+    workspacePageExpectations.map(async ({ island, route }) => {
       const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
 
       assert.match(
@@ -72,13 +68,43 @@ test("Slice 4 Astro admin page inventory matches the planned routes", async () =
   );
 });
 
-test("Slice 4 React island wrappers export every planned admin route island", async () => {
-  const workspaceSource = await readFile(
-    path.join(adminRoutesDirectory, "workspace-routes.tsx"),
-    "utf8",
+test("Slice 2 Astro admin auth pages render as Astro templates", async () => {
+  await Promise.all(
+    authPageRoutes.map(async (route) => {
+      const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
+
+      assert.doesNotMatch(
+        source,
+        /client:only="react"/,
+        `${route} should not mount a React client-only island`,
+      );
+      assert.doesNotMatch(
+        source,
+        /auth-routes/,
+        `${route} should not import the temporary auth route bridge`,
+      );
+      assert.match(
+        source,
+        /AuthCard/,
+        `${route} should use the shared Astro auth card template`,
+      );
+      assert.match(
+        source,
+        /data-auth-page=/,
+        `${route} should expose a stable auth page hook for its DOM script`,
+      );
+      assert.match(
+        source,
+        /DatamixRootLayout/,
+        `${route} should use the shared Astro root layout`,
+      );
+    }),
   );
-  const authSource = await readFile(
-    path.join(adminRoutesDirectory, "auth-routes.tsx"),
+});
+
+test("Slice 2 React workspace island wrappers export every planned workspace island", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
   );
 
@@ -89,17 +115,9 @@ test("Slice 4 React island wrappers export every planned admin route island", as
       `workspace-routes.tsx should export ${island}`,
     );
   }
-
-  for (const island of authIslands) {
-    assert.match(
-      authSource,
-      new RegExp(`export\\s+function\\s+${island}\\b`),
-      `auth-routes.tsx should export ${island}`,
-    );
-  }
 });
 
-test("Slice 4 retained React components no longer import Next Link", async () => {
+test("Slice 2 retained React components no longer import Next Link", async () => {
   const retainedReactComponents = [
     "apps/web/src/admin/_screens/admin-home.tsx",
     "apps/web/src/admin/_components/admin-frame.tsx",
