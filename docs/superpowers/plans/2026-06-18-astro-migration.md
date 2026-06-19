@@ -1502,11 +1502,11 @@ git commit -m "chore: remove vinext app router shell"
 
 ## Final Acceptance Checklist
 
-- [ ] `git branch --show-current` returns `astro`.
-- [ ] `rg -n "vinext|next/link|next/server|next/navigation|react-server-dom-webpack|@vitejs/plugin-rsc" apps/web package.json package-lock.json` returns no active runtime references.
-- [ ] `npm run typecheck --workspace @datamix/web` exits `0`.
-- [ ] `npm run build --workspace @datamix/web` exits `0`.
-- [ ] `npm run smoke` exits `0`.
+- [x] `git branch --show-current` returns `astro`.
+- [x] `rg -n "vinext|next/link|next/server|next/navigation|react-server-dom-webpack|@vitejs/plugin-rsc" apps/web package.json package-lock.json` returns no active runtime references.
+- [x] `npm run typecheck --workspace @datamix/web` exits `0`.
+- [x] `npm run build --workspace @datamix/web` exits `0`.
+- [x] `npm run smoke` exits `0`.
 - [ ] User manually verifies:
   - `/`
   - `/admin`
@@ -1515,7 +1515,25 @@ git commit -m "chore: remove vinext app router shell"
   - One schema route
   - One content route
   - Media library upload/read if local test data allows it
-- [ ] Docs describe Astro, not Vinext/App Router, as the app shell.
+- [x] Docs describe Astro, not Vinext/App Router, as the app shell.
+
+## Next Handoff Prompt
+
+Continue the Astro migration acceptance in `/Users/jy/Desktop/projects/datamix` on branch `astro`. Do not use Browser. The plan is `docs/superpowers/plans/2026-06-18-astro-migration.md`.
+
+Current state:
+
+- Slices 0-7 are complete and committed.
+- Final acceptance command checks passed: `git branch --show-current`, the runtime reference `rg`, `npm run typecheck --workspace @datamix/web`, `npm run build --workspace @datamix/web`, `npm run smoke`, `node --import tsx --test apps/web/server/routes/astro.test.ts apps/web/server/routes/astro-admin-page-inventory.test.ts apps/web/server/routes/astro-route-inventory.test.ts`, and `git diff --check`.
+- A final follow-up reworded the `astro-admin-page-inventory.test.ts` assertion message so the acceptance reference scan has no stale framework-token matches.
+- Manual UI verification is still pending unless the user has already reported results for `/`, `/admin`, `/admin/login`, `/admin/setup`, one schema route, one content route, and media upload/read if local data allows.
+
+Next task:
+
+1. Collect the user's manual UI verification results.
+2. If any issue is reported or any command fails, debug systematically and avoid stacked random fixes.
+3. If manual verification passes, coordinate the branch completion path with the user.
+4. Before ending, write the next handoff prompt and instruct the next agent to do the same.
 
 ## Source Notes
 

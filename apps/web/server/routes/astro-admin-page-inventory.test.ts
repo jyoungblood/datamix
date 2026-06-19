@@ -112,7 +112,7 @@ test("Slice 4 retained React components no longer import Next Link", async () =>
       assert.doesNotMatch(
         source,
         /from ["']next\/link["']/,
-        `${componentPath} should not import next/link`,
+        `${componentPath} should not import Next Link`,
       );
       assert.doesNotMatch(
         source,
