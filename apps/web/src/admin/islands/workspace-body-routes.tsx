@@ -12,9 +12,9 @@ import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-pe
 export function AdminHomeBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? <AdminHomeRoute routeAccess={routeAccess} /> : <AdminHomeRoute />;
+  return <AdminHomeRoute routeAccess={routeAccess} />;
 }
 
 export function SchemaOverviewBody({

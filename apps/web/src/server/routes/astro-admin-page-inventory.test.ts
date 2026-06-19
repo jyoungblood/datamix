@@ -319,6 +319,33 @@ test("Slice 14 account body requires explicit route access from the server works
   );
 });
 
+test("Slice 15 admin home body requires explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<AdminHomeBody\s*\/>/,
+    "AdminHomeIsland should not render AdminHomeBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function AdminHomeBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "AdminHomeBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<AdminHomeRoute\s*\/>/,
+    "AdminHomeBody should not rely on the admin home route provider fallback",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

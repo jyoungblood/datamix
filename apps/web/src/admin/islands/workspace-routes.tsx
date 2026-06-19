@@ -41,7 +41,7 @@ export function AdminHomeIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <AdminHomeBody routeAccess={routeAccess} /> : <AdminHomeBody />}
+        {routeAccess ? <AdminHomeBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
