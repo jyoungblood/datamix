@@ -116,7 +116,7 @@ export function NewContentIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <NewContentBody routeAccess={routeAccess} /> : <NewContentBody />}
+        {routeAccess ? <NewContentBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -143,9 +143,7 @@ export function ContentRecordIsland({
             recordId={recordId}
             schemaId={schemaId}
           />
-        ) : (
-          <ContentRecordBody recordId={recordId} schemaId={schemaId} />
-        )}
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

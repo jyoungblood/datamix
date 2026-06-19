@@ -427,6 +427,54 @@ test("Slice 17 content index body requires explicit route access from the server
   );
 });
 
+test("Slice 18 content editor bodies require explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const contentEditorSource = await readFile(contentEditorSourcePath, "utf8");
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<NewContentBody\s*\/>/,
+    "NewContentIsland should not render NewContentBody without server-derived route access",
+  );
+  assert.doesNotMatch(
+    workspaceSource,
+    /<ContentRecordBody\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>/,
+    "ContentRecordIsland should not render ContentRecordBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function NewContentBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "NewContentBody should require explicit route access",
+  );
+  assert.match(
+    bodySource,
+    /export function ContentRecordBody\(\{\s*recordId,\s*routeAccess,\s*schemaId,\s*\}: \{\s*recordId: string;\s*routeAccess: AdminWorkspaceRouteAccessState;\s*schemaId: string;\s*\}\)/,
+    "ContentRecordBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<ContentEditorRoute\s+mode="create"\s*\/>/,
+    "NewContentBody should not rely on the content editor route provider fallback",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<ContentEditorRoute\s+mode="edit"\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>/,
+    "ContentRecordBody should not rely on the content editor route provider fallback",
+  );
+  assert.match(
+    contentEditorSource,
+    /function ContentEditorRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<ContentEditorContent\s+routeAccess=\{providerAccess\}/,
+    "ContentEditorRoute should keep the provider fallback wrapper for direct production hook hits",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

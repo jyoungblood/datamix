@@ -56,13 +56,9 @@ export function ContentIndexBody({
 export function NewContentBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <ContentEditorRoute mode="create" routeAccess={routeAccess} />
-  ) : (
-    <ContentEditorRoute mode="create" />
-  );
+  return <ContentEditorRoute mode="create" routeAccess={routeAccess} />;
 }
 
 export function ContentRecordBody({
@@ -71,18 +67,16 @@ export function ContentRecordBody({
   schemaId,
 }: {
   recordId: string;
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
   schemaId: string;
 }) {
-  return routeAccess ? (
+  return (
     <ContentEditorRoute
       mode="edit"
       recordId={recordId}
       routeAccess={routeAccess}
       schemaId={schemaId}
     />
-  ) : (
-    <ContentEditorRoute mode="edit" recordId={recordId} schemaId={schemaId} />
   );
 }
 
