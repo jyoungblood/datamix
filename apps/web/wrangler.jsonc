@@ -12,6 +12,8 @@
     "MEDIA_PUBLIC_ORIGIN": "https://datamix.example",
     "NEXT_PUBLIC_APP_ENV": "production",
     "NEXT_PUBLIC_APP_ORIGIN": "https://datamix.example",
+    "PUBLIC_DATAMIX_APP_ENV": "production",
+    "PUBLIC_DATAMIX_APP_ORIGIN": "https://datamix.example",
     "AUTH_EMAIL_PROVIDER": "resend",
     "AUTH_EMAIL_FROM_EMAIL": "noreply@example.com",
     "AUTH_EMAIL_FROM_NAME": "Datamix",

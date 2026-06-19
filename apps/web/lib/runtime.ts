@@ -6,15 +6,24 @@ import {
   type DatamixEnvironment,
 } from "@datamix/core";
 
+type DatamixPublicImportMetaEnv = {
+  PUBLIC_DATAMIX_APP_ENV?: string;
+  PUBLIC_DATAMIX_APP_ORIGIN?: string;
+};
+
 function isDatamixEnvironment(value: string): value is DatamixEnvironment {
   return datamixEnvironments.includes(value as DatamixEnvironment);
 }
 
-export function readAdminPublicEnv(env: NodeJS.ProcessEnv): AdminPublicEnv {
-  const appEnv = env.NEXT_PUBLIC_APP_ENV;
+function readPublicImportMetaEnv(): DatamixPublicImportMetaEnv {
+  return import.meta.env as DatamixPublicImportMetaEnv;
+}
+
+export function readAdminPublicEnv(env: DatamixPublicImportMetaEnv): AdminPublicEnv {
+  const appEnv = env.PUBLIC_DATAMIX_APP_ENV;
   const appOrigin = normalizeDatamixOrigin(
-    env.NEXT_PUBLIC_APP_ORIGIN ?? defaultAdminPublicEnv.NEXT_PUBLIC_APP_ORIGIN,
-    "NEXT_PUBLIC_APP_ORIGIN",
+    env.PUBLIC_DATAMIX_APP_ORIGIN ?? defaultAdminPublicEnv.NEXT_PUBLIC_APP_ORIGIN,
+    "PUBLIC_DATAMIX_APP_ORIGIN",
   );
 
   return {
@@ -26,7 +35,7 @@ export function readAdminPublicEnv(env: NodeJS.ProcessEnv): AdminPublicEnv {
   };
 }
 
-export const adminPublicEnv = readAdminPublicEnv(process.env);
+export const adminPublicEnv = readAdminPublicEnv(readPublicImportMetaEnv());
 export const datamixAdminBasePath = "/admin";
 export const datamixAdminApiBasePath = "/api/admin";
 
