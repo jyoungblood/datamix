@@ -2,23 +2,25 @@ import type { APIContext, APIRoute } from "astro";
 
 import type { RouteContext } from "./http";
 
-type HandlerContext = RouteContext<Record<string, string | string[]>>;
+type HandlerParams = Record<string, string | string[]>;
 
-type DatamixRouteHandler = (
+type DatamixRouteHandler<TParams extends HandlerParams> = (
   request: Request,
-  context: HandlerContext,
+  context: RouteContext<TParams>,
 ) => Response | Promise<Response>;
 
 type DatamixRequestHandler = (request: Request) => Response | Promise<Response>;
 
-function normalizeParams(params: APIContext["params"]) {
-  return params as Record<string, string | string[]>;
+function normalizeParams<TParams extends HandlerParams>(params: APIContext["params"]) {
+  return params as TParams;
 }
 
-export function defineAstroRoute(handler: DatamixRouteHandler): APIRoute {
+export function defineAstroRoute<TParams extends HandlerParams>(
+  handler: DatamixRouteHandler<TParams>,
+): APIRoute {
   return async ({ params, request }) => {
     return handler(request, {
-      params: normalizeParams(params),
+      params: normalizeParams<TParams>(params),
     });
   };
 }
