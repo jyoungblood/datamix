@@ -69,8 +69,16 @@ export function TeamBody({
   );
 }
 
-export function SettingsBody() {
-  return <SettingsApiKeysRoute />;
+export function SettingsBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <SettingsApiKeysRoute routeAccess={routeAccess} />
+  ) : (
+    <SettingsApiKeysRoute />
+  );
 }
 
 export function AccountBody() {

@@ -29,6 +29,7 @@ import {
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { formatIssuePath } from "../_lib/schema-drafts";
 import { rolePermissionSections } from "../_lib/role-drafts";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -39,6 +40,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { adminPublicEnv } from "@/lib/runtime";
 import { useSetupStatus } from "@/lib/setup";
+
+type SettingsApiKeysContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type SettingsApiKeysRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
 
 function SettingsApiKeyRow({ apiKey }: { apiKey: DatamixApiKeySummary }) {
   const workspace = useAdminWorkspace();
@@ -138,10 +147,12 @@ function SettingsApiKeyRow({ apiKey }: { apiKey: DatamixApiKeySummary }) {
   );
 }
 
-export function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }) {
+export function SettingsApiKeysContent({
+  routeAccess,
+}: SettingsApiKeysContentProps) {
   const workspace = useAdminWorkspace();
   const setupStatus = useSetupStatus();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     apiKeyDraft,
     apiKeys,
@@ -654,6 +665,24 @@ export function SettingsApiKeysContent({ route }: { route: AdminWorkspaceRoute }
   );
 }
 
-export function SettingsApiKeysRoute() {
-  return <SettingsApiKeysContent route={adminRoutes.settings()} />;
+function SettingsApiKeysRouteWithProviderAccess({
+  route,
+}: {
+  route: AdminWorkspaceRoute;
+}) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <SettingsApiKeysContent routeAccess={providerAccess} />;
+}
+
+export function SettingsApiKeysRoute({
+  routeAccess,
+}: SettingsApiKeysRouteProps = {}) {
+  const route = adminRoutes.settings();
+
+  return routeAccess ? (
+    <SettingsApiKeysContent routeAccess={routeAccess} />
+  ) : (
+    <SettingsApiKeysRouteWithProviderAccess route={route} />
+  );
 }

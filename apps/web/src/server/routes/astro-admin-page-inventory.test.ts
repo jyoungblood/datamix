@@ -70,6 +70,9 @@ const mediaLibrarySourcePath = path.resolve(
 const teamAndRolesSourcePath = path.resolve(
   "apps/web/src/admin/_screens/team-and-roles.tsx",
 );
+const settingsApiKeysSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/settings-api-keys.tsx",
+);
 
 test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
@@ -220,6 +223,39 @@ test("Slice 3 team island derives route access from server workspace props", asy
     teamSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "TeamAndRolesContent should not derive team route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 4 settings island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const settingsSource = await readFile(settingsApiKeysSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function SettingsIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SettingsBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "SettingsIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<SettingsApiKeysRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "SettingsBody should forward route access into the retained settings route",
+  );
+  assert.match(
+    settingsSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "SettingsApiKeysContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    settingsSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "SettingsApiKeysContent should not derive settings route access from AdminWorkspaceProvider",
   );
 });
 
