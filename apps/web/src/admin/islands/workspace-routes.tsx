@@ -179,7 +179,7 @@ export function TeamIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <TeamBody routeAccess={routeAccess} /> : <TeamBody />}
+        {routeAccess ? <TeamBody routeAccess={routeAccess} /> : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

@@ -238,6 +238,33 @@ test("Slice 11 media body requires explicit route access from the server workspa
   );
 });
 
+test("Slice 12 team body requires explicit route access from the server workspace prop", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /<TeamBody\s*\/>/,
+    "TeamIsland should not render TeamBody without server-derived route access",
+  );
+  assert.match(
+    bodySource,
+    /export function TeamBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
+    "TeamBody should require explicit route access",
+  );
+  assert.doesNotMatch(
+    bodySource,
+    /<TeamAndRolesRoute\s*\/>/,
+    "TeamBody should not rely on the team route provider fallback",
+  );
+});
+
 test("Slice 3 team island derives route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),

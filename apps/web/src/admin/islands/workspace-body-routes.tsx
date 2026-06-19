@@ -111,13 +111,9 @@ export function MediaBody({
 export function TeamBody({
   routeAccess,
 }: {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
 }) {
-  return routeAccess ? (
-    <TeamAndRolesRoute routeAccess={routeAccess} />
-  ) : (
-    <TeamAndRolesRoute />
-  );
+  return <TeamAndRolesRoute routeAccess={routeAccess} />;
 }
 
 export function SettingsBody({
