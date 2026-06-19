@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import { resolveAdminWorkspaceRouteAccess } from "@/admin/_workspace/admin-permissions";
 import { AdminWorkspacePage } from "@/admin/_workspace/admin-workspace-page";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 import {
@@ -112,11 +113,15 @@ export function ContentRecordIsland({
   );
 }
 
-export function MediaIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function MediaIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <MediaBody />
+        {routeAccess ? <MediaBody routeAccess={routeAccess} /> : <MediaBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

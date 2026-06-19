@@ -7,6 +7,7 @@ import { SchemaOverviewRoute } from "@/admin/_screens/schema-overview";
 import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
 import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
 import { UserAccountRoute } from "@/admin/_screens/user-account";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
 
 export function AdminHomeBody() {
   return <AdminHomeRoute />;
@@ -44,8 +45,16 @@ export function ContentRecordBody({
   );
 }
 
-export function MediaBody() {
-  return <MediaLibraryRoute />;
+export function MediaBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <MediaLibraryRoute routeAccess={routeAccess} />
+  ) : (
+    <MediaLibraryRoute />
+  );
 }
 
 export function TeamBody() {

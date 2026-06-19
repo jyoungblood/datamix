@@ -21,6 +21,7 @@ import {
   formatByteSize,
   formatRecordTimestamp,
 } from "../_lib/media-formatting";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -30,9 +31,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
+type MediaLibraryContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type MediaLibraryRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
+
+export function MediaLibraryContent({
+  routeAccess,
+}: MediaLibraryContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const mediaFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const {
     copyMediaStorageKey,
@@ -383,8 +394,18 @@ export function MediaLibraryContent({ route }: { route: AdminWorkspaceRoute }) {
   );
 }
 
-export function MediaLibraryRoute() {
+function MediaLibraryRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <MediaLibraryContent routeAccess={providerAccess} />;
+}
+
+export function MediaLibraryRoute({ routeAccess }: MediaLibraryRouteProps = {}) {
   const route = adminRoutes.media();
 
-  return <MediaLibraryContent route={route} />;
+  return routeAccess ? (
+    <MediaLibraryContent routeAccess={routeAccess} />
+  ) : (
+    <MediaLibraryRouteWithProviderAccess route={route} />
+  );
 }

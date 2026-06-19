@@ -64,6 +64,9 @@ const adminIslandsDirectory = path.resolve("apps/web/src/admin/islands");
 const workspaceResolverPath = path.resolve(
   "apps/web/src/server/routes/astro-workspace-page.ts",
 );
+const mediaLibrarySourcePath = path.resolve(
+  "apps/web/src/admin/_screens/media-library.tsx",
+);
 
 test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
@@ -133,6 +136,54 @@ test("Slice 1 workspace resolver returns serializable workspace data on successf
     resolverSource,
     /workspace:\s*createAdminWorkspaceProps\(/,
     "successful resolveWorkspacePage shell results should include workspace props",
+  );
+});
+
+test("Slice 2 media island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const mediaSource = await readFile(mediaLibrarySourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /resolveAdminWorkspaceRouteAccess/,
+    "MediaIsland should import the pure route access resolver for server workspace props",
+  );
+  assert.match(
+    workspaceSource,
+    /workspace\.activeRoute/,
+    "MediaIsland should read the active route from the server workspace prop",
+  );
+  assert.match(
+    workspaceSource,
+    /workspace\.permissions/,
+    "MediaIsland should read permissions from the server workspace prop",
+  );
+  assert.match(
+    workspaceSource,
+    /<MediaBody\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "MediaIsland should pass explicit route access into the retained media body",
+  );
+  assert.match(
+    bodySource,
+    /<MediaLibraryRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "MediaBody should forward route access into the retained media route",
+  );
+  assert.match(
+    mediaSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "MediaLibraryContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    mediaSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "MediaLibraryContent should not derive media route access from AdminWorkspaceProvider",
   );
 });
 
