@@ -127,11 +127,15 @@ export function MediaIsland({ workspace }: AdminWorkspaceIslandProps) {
   );
 }
 
-export function TeamIsland({ workspace: _workspace }: AdminWorkspaceIslandProps) {
+export function TeamIsland({ workspace }: AdminWorkspaceIslandProps) {
+  const routeAccess = workspace
+    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
+    : undefined;
+
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        <TeamBody />
+        {routeAccess ? <TeamBody routeAccess={routeAccess} /> : <TeamBody />}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

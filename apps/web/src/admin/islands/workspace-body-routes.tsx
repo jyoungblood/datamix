@@ -57,8 +57,16 @@ export function MediaBody({
   );
 }
 
-export function TeamBody() {
-  return <TeamAndRolesRoute />;
+export function TeamBody({
+  routeAccess,
+}: {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+}) {
+  return routeAccess ? (
+    <TeamAndRolesRoute routeAccess={routeAccess} />
+  ) : (
+    <TeamAndRolesRoute />
+  );
 }
 
 export function SettingsBody() {

@@ -67,6 +67,9 @@ const workspaceResolverPath = path.resolve(
 const mediaLibrarySourcePath = path.resolve(
   "apps/web/src/admin/_screens/media-library.tsx",
 );
+const teamAndRolesSourcePath = path.resolve(
+  "apps/web/src/admin/_screens/team-and-roles.tsx",
+);
 
 test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
@@ -184,6 +187,39 @@ test("Slice 2 media island derives route access from server workspace props", as
     mediaSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "MediaLibraryContent should not derive media route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 3 team island derives route access from server workspace props", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const bodySource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
+    "utf8",
+  );
+  const teamSource = await readFile(teamAndRolesSourcePath, "utf8");
+
+  assert.match(
+    workspaceSource,
+    /export function TeamIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<TeamBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "TeamIsland should derive route access from the server workspace prop",
+  );
+  assert.match(
+    bodySource,
+    /<TeamAndRolesRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "TeamBody should forward route access into the retained team route",
+  );
+  assert.match(
+    teamSource,
+    /routeAccess: AdminWorkspaceRouteAccessState/,
+    "TeamAndRolesContent should receive route access as explicit route-scoped state",
+  );
+  assert.doesNotMatch(
+    teamSource,
+    /const access = useAdminWorkspaceRouteAccess\(route\);/,
+    "TeamAndRolesContent should not derive team route access from AdminWorkspaceProvider",
   );
 });
 

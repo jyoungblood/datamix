@@ -19,6 +19,7 @@ import {
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
   useAdminWorkspace,
@@ -46,9 +47,19 @@ function createRolePermissionSummary(role: DatamixRoleDefinition) {
     .join(" / ");
 }
 
-export function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
+type TeamAndRolesContentProps = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+};
+
+type TeamAndRolesRouteProps = {
+  routeAccess?: AdminWorkspaceRouteAccessState;
+};
+
+export function TeamAndRolesContent({
+  routeAccess,
+}: TeamAndRolesContentProps) {
   const workspace = useAdminWorkspace();
-  const access = useAdminWorkspaceRouteAccess(route);
+  const access = routeAccess;
   const {
     availableRoles,
     hasLoadedRoles,
@@ -366,6 +377,18 @@ export function TeamAndRolesContent({ route }: { route: AdminWorkspaceRoute }) {
   );
 }
 
-export function TeamAndRolesRoute() {
-  return <TeamAndRolesContent route={adminRoutes.team()} />;
+function TeamAndRolesRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
+  const providerAccess = useAdminWorkspaceRouteAccess(route);
+
+  return <TeamAndRolesContent routeAccess={providerAccess} />;
+}
+
+export function TeamAndRolesRoute({ routeAccess }: TeamAndRolesRouteProps = {}) {
+  const route = adminRoutes.team();
+
+  return routeAccess ? (
+    <TeamAndRolesContent routeAccess={routeAccess} />
+  ) : (
+    <TeamAndRolesRouteWithProviderAccess route={route} />
+  );
 }
