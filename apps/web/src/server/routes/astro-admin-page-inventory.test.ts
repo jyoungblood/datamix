@@ -266,11 +266,16 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
   },
   {
     bodyFile: "MediaLibraryRouteBody.astro",
+    forbiddenSignals: [/\bMediaLibraryRoute\b/, /\bMediaLibraryContent\b/],
     requiredSignals: [
       /mediaAssetsLoaded: boolean;/,
+      /mediaLoadError: string \| null;/,
       /routeAccess: AdminWorkspaceRouteAccessState;/,
+      /<AdminPageHeader\s+title="Media library"/,
+      /!routeAccess\.isAllowed/,
+      /mediaAssets\.map/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
-      /<MediaLibraryRoute\b[\s\S]*client:only="react"[\s\S]*routeAccess=\{routeAccess\}[\s\S]*workspace=\{workspace\}/,
+      /<MediaLibraryInteractionsIsland\b[\s\S]*client:only="react"[\s\S]*mediaAssets=\{mediaAssets\}[\s\S]*mediaAssetsLoaded=\{mediaAssetsLoaded\}[\s\S]*mediaLoadError=\{mediaLoadError\}[\s\S]*workspace=\{workspace\}/,
     ],
   },
   {
@@ -322,7 +327,7 @@ const statefulClientRoutes = [
     path: "apps/web/src/admin/_screens/content-editor.tsx",
   },
   {
-    exportName: "MediaLibraryRoute",
+    exportName: "MediaLibraryInteractionsIsland",
     path: "apps/web/src/admin/_screens/media-library.tsx",
   },
   {
@@ -542,17 +547,30 @@ test("retained client screens are route-body islands without provider fallbacks"
     statefulClientRoutes.map(async ({ exportName, path: screenPath }) => {
       const source = await readFile(path.resolve(screenPath), "utf8");
 
-      assert.match(
-        source,
-        /routeAccess: AdminWorkspaceRouteAccessState/,
-        `${screenPath} should receive route access as explicit route-scoped state`,
-      );
+      if (exportName !== "MediaLibraryInteractionsIsland") {
+        assert.match(
+          source,
+          /routeAccess: AdminWorkspaceRouteAccessState/,
+          `${screenPath} should receive route access as explicit route-scoped state`,
+        );
+      }
       assert.match(
         source,
         new RegExp(`export function ${exportName}\\b`),
         `${screenPath} should export ${exportName} for its Astro route body island`,
       );
     }),
+  );
+
+  const mediaLibrarySource = await readFile(
+    path.resolve("apps/web/src/admin/_screens/media-library.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    mediaLibrarySource,
+    /export function MediaLibraryRoute\b|export function MediaLibraryContent\b|AdminPageHeader/,
+    "media-library.tsx should not keep the deleted whole-route media body",
   );
 
   const accountSource = await readFile(

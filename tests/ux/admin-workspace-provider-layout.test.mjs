@@ -20,6 +20,10 @@ const contentIndexRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/ContentIndexRouteBody.astro",
 );
+const mediaLibraryRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/MediaLibraryRouteBody.astro",
+);
 const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
@@ -293,6 +297,7 @@ const shellSource = readFileSync(adminShell, "utf8");
 const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
 const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf8");
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
+const mediaLibraryRouteBodySource = readFileSync(mediaLibraryRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const adminDashboardRouteBodySource = readFileSync(adminDashboardRouteBody, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
@@ -379,7 +384,6 @@ for (const skeletonExport of [
 }
 
 for (const [screenFile, expectedSkeleton] of [
-  ["media-library.tsx", "AdminMiniListSkeleton"],
   ["settings-api-keys.tsx", "AdminMiniListSkeleton"],
   ["team-and-roles.tsx", "AdminMiniListSkeleton"],
 ]) {
@@ -411,6 +415,29 @@ assert(
     !contentIndexRouteBodySource.includes("listCollectionRecords") &&
     !contentIndexRouteBodySource.includes("AdminTableSkeleton"),
   "The Astro-native content index body should render server-loaded records and keep only the command palette hydrated.",
+);
+
+assert(
+  mediaLibraryRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    mediaLibraryRouteBodySource.includes('client:only="react"') &&
+    mediaLibraryRouteBodySource.includes("MediaLibraryInteractionsIsland") &&
+    mediaLibraryRouteBodySource.includes("mediaAssets.map") &&
+    mediaLibraryRouteBodySource.includes("mediaAssetsLoaded") &&
+    mediaLibraryRouteBodySource.includes("Media access is restricted") &&
+    mediaLibraryRouteBodySource.includes("No uploads yet") &&
+    !mediaLibraryRouteBodySource.includes("MediaLibraryRoute") &&
+    !mediaLibraryRouteBodySource.includes("MediaLibraryContent"),
+  "The Astro-native media body should render server-loaded media states and hydrate only targeted media interactions.",
+);
+
+const mediaLibraryScreenSource = readFileSync(mediaLibrarySourcePath, "utf8");
+
+assert(
+  mediaLibraryScreenSource.includes("export function MediaLibraryInteractionsIsland") &&
+    !mediaLibraryScreenSource.includes("export function MediaLibraryRoute") &&
+    !mediaLibraryScreenSource.includes("export function MediaLibraryContent") &&
+    !mediaLibraryScreenSource.includes("AdminPageHeader"),
+  "The media client screen should expose only the targeted interaction island after the Astro body owns the static page.",
 );
 
 for (const screenFile of manualRefreshFreeScreens) {
@@ -578,10 +605,15 @@ assert(
   "Settings OAuth/API key/role panels should delay skeletons while setup/runtime details are pending.",
 );
 
-for (const [screenLabel, source] of [
-  ["media library", mediaLibrarySource],
-  ["team and roles", teamAndRolesSource],
-]) {
+assert(
+  mediaLibraryRouteBodySource.includes("data-media-list-loading") &&
+    mediaLibraryRouteBodySource.includes("data-media-detail-loading") &&
+    mediaLibraryRouteBodySource.includes("min-h-[252px]") &&
+    mediaLibraryRouteBodySource.includes("min-h-[210px]"),
+  "The Astro-native media body should reserve list and detail layout while media props are loading.",
+);
+
+for (const [screenLabel, source] of [["team and roles", teamAndRolesSource]]) {
   assert(
     source.includes("useDelayedLoadingIndicator") &&
       source.includes("AdminLoadingReserve"),

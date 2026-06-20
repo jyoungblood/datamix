@@ -100,6 +100,10 @@ const dashboardBodySource = readFileSync(
   path.join(adminComponentsRoot, "AdminDashboardRouteBody.astro"),
   "utf8",
 );
+const mediaLibraryBodySource = readFileSync(
+  path.join(adminComponentsRoot, "MediaLibraryRouteBody.astro"),
+  "utf8",
+);
 
 assert.match(
   dashboardBodySource,
@@ -110,4 +114,25 @@ assert.doesNotMatch(
   dashboardBodySource,
   /useAdminDashboardData|AdminHomeRoute/,
   "AdminDashboardRouteBody should not keep the old client dashboard data route.",
+);
+
+assert.match(
+  mediaLibraryBodySource,
+  /<AdminPageHeader\s+title="Media library"/,
+  "MediaLibraryRouteBody should render the media page header in Astro.",
+);
+assert.match(
+  mediaLibraryBodySource,
+  /mediaAssets\.map/,
+  "MediaLibraryRouteBody should render the server-loaded media list in Astro.",
+);
+assert.match(
+  mediaLibraryBodySource,
+  /<MediaLibraryInteractionsIsland\b[\s\S]*client:only="react"/,
+  "MediaLibraryRouteBody should keep only targeted media interactions hydrated.",
+);
+assert.doesNotMatch(
+  mediaLibraryBodySource,
+  /<MediaLibraryRoute\b[\s\S]*client:only="react"|import \{ MediaLibraryRoute \}/,
+  "MediaLibraryRouteBody should not hydrate the whole media route body.",
 );

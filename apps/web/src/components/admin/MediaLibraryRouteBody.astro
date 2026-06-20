@@ -1,10 +1,24 @@
 ---
 import type { DatamixMediaAsset } from "@datamix/core";
+import { Copy, Upload } from "lucide-react";
 
-import { MediaLibraryRoute } from "@/admin/_screens/media-library";
+import {
+  createMediaAssetSearchText,
+  createMediaOriginalUrl,
+  createMediaTransformUrl,
+  formatByteSize,
+  formatRecordTimestamp,
+} from "@/admin/_lib/media-formatting";
+import { MediaLibraryInteractionsIsland } from "@/admin/_screens/media-library";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
+import AdminStateBox from "./AdminStateBox.astro";
 
 type Props = {
   mediaAssets: DatamixMediaAsset[];
@@ -16,18 +30,348 @@ type Props = {
 
 const { mediaAssets, mediaAssetsLoaded, mediaLoadError, routeAccess, workspace } =
   Astro.props;
+const { permissions, role } = workspace;
+const rootId = "admin-media-library";
+const badgeClass = badgeVariants({ variant: "outline" });
+const primaryButtonClass = buttonVariants();
+const outlineButtonClass = buttonVariants({ variant: "outline" });
+const selectedAsset = mediaAssets[0] ?? null;
+const selectedAssetOriginalUrl = selectedAsset
+  ? createMediaOriginalUrl(selectedAsset.storageKey)
+  : null;
+const selectedAssetTransformUrl = selectedAsset
+  ? createMediaTransformUrl(selectedAsset.storageKey)
+  : null;
+const shouldShowMediaLoading =
+  routeAccess.isAllowed &&
+  permissions.canViewMedia &&
+  !mediaAssetsLoaded &&
+  !mediaLoadError;
+const shouldShowMediaError =
+  routeAccess.isAllowed &&
+  permissions.canViewMedia &&
+  Boolean(mediaLoadError) &&
+  mediaAssets.length === 0;
+const shouldShowEmptyMedia =
+  routeAccess.isAllowed &&
+  permissions.canViewMedia &&
+  mediaAssetsLoaded &&
+  !mediaLoadError &&
+  mediaAssets.length === 0;
+const shouldShowMediaList =
+  routeAccess.isAllowed &&
+  permissions.canViewMedia &&
+  mediaAssets.length > 0 &&
+  !shouldShowMediaLoading;
 ---
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+<div
+  class="mx-auto flex w-full max-w-6xl flex-col gap-4"
+  data-media-library-root
+  id={rootId}
+>
   <div class="flex justify-end">
     <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
   </div>
-  <MediaLibraryRoute
-    client:only="react"
-    mediaAssets={mediaAssets}
-    mediaAssetsLoaded={mediaAssetsLoaded}
-    mediaLoadError={mediaLoadError}
-    routeAccess={routeAccess}
-    workspace={workspace}
-  />
+
+  <AdminPageHeader title="Media library" />
+
+  {
+    !routeAccess.isAllowed ? (
+      <AdminStateBox
+        body={`Your ${role.label} role cannot access the shared media library.`}
+        title="Media access is restricted"
+        tone="warning"
+      />
+    ) : (
+      <>
+        <AdminSectionCard
+          description="Choose a file to store the original in media storage and create an asset record."
+          title="Upload original"
+        >
+          <form class="auth-form" data-media-upload-form>
+            {!permissions.canUploadMedia ? (
+              <AdminStateBox
+                body={`Your ${role.label} role can browse media, but it cannot upload new assets.`}
+                compact
+                title="Upload is disabled"
+                tone="warning"
+              />
+            ) : null}
+
+            <label class="field">
+              <span>Upload file</span>
+              <input
+                accept="*/*"
+                data-media-file-input
+                disabled={!permissions.canUploadMedia}
+                type="file"
+              />
+            </label>
+
+            <div class="type-specific-box" data-media-selected-file hidden>
+              <p class="section-title" data-media-selected-file-name></p>
+              <p class="section-copy" data-media-selected-file-meta></p>
+            </div>
+
+            <div data-media-no-file>
+              <AdminStateBox
+                body="Choose a file to store the original and create an asset record."
+                compact
+                title="No file selected"
+              />
+            </div>
+
+            <div data-media-upload-success hidden>
+              <AdminStateBox
+                body=""
+                compact
+                title="Media asset uploaded"
+                tone="success"
+              />
+            </div>
+
+            <div data-media-upload-error hidden>
+              <AdminStateBox
+                body=""
+                compact
+                title="Media upload flow needs attention"
+                tone="error"
+              />
+            </div>
+
+            <div class="actions">
+              <button
+                class={primaryButtonClass}
+                data-media-upload-button
+                disabled={!permissions.canUploadMedia}
+                type="submit"
+              >
+                <Upload className="size-4" />
+                <span data-media-upload-label>Upload asset</span>
+              </button>
+            </div>
+          </form>
+        </AdminSectionCard>
+
+        {permissions.canViewMedia ? (
+          <AdminSectionCard
+            description="Search by filename, MIME type, uploader email, or storage key."
+            title="Browse assets"
+          >
+            <Fragment slot="action">
+              <span class={badgeClass}>
+                <span data-media-visible-count>{mediaAssets.length}</span> visible
+              </span>
+            </Fragment>
+
+            <div class="record-browser">
+              <div class="record-browser-list">
+                <label class="field">
+                  <span>Filter assets</span>
+                  <input
+                    data-media-filter-input
+                    placeholder="Search by filename, MIME type, uploader, or storage key"
+                    type="text"
+                    value=""
+                  />
+                </label>
+
+                <div data-media-list-loading hidden={!shouldShowMediaLoading}>
+                  <div class="min-h-[252px]" aria-hidden="true"></div>
+                </div>
+
+                <div data-media-list-error hidden={!shouldShowMediaError}>
+                  <AdminStateBox
+                    body={mediaLoadError ?? ""}
+                    compact
+                    title="Media library is unavailable"
+                    tone="error"
+                  />
+                </div>
+
+                <div data-media-list-empty hidden={!shouldShowEmptyMedia}>
+                  <AdminStateBox
+                    body="Upload a file to add it to the library."
+                    compact
+                    title="No uploads yet"
+                  />
+                </div>
+
+                <div data-media-no-matches hidden>
+                  <AdminStateBox
+                    body=""
+                    compact
+                    title="No matching assets"
+                    tone="warning"
+                  >
+                    <Fragment slot="action">
+                      <button class="mini-button" data-media-clear-filter type="button">
+                        Clear filter
+                      </button>
+                    </Fragment>
+                  </AdminStateBox>
+                </div>
+
+                <div data-media-list-content hidden={!shouldShowMediaList}>
+                  <div data-media-list-items>
+                    {
+                      mediaAssets.map((asset, index) => (
+                        <button
+                          class:list={[
+                            "mini-list-item mini-list-item-stacked",
+                            index === 0 && "is-selected",
+                          ]}
+                          data-media-asset-button
+                          data-media-asset-id={asset.id}
+                          data-media-asset-search={createMediaAssetSearchText(asset)}
+                          type="button"
+                        >
+                          <div class="mini-list-content">
+                            <span>{asset.fileName}</span>
+                            <small>
+                              {asset.mimeType} / {formatByteSize(asset.byteSize)}
+                            </small>
+                            <small>{asset.storageKey}</small>
+                          </div>
+                          <small>{formatRecordTimestamp(asset.createdAt)}</small>
+                        </button>
+                      ))
+                    }
+                  </div>
+
+                  <div
+                    class="mt-3"
+                    data-media-stale-error
+                    hidden={!(mediaLoadError && mediaAssets.length > 0)}
+                  >
+                    <AdminStateBox
+                      body={`${mediaLoadError ?? ""} Showing the last media list that loaded successfully.`}
+                      compact
+                      title="Media library may be out of date"
+                      tone="error"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <aside class="generated-record-preview">
+                <p class="card-eyebrow">Asset detail</p>
+
+                <div data-media-detail-loading hidden={!shouldShowMediaLoading}>
+                  <div class="min-h-[210px]" aria-hidden="true"></div>
+                </div>
+
+                <div data-media-detail-content hidden={!selectedAsset || shouldShowMediaLoading}>
+                  <h4 class="section-title" data-media-detail-file-name>
+                    {selectedAsset?.fileName}
+                  </h4>
+                  <p class="section-copy">
+                    Metadata and delivery URLs for the selected asset.
+                  </p>
+                  <dl class="detail-list">
+                    <div>
+                      <dt>Storage key</dt>
+                      <dd class="detail-list-code" data-media-detail-storage-key>
+                        {selectedAsset?.storageKey}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>MIME type</dt>
+                      <dd data-media-detail-mime-type>{selectedAsset?.mimeType}</dd>
+                    </div>
+                    <div>
+                      <dt>Size</dt>
+                      <dd data-media-detail-byte-size>
+                        {selectedAsset ? formatByteSize(selectedAsset.byteSize) : ""}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Uploaded</dt>
+                      <dd data-media-detail-created-at>
+                        {selectedAsset ? formatRecordTimestamp(selectedAsset.createdAt) : ""}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Uploader</dt>
+                      <dd data-media-detail-uploader>
+                        {selectedAsset?.uploadedByUserEmail ?? "Unknown uploader"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Asset id</dt>
+                      <dd class="detail-list-code" data-media-detail-id>
+                        {selectedAsset?.id}
+                      </dd>
+                    </div>
+                    <div data-media-detail-original-url-row hidden={!selectedAssetOriginalUrl}>
+                      <dt>Original URL</dt>
+                      <dd class="detail-list-code" data-media-detail-original-url>
+                        {selectedAssetOriginalUrl}
+                      </dd>
+                    </div>
+                    <div data-media-detail-transform-url-row hidden={!selectedAssetTransformUrl}>
+                      <dt>Transform URL example</dt>
+                      <dd class="detail-list-code" data-media-detail-transform-url>
+                        {selectedAssetTransformUrl}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Transform query contract</dt>
+                      <dd>
+                        `width`, `height`, `fit`, `quality`, `format`, `cropLeft`,
+                        `cropTop`, `cropWidth`, `cropHeight`
+                      </dd>
+                    </div>
+                  </dl>
+                  <p class="helper-text" data-media-clipboard-message hidden></p>
+                  <div class="actions">
+                    <button
+                      class={outlineButtonClass}
+                      data-media-copy-button
+                      disabled={!selectedAsset}
+                      type="button"
+                    >
+                      <Copy className="size-4" />
+                      Copy storage key
+                    </button>
+                  </div>
+                </div>
+
+                <div data-media-selected-filtered hidden>
+                  <AdminStateBox
+                    body="The selected asset is hidden by the current filter. Clear the filter or pick a different visible asset."
+                    title="Selected asset is filtered out"
+                    tone="warning"
+                  >
+                    <Fragment slot="action">
+                      <button class="mini-button" data-media-clear-filter type="button">
+                        Clear filter
+                      </button>
+                    </Fragment>
+                  </AdminStateBox>
+                </div>
+
+                <div data-media-no-selected hidden={Boolean(selectedAsset) || shouldShowMediaLoading}>
+                  <AdminStateBox
+                    body="Choose an asset from the library to inspect its metadata."
+                    title="No asset selected"
+                  />
+                </div>
+              </aside>
+            </div>
+          </AdminSectionCard>
+        ) : null}
+
+        <MediaLibraryInteractionsIsland
+          client:only="react"
+          mediaAssets={mediaAssets}
+          mediaAssetsLoaded={mediaAssetsLoaded}
+          mediaLoadError={mediaLoadError}
+          rootId={rootId}
+          workspace={workspace}
+        />
+      </>
+    )
+  }
 </div>
