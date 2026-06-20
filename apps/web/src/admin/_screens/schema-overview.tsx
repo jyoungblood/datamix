@@ -9,26 +9,23 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
-import {
-  adminRoutes,
-  type AdminWorkspaceRoute,
-} from "../_workspace/admin-routes";
-import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
 import { formatCollectionSummary } from "../_lib/schema-drafts";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
+import { adminRoutes } from "../_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type SchemaOverviewContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type SchemaOverviewRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 function formatSchemaTimestamp(value: string) {
@@ -55,8 +52,10 @@ function formatSchemaLanguage(value: string) {
     .replaceAll("collection", "schema");
 }
 
-export function SchemaOverviewContent({ routeAccess }: SchemaOverviewContentProps) {
-  const workspace = useAdminWorkspace();
+export function SchemaOverviewContent({
+  routeAccess,
+  workspace,
+}: SchemaOverviewContentProps) {
   const access = routeAccess;
   const {
     collectionLoadError,
@@ -64,8 +63,8 @@ export function SchemaOverviewContent({ routeAccess }: SchemaOverviewContentProp
     hasLoadedCollections,
     isLoadingCollections,
     loadCollections,
-    permissions,
-  } = workspace;
+  } = useAdminCollectionsState();
+  const { permissions } = workspace;
   const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;
   const shouldShowCollectionSkeleton =
     permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
@@ -220,24 +219,9 @@ export function SchemaOverviewContent({ routeAccess }: SchemaOverviewContentProp
   );
 }
 
-function SchemaOverviewRouteWithProviderAccess({
-  route,
-}: {
-  route: AdminWorkspaceRoute;
-}) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <SchemaOverviewContent routeAccess={providerAccess} />;
-}
-
 export function SchemaOverviewRoute({
   routeAccess,
-}: SchemaOverviewRouteProps = {}) {
-  const route = adminRoutes.schema.index();
-
-  return routeAccess ? (
-    <SchemaOverviewContent routeAccess={routeAccess} />
-  ) : (
-    <SchemaOverviewRouteWithProviderAccess route={route} />
-  );
+  workspace,
+}: SchemaOverviewRouteProps) {
+  return <SchemaOverviewContent routeAccess={routeAccess} workspace={workspace} />;
 }

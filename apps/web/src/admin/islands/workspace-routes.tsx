@@ -50,7 +50,9 @@ export function SchemaOverviewIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <SchemaOverviewBody routeAccess={routeAccess} /> : null}
+        {routeAccess && workspace ? (
+          <SchemaOverviewBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -91,7 +93,9 @@ export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <ContentIndexBody routeAccess={routeAccess} /> : null}
+        {routeAccess && workspace ? (
+          <ContentIndexBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

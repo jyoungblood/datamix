@@ -15,10 +15,7 @@ import { LoaderViewTransitionBoundary } from "@/components/loader-view-transitio
 import { Button } from "@/components/ui/button";
 import type { PublicApiRuntimeSummary } from "@/lib/api-keys";
 import { authClient } from "@/lib/auth-client";
-import {
-  listCollectionDefinitions,
-  type StoredCollectionDefinition,
-} from "@/lib/collection-definitions";
+import type { StoredCollectionDefinition } from "@/lib/collection-definitions";
 import {
   CollectionRecordRequestError,
   createCollectionRecord,
@@ -46,6 +43,7 @@ import {
   type AdminAccountUser,
   useAdminAccountState,
 } from "../_state/admin-account-state";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
 import { useAdminMediaState } from "../_state/admin-media-state";
 import { useAdminRolesState } from "../_state/admin-roles-state";
 import { useAdminTeamState } from "../_state/admin-team-state";
@@ -256,7 +254,14 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     [session.data],
   );
   const accountState = useAdminAccountState({ initialUser: initialAccountUser });
+  const collectionsState = useAdminCollectionsState();
   const mediaState = useAdminMediaState();
+  const {
+    hasLoadedCollections,
+    isLoadingCollections,
+    loadCollections,
+    resetCollectionsWorkspace,
+  } = collectionsState;
   const {
     hasLoadedMediaAssets,
     isLoadingMediaAssets,
@@ -264,7 +269,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     resetMediaAssetList,
     resetMediaWorkspace,
   } = mediaState;
-  const collectionLoadRequestId = React.useRef(0);
   const prefetchedRouteSectionsRef = React.useRef(
     new Set<AdminWorkspaceRouteSection>(),
   );
@@ -275,10 +279,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [authorizationStatusCode, setAuthorizationStatusCode] = React.useState<number | null>(
     null,
   );
-  const [collections, setCollections] = React.useState<StoredCollectionDefinition[]>([]);
-  const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(null);
-  const [hasLoadedCollections, setHasLoadedCollections] = React.useState(false);
-  const [isLoadingCollections, setIsLoadingCollections] = React.useState(false);
   const [recordCollectionName, setRecordCollectionName] = React.useState<string | null>(
     null,
   );
@@ -365,42 +365,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     loadApiKeyData,
     resetApiKeyWorkspace,
   } = apiKeysState;
-
-  const loadCollections = React.useCallback(
-    async () => {
-      const requestId = collectionLoadRequestId.current + 1;
-
-      collectionLoadRequestId.current = requestId;
-      setCollectionLoadError(null);
-      setIsLoadingCollections(true);
-
-      try {
-        const nextCollections = await listCollectionDefinitions();
-
-        if (collectionLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setCollections(nextCollections);
-        setHasLoadedCollections(true);
-      } catch (error) {
-        if (collectionLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setCollectionLoadError(
-          error instanceof Error
-            ? error.message
-            : "Unable to load collection definitions.",
-        );
-      } finally {
-        if (collectionLoadRequestId.current === requestId) {
-          setIsLoadingCollections(false);
-        }
-      }
-    },
-    [],
-  );
 
   const resetRecordWorkspace = React.useCallback(() => {
     recordLoadRequestId.current += 1;
@@ -703,11 +667,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       setAuthorization(null);
       setAuthorizationError(null);
       setAuthorizationStatusCode(null);
-      collectionLoadRequestId.current += 1;
-      setCollections([]);
-      setCollectionLoadError(null);
-      setHasLoadedCollections(false);
-      setIsLoadingCollections(false);
+      resetCollectionsWorkspace();
       resetMediaWorkspace();
       resetRecordWorkspace();
       resetRoleWorkspace();
@@ -720,6 +680,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   }, [
     loadSessionAuthorizationData,
     resetApiKeyWorkspace,
+    resetCollectionsWorkspace,
     resetMediaWorkspace,
     resetRecordWorkspace,
     resetRoleWorkspace,
@@ -829,18 +790,14 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const value: AdminWorkspaceContextValue = {
     ...accountState,
     ...apiKeysState,
+    ...collectionsState,
     ...mediaState,
     ...rolesState,
     ...teamState,
     authorization: currentAuthorization,
-    collectionLoadError,
-    collections,
-    hasLoadedCollections,
     hasLoadedRecords,
-    isLoadingCollections,
     isLoadingRecords,
     isSavingRecord,
-    loadCollections,
     loadRecords,
     permissions: currentPermissions,
     prefetchAdminRoute,

@@ -20,10 +20,12 @@ export function AdminHomeBody({
 
 export function SchemaOverviewBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <SchemaOverviewRoute routeAccess={routeAccess} />;
+  return <SchemaOverviewRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function NewSchemaBody({
@@ -48,10 +50,12 @@ export function SchemaDetailBody({
 
 export function ContentIndexBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <ContentIndexRoute routeAccess={routeAccess} />;
+  return <ContentIndexRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function NewContentBody({

@@ -12,15 +12,10 @@ import {
 import { AdminStateBox } from "../_components/admin-state";
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { summarizeRecord } from "../_lib/record-drafts";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import {
-  adminRoutes,
-  type AdminWorkspaceRoute,
-} from "../_workspace/admin-routes";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import { adminRoutes } from "../_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Button } from "@/components/ui/button";
 import type { StoredCollectionDefinition } from "@/lib/collection-definitions";
@@ -36,10 +31,12 @@ type ContentIndexRecordRow = {
 
 type ContentIndexContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type ContentIndexRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 function formatContentRecordError(error: unknown) {
@@ -52,8 +49,10 @@ function createCollectionSignature(collections: StoredCollectionDefinition[]) {
     .join("|");
 }
 
-export function ContentIndexContent({ routeAccess }: ContentIndexContentProps) {
-  const workspace = useAdminWorkspace();
+export function ContentIndexContent({
+  routeAccess,
+  workspace,
+}: ContentIndexContentProps) {
   const access = routeAccess;
   const {
     collectionLoadError,
@@ -61,10 +60,8 @@ export function ContentIndexContent({ routeAccess }: ContentIndexContentProps) {
     hasLoadedCollections,
     isLoadingCollections,
     loadCollections,
-    permissions,
-    role,
-    selectRecord,
-  } = workspace;
+  } = useAdminCollectionsState();
+  const { permissions, role } = workspace;
   const [recordRows, setRecordRows] = React.useState<ContentIndexRecordRow[]>([]);
   const [recordLoadError, setRecordLoadError] = React.useState<string | null>(null);
   const [hasLoadedContentRecords, setHasLoadedContentRecords] =
@@ -342,7 +339,6 @@ export function ContentIndexContent({ routeAccess }: ContentIndexContentProps) {
                     <a
                       className="min-w-0 font-medium text-slate-950 transition hover:text-slate-700"
                       href={adminRoutes.content.record(collection.id, record.id).href}
-                      onClick={() => selectRecord(collection, record)}
                     >
                       <span className="block truncate">
                         {summarizeRecord(definition, record)}
@@ -389,18 +385,9 @@ export function ContentIndexContent({ routeAccess }: ContentIndexContentProps) {
   );
 }
 
-function ContentIndexRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <ContentIndexContent routeAccess={providerAccess} />;
-}
-
-export function ContentIndexRoute({ routeAccess }: ContentIndexRouteProps = {}) {
-  const route = adminRoutes.content.index();
-
-  return routeAccess ? (
-    <ContentIndexContent routeAccess={routeAccess} />
-  ) : (
-    <ContentIndexRouteWithProviderAccess route={route} />
-  );
+export function ContentIndexRoute({
+  routeAccess,
+  workspace,
+}: ContentIndexRouteProps) {
+  return <ContentIndexContent routeAccess={routeAccess} workspace={workspace} />;
 }

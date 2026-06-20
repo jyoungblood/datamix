@@ -311,6 +311,43 @@ test("Task 3 team and settings state use route-scoped hooks", async () => {
   );
 });
 
+test("Task 4 schema overview and content index use route-scoped collection state", async () => {
+  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
+  const schemaOverviewSource = await readFile(schemaOverviewSourcePath, "utf8");
+  const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
+
+  assert.doesNotMatch(
+    schemaOverviewSource,
+    /useAdminWorkspace(?:RouteAccess)?/,
+    "schema-overview.tsx should not import the old admin workspace context hooks",
+  );
+  assert.match(
+    schemaOverviewSource,
+    /useAdminCollectionsState/,
+    "schema-overview.tsx should import the route-scoped collection state hook",
+  );
+  assert.doesNotMatch(
+    contentIndexSource,
+    /useAdminWorkspace(?:RouteAccess)?/,
+    "content-index.tsx should not import the old admin workspace context hooks",
+  );
+  assert.match(
+    contentIndexSource,
+    /useAdminCollectionsState/,
+    "content-index.tsx should import the route-scoped collection state hook",
+  );
+  assert.match(
+    providerSource,
+    /useAdminCollectionsState/,
+    "AdminWorkspaceProvider should compose collection state during migration",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.collectionsState/,
+    "AdminWorkspaceProvider should spread collection state into the compatibility context",
+  );
+});
+
 test("Slice 2 media island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
@@ -610,18 +647,18 @@ test("Slice 17 content index body requires explicit route access from the server
   );
   assert.match(
     bodySource,
-    /export function ContentIndexBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "ContentIndexBody should require explicit route access",
+    /export function ContentIndexBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "ContentIndexBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
     /<ContentIndexRoute\s*\/>/,
     "ContentIndexBody should not rely on the content index route provider fallback",
   );
-  assert.match(
+  assert.doesNotMatch(
     contentIndexSource,
-    /function ContentIndexRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<ContentIndexContent\s+routeAccess=\{providerAccess\}/,
-    "ContentIndexRoute should keep the provider fallback wrapper for direct production hook hits",
+    /ContentIndexRouteWithProviderAccess/,
+    "ContentIndexRoute should not keep a provider fallback after route-scoped collection migration",
   );
 });
 
@@ -847,8 +884,8 @@ test("Slice 6 schema overview island forwards explicit route access to the retai
 
   assert.match(
     workspaceSource,
-    /<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "SchemaOverviewIsland should pass explicit route access into the retained schema overview body",
+    /<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "SchemaOverviewIsland should pass explicit workspace and route access into the retained schema overview body",
   );
   assert.doesNotMatch(
     workspaceSource,
@@ -857,13 +894,13 @@ test("Slice 6 schema overview island forwards explicit route access to the retai
   );
   assert.match(
     bodySource,
-    /export function SchemaOverviewBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "SchemaOverviewBody should require explicit route access",
+    /export function SchemaOverviewBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "SchemaOverviewBody should require explicit workspace and route access",
   );
   assert.match(
     bodySource,
-    /<SchemaOverviewRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "SchemaOverviewBody should forward route access into the retained schema overview route",
+    /<SchemaOverviewRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "SchemaOverviewBody should forward workspace and route access into the retained schema overview route",
   );
   assert.doesNotMatch(
     bodySource,
@@ -880,10 +917,10 @@ test("Slice 6 schema overview island forwards explicit route access to the retai
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SchemaOverviewContent should not derive schema overview route access from AdminWorkspaceProvider",
   );
-  assert.match(
+  assert.doesNotMatch(
     schemaOverviewSource,
-    /function SchemaOverviewRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<SchemaOverviewContent\s+routeAccess=\{providerAccess\}/,
-    "SchemaOverviewRoute should keep the provider fallback wrapper for direct production hook hits",
+    /SchemaOverviewRouteWithProviderAccess/,
+    "SchemaOverviewRoute should not keep a provider fallback after route-scoped collection migration",
   );
 });
 
@@ -1019,7 +1056,7 @@ test("Slice 8 content index island consumes serialized route access from server 
 
   assert.match(
     contentIndexIslandSource,
-    /export function ContentIndexIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentIndexBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    /export function ContentIndexIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentIndexBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>[\s\S]*?\}/,
     "ContentIndexIsland should consume serialized route access from the server workspace prop",
   );
   assert.doesNotMatch(
@@ -1029,8 +1066,8 @@ test("Slice 8 content index island consumes serialized route access from server 
   );
   assert.match(
     bodySource,
-    /<ContentIndexRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "ContentIndexBody should forward route access into the retained content index route",
+    /<ContentIndexRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "ContentIndexBody should forward workspace and route access into the retained content index route",
   );
   assert.match(
     contentIndexSource,
