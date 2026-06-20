@@ -769,7 +769,7 @@ test("Slice 23 schema overview island consumes serialized workspace route access
   );
 });
 
-test("Slice 7 schema builder islands derive route access from server workspace props", async () => {
+test("Slice 24 schema builder islands consume serialized workspace route access", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -779,16 +779,54 @@ test("Slice 7 schema builder islands derive route access from server workspace p
     "utf8",
   );
   const schemaBuilderSource = await readFile(schemaBuilderSourcePath, "utf8");
+  const newSchemaIslandSource =
+    workspaceSource.match(
+      /export function NewSchemaIsland\([\s\S]*?\nexport function SchemaDetailIsland/,
+    )?.[0] ?? "";
+  const schemaDetailIslandSource =
+    workspaceSource.match(
+      /export function SchemaDetailIsland\([\s\S]*?\nexport function ContentIndexIsland/,
+    )?.[0] ?? "";
 
   assert.match(
-    workspaceSource,
-    /export function NewSchemaIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<NewSchemaBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "NewSchemaIsland should derive route access from the server workspace prop",
+    newSchemaIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "NewSchemaIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    newSchemaIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "NewSchemaIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    newSchemaIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "NewSchemaIsland should not read route metadata or permissions to derive access",
   );
   assert.match(
-    workspaceSource,
-    /export function SchemaDetailIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{ schemaId: string \}\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SchemaDetailBody\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>[\s\S]*?\}/,
-    "SchemaDetailIsland should derive route access from the server workspace prop",
+    schemaDetailIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "SchemaDetailIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    schemaDetailIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "SchemaDetailIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    schemaDetailIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "SchemaDetailIsland should not read route metadata or permissions to derive access",
+  );
+  assert.match(
+    newSchemaIslandSource,
+    /<NewSchemaBody\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "NewSchemaIsland should pass explicit route access into the retained schema builder body",
+  );
+  assert.match(
+    schemaDetailIslandSource,
+    /<SchemaDetailBody\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>/,
+    "SchemaDetailIsland should pass explicit route access into the retained schema builder body",
   );
   assert.match(
     bodySource,
