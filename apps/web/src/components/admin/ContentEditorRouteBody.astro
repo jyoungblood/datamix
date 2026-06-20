@@ -1,12 +1,19 @@
 ---
 import type { DatamixMediaAsset } from "@datamix/core";
 
-import { ContentEditorRoute } from "@/admin/_screens/content-editor";
+import { ContentEditorFormIsland } from "@/admin/_screens/content-editor";
+import { summarizeRecord } from "@/admin/_lib/record-drafts";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { buttonVariants } from "@/components/ui/button";
 import type { StoredCollectionDefinition } from "@/server/collections";
 import type { StoredCollectionRecord } from "@/server/records";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
+import AdminStateBox from "./AdminStateBox.astro";
 
 type Props = {
   collectionLoadError: string | null;
@@ -43,50 +50,201 @@ const {
   schemaId,
   workspace,
 } = Astro.props;
+
+const { permissions, role } = workspace;
+const isEditMode = mode === "edit";
+const contentIndexHref = adminRoutes.content.index().href;
+const contentIndexButtonClass = buttonVariants({ variant: "outline" });
+const schemaNewHref = adminRoutes.schema.new().href;
+const newRecordHref = adminRoutes.content.newRecord().href;
+const selectClassName =
+  "h-9 w-full rounded-md border border-input bg-white px-2.5 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50";
+
+function decodeSchemaId(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
+const activeSchemaId = decodedSchemaId;
+const activeCollection =
+  activeSchemaId === null
+    ? null
+    : collections.find((item) => item.id === activeSchemaId) ?? null;
+const activeRouteRecord =
+  isEditMode && recordId
+    ? records.find((record) => record.id === recordId) ?? null
+    : null;
+const canSaveCurrentContent = isEditMode
+  ? permissions.canUpdateRecords
+  : permissions.canCreateRecords;
+const shouldBlockContentSchemaUntilLoaded =
+  permissions.canViewCollections && !collectionsLoaded && !collectionLoadError;
+const isInitialRecordLoad =
+  isEditMode &&
+  activeCollection !== null &&
+  permissions.canViewRecords &&
+  !recordLoadError &&
+  !recordsLoaded;
+const pageTitle = activeCollection
+  ? isEditMode
+    ? `Edit ${activeCollection.definition.label} content`
+    : `New ${activeCollection.definition.label} content`
+  : isEditMode
+    ? "Content editor"
+    : "New content";
+const editorCardTitle =
+  isEditMode && activeCollection && activeRouteRecord
+    ? summarizeRecord(activeCollection.definition, activeRouteRecord)
+    : "Create content";
+const shouldRenderContentEditorForm =
+  routeAccess.isAllowed &&
+  activeCollection !== null &&
+  !shouldBlockContentSchemaUntilLoaded &&
+  canSaveCurrentContent &&
+  (!isEditMode ||
+    (permissions.canViewRecords &&
+      !isInitialRecordLoad &&
+      !(recordLoadError && records.length === 0) &&
+      activeRouteRecord !== null));
 ---
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
   <div class="flex justify-end">
     <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
   </div>
+
+  <AdminPageHeader title={pageTitle}>
+    <Fragment slot="action">
+      <a class={contentIndexButtonClass} href={contentIndexHref}>All content</a>
+    </Fragment>
+  </AdminPageHeader>
+
   {
-    mode === "edit" ? (
-      <ContentEditorRoute
-        client:only="react"
-        collectionLoadError={collectionLoadError}
-        collections={collections}
-        collectionsLoaded={collectionsLoaded}
-        mediaAssets={mediaAssets}
-        mediaAssetsLoaded={mediaAssetsLoaded}
-        mediaLoadError={mediaLoadError}
-        mode="edit"
-        recordId={recordId ?? ""}
-        recordLoadError={recordLoadError}
-        recordSupportedFieldNames={recordSupportedFieldNames}
-        records={records}
-        recordsLoaded={recordsLoaded}
-        routeAccess={routeAccess}
-        schemaId={schemaId ?? ""}
-        workspace={workspace}
+    !routeAccess.isAllowed ? (
+      <AdminStateBox body={routeAccess.body} title={routeAccess.title} tone="warning" />
+    ) : shouldBlockContentSchemaUntilLoaded ? (
+      <AdminStateBox
+        body="Loading schemas before opening this generated content editor."
+        title="Loading content schema"
       />
-    ) : (
-      <ContentEditorRoute
-        client:only="react"
-        collectionLoadError={collectionLoadError}
-        collections={collections}
-        collectionsLoaded={collectionsLoaded}
-        mediaAssets={mediaAssets}
-        mediaAssetsLoaded={mediaAssetsLoaded}
-        mediaLoadError={mediaLoadError}
-        mode="create"
-        recordLoadError={recordLoadError}
-        recordSupportedFieldNames={recordSupportedFieldNames}
-        records={records}
-        recordsLoaded={recordsLoaded}
-        routeAccess={routeAccess}
-        schemaId={schemaId}
-        workspace={workspace}
+    ) : collectionLoadError && collections.length === 0 ? (
+      <AdminStateBox
+        body={collectionLoadError}
+        title="Content schema is unavailable"
+        tone="error"
       />
-    )
+    ) : !activeCollection && !activeSchemaId && mode === "create" ? (
+      <AdminSectionCard title="Choose schema">
+        {collections.length === 0 ? (
+          <AdminStateBox
+            body="Create a schema before adding content."
+            compact
+            title="No schemas yet"
+          >
+            <Fragment slot="action">
+              <a class={contentIndexButtonClass} href={schemaNewHref}>Create first schema</a>
+            </Fragment>
+          </AdminStateBox>
+        ) : (
+          <form action={newRecordHref} class="max-w-md space-y-2" method="get">
+            <label
+              class="flex items-center gap-2 text-sm leading-none font-medium select-none"
+              for="content-schema-id"
+            >
+              Schema
+            </label>
+            <select
+              class={selectClassName}
+              id="content-schema-id"
+              name="schemaId"
+              onchange="this.form.requestSubmit()"
+              required
+            >
+              <option value="">Select schema</option>
+              {collections.map((item) => (
+                <option value={item.id}>{item.definition.label}</option>
+              ))}
+            </select>
+            <button class="sr-only" type="submit">Open schema</button>
+          </form>
+        )}
+      </AdminSectionCard>
+    ) : !activeCollection ? (
+      <AdminStateBox
+        body={`No saved schema with id "${activeSchemaId ?? "this route"}" was found.`}
+        title="Content schema not found"
+        tone="warning"
+      >
+        <Fragment slot="action">
+          <a class={contentIndexButtonClass} href={contentIndexHref}>All content</a>
+        </Fragment>
+      </AdminStateBox>
+    ) : isEditMode && !permissions.canViewRecords ? (
+      <AdminStateBox
+        body={`Your ${role.label} role cannot load saved content for editing.`}
+        title="Content editing is restricted"
+        tone="warning"
+      />
+    ) : !canSaveCurrentContent ? (
+      <AdminStateBox
+        body={`Your ${role.label} role cannot ${isEditMode ? "update" : "create"} content.`}
+        title="Content save is restricted"
+        tone="warning"
+      />
+    ) : isEditMode && isInitialRecordLoad ? (
+      <AdminStateBox body="Loading this content record." title="Loading content" />
+    ) : isEditMode && recordLoadError && records.length === 0 ? (
+      <AdminStateBox
+        body={recordLoadError}
+        title="Content is unavailable"
+        tone="error"
+      />
+    ) : isEditMode && !activeRouteRecord ? (
+      <AdminStateBox
+        body={`No saved content with record id "${recordId}" was found for ${activeCollection.definition.label}.`}
+        title="Content not found"
+        tone="warning"
+      >
+        <Fragment slot="action">
+          <a class={contentIndexButtonClass} href={contentIndexHref}>Back to content</a>
+        </Fragment>
+      </AdminStateBox>
+    ) : shouldRenderContentEditorForm ? (
+      <AdminSectionCard
+        description={`Field order matches the saved ${activeCollection.definition.label} schema.`}
+        title={editorCardTitle}
+      >
+        {!permissions.canViewRecords && permissions.canCreateRecords ? (
+          <div class="mb-4">
+            <AdminStateBox
+              body="This role can create content, but it cannot browse saved content."
+              compact
+              title="Content list is hidden for this role"
+              tone="warning"
+            />
+          </div>
+        ) : null}
+
+        <ContentEditorFormIsland
+          client:only="react"
+          collections={collections}
+          mediaAssets={mediaAssets}
+          mediaAssetsLoaded={mediaAssetsLoaded}
+          mediaLoadError={mediaLoadError}
+          mode={mode}
+          recordId={recordId ?? ""}
+          recordLoadError={recordLoadError}
+          recordSupportedFieldNames={recordSupportedFieldNames}
+          records={records}
+          recordsLoaded={recordsLoaded}
+          schemaId={schemaId ?? ""}
+          workspace={workspace}
+        />
+      </AdminSectionCard>
+    ) : null
   }
 </div>

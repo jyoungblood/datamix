@@ -115,6 +115,10 @@ const schemaBuilderBodySource = readFileSync(
   path.join(adminComponentsRoot, "SchemaBuilderRouteBody.astro"),
   "utf8",
 );
+const contentEditorBodySource = readFileSync(
+  path.join(adminComponentsRoot, "ContentEditorRouteBody.astro"),
+  "utf8",
+);
 const mediaLibraryBodySource = readFileSync(
   path.join(adminComponentsRoot, "MediaLibraryRouteBody.astro"),
   "utf8",
@@ -173,6 +177,37 @@ assert.doesNotMatch(
   schemaBuilderBodySource,
   /<SchemaBuilderRoute\b[\s\S]*client:only="react"|import \{ SchemaBuilderRoute \}/,
   "SchemaBuilderRouteBody should not hydrate the whole schema builder route body.",
+);
+
+assert.match(
+  contentEditorBodySource,
+  /<AdminPageHeader\s+title=\{pageTitle\}/,
+  "ContentEditorRouteBody should render the selected content page header in Astro.",
+);
+assert.match(
+  contentEditorBodySource,
+  /routeAccess\.isAllowed/,
+  "ContentEditorRouteBody should render route access states in Astro.",
+);
+assert.match(
+  contentEditorBodySource,
+  /collections\.find/,
+  "ContentEditorRouteBody should resolve the selected schema from server-loaded collections in Astro.",
+);
+assert.match(
+  contentEditorBodySource,
+  /Choose schema|Loading content schema|Content schema is unavailable|Content schema not found|Content editing is restricted|Content is unavailable|Content not found/,
+  "ContentEditorRouteBody should render content editor schema and record states in Astro.",
+);
+assert.match(
+  contentEditorBodySource,
+  /<ContentEditorFormIsland\b[\s\S]*client:only="react"/,
+  "ContentEditorRouteBody should keep only the targeted content editor form hydrated.",
+);
+assert.doesNotMatch(
+  contentEditorBodySource,
+  /<ContentEditorRoute\b[\s\S]*client:only="react"|import \{ ContentEditorRoute \}/,
+  "ContentEditorRouteBody should not hydrate the whole content editor route body.",
 );
 
 assert.match(

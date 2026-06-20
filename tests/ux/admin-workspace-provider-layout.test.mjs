@@ -29,6 +29,10 @@ const contentIndexRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/ContentIndexRouteBody.astro",
 );
+const contentEditorRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/ContentEditorRouteBody.astro",
+);
 const schemaBuilderRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/SchemaBuilderRouteBody.astro",
@@ -341,6 +345,10 @@ const schemaOverviewRouteBodySource = readFileSync(
   "utf8",
 );
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
+const contentEditorRouteBodySource = readFileSync(
+  contentEditorRouteBody,
+  "utf8",
+);
 const schemaBuilderRouteBodySource = readFileSync(
   schemaBuilderRouteBody,
   "utf8",
@@ -358,7 +366,6 @@ const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
 const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
 const settingsApiKeysSource = readFileSync(settingsApiKeysScreen, "utf8");
-const contentEditorSource = readFileSync(contentEditorSourcePath, "utf8");
 const contentIndexSource = readFileSync(contentIndexSourcePath, "utf8");
 const mediaLibrarySource = readFileSync(mediaLibrarySourcePath, "utf8");
 const schemaBuilderSource = readFileSync(schemaBuilderSourcePath, "utf8");
@@ -459,6 +466,39 @@ assert(
     !contentIndexRouteBodySource.includes("listCollectionRecords") &&
     !contentIndexRouteBodySource.includes("AdminTableSkeleton"),
   "The Astro-native content index body should render server-loaded records and keep only the command palette hydrated.",
+);
+
+assert(
+  contentEditorRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    contentEditorRouteBodySource.includes('client:only="react"') &&
+    contentEditorRouteBodySource.includes("ContentEditorFormIsland") &&
+    contentEditorRouteBodySource.includes("<AdminPageHeader title={pageTitle}") &&
+    contentEditorRouteBodySource.includes("!routeAccess.isAllowed") &&
+    contentEditorRouteBodySource.includes("collections.find") &&
+    contentEditorRouteBodySource.includes("collections.map") &&
+    contentEditorRouteBodySource.includes("Choose schema") &&
+    contentEditorRouteBodySource.includes("Loading content schema") &&
+    contentEditorRouteBodySource.includes("Content schema is unavailable") &&
+    contentEditorRouteBodySource.includes("Content schema not found") &&
+    contentEditorRouteBodySource.includes("Content editing is restricted") &&
+    contentEditorRouteBodySource.includes("Content save is restricted") &&
+    contentEditorRouteBodySource.includes("Content is unavailable") &&
+    contentEditorRouteBodySource.includes("Content not found") &&
+    !contentEditorRouteBodySource.includes("ContentEditorRoute"),
+  "The Astro-native content editor body should render server-loaded content states and hydrate only targeted form interactions.",
+);
+
+const contentEditorScreenSource = readFileSync(contentEditorSourcePath, "utf8");
+
+assert(
+  contentEditorScreenSource.includes("export function ContentEditorFormIsland") &&
+    !contentEditorScreenSource.includes("export function ContentEditorRoute") &&
+    !contentEditorScreenSource.includes("export function ContentEditorContent") &&
+    !contentEditorScreenSource.includes("AdminPageHeader") &&
+    !contentEditorScreenSource.includes("AdminSectionCard") &&
+    !contentEditorScreenSource.includes("useDelayedLoadingIndicator") &&
+    !contentEditorScreenSource.includes("AdminLoadingReserve"),
+  "The content editor client screen should expose only the targeted form island after the Astro body owns the static page.",
 );
 
 assert(
@@ -716,18 +756,16 @@ assert(
 );
 
 assert(
-  contentEditorSource.includes(
-    "permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError",
+  contentEditorRouteBodySource.includes(
+    "permissions.canViewCollections && !collectionsLoaded && !collectionLoadError",
   ) &&
-    contentEditorSource.includes("const isInitialRecordLoad =") &&
-    contentEditorSource.includes("!recordLoadError") &&
-    contentEditorSource.includes(
-      "(!isActiveRecordCollection || !hasLoadedRecords)",
-    ) &&
-    contentEditorSource.includes("shouldShowContentSchemaLoadingState") &&
-    contentEditorSource.includes("shouldShowContentRecordLoadingState") &&
-    !contentEditorSource.includes("Loading content record id"),
-  "Content editor should hide route-param placeholders and delay visible loading states until API loading is perceptible.",
+    contentEditorRouteBodySource.includes("const isInitialRecordLoad =") &&
+    contentEditorRouteBodySource.includes("!recordLoadError") &&
+    contentEditorRouteBodySource.includes("!recordsLoaded") &&
+    contentEditorRouteBodySource.includes("Loading content schema") &&
+    contentEditorRouteBodySource.includes("Loading content") &&
+    !contentEditorRouteBodySource.includes("Loading content record id"),
+  "Content editor should hide route-param placeholders and render server-resolved loading states in Astro.",
 );
 
 assert(

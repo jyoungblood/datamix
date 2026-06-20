@@ -18,6 +18,10 @@ const contentIndexResolverPath = path.join(
   "apps/web/src/server/routes/astro-admin-content-index-page.ts",
 );
 const contentEditorPath = path.join(adminRoot, "_screens/content-editor.tsx");
+const contentEditorRouteBodyPath = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/ContentEditorRouteBody.astro",
+);
 const schemaBuilderPath = path.join(adminRoot, "_screens/schema-builder.tsx");
 const collectionDefinitionsPath = path.join(
   repoRoot,
@@ -28,6 +32,7 @@ const adminRoutesSource = readFileSync(adminRoutesPath, "utf8");
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBodyPath, "utf8");
 const contentIndexResolverSource = readFileSync(contentIndexResolverPath, "utf8");
 const contentEditorSource = readFileSync(contentEditorPath, "utf8");
+const contentEditorRouteBodySource = readFileSync(contentEditorRouteBodyPath, "utf8");
 const schemaBuilderSource = readFileSync(schemaBuilderPath, "utf8");
 const collectionDefinitionsSource = readFileSync(collectionDefinitionsPath, "utf8");
 
@@ -86,6 +91,18 @@ assert.doesNotMatch(
   contentEditorSource,
   /definition\.name\)\.href[\s\S]{0,80}Back to content/,
   "The content editor back link should return to the all-content list, not an overview page.",
+);
+
+assert.match(
+  contentEditorRouteBodySource,
+  /name="schemaId"/,
+  "The Astro content editor body should keep /admin/content/new schema selection id-based.",
+);
+
+assert.match(
+  contentEditorRouteBodySource,
+  /adminRoutes\.content\.index\(\)\.href/,
+  "The Astro content editor body should keep missing-record actions pointed at the all-content list.",
 );
 
 assert.match(

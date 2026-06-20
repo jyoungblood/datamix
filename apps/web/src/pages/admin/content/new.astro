@@ -7,7 +7,11 @@ import { resolveContentEditorPage } from "@/server/routes/astro-admin-stateful-p
 import DatamixRootLayout from "../../../layouts/DatamixRootLayout.astro";
 
 const route = adminRoutes.content.newRecord();
-const page = await resolveContentEditorPage(Astro.request, route);
+const selectedSchemaId =
+  Astro.url.searchParams.get("schemaId")?.trim() || undefined;
+const page = await resolveContentEditorPage(Astro.request, route, {
+  schemaId: selectedSchemaId,
+});
 
 if (page.kind === "redirect") {
   return Astro.redirect(page.location);
@@ -31,6 +35,7 @@ if (page.kind === "redirect") {
           records={page.contentEditor.records}
           recordsLoaded={page.contentEditor.recordsLoaded}
           routeAccess={page.workspace.routeAccess}
+          schemaId={selectedSchemaId}
           workspace={page.workspace}
         />
       ) : null

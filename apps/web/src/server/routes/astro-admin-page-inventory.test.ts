@@ -128,6 +128,7 @@ const protectedAdminRoutes: ProtectedAdminRouteExpectation[] = [
       "records={page.contentEditor.records}",
       "recordsLoaded={page.contentEditor.recordsLoaded}",
       "routeAccess={page.workspace.routeAccess}",
+      "schemaId={selectedSchemaId}",
       "workspace={page.workspace}",
     ],
     resolver: "resolveContentEditorPage",
@@ -269,12 +270,27 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
   },
   {
     bodyFile: "ContentEditorRouteBody.astro",
+    forbiddenSignals: [/\bContentEditorRoute\b/, /\bContentEditorContent\b/],
     requiredSignals: [
+      /collectionsLoaded: boolean;/,
       /mediaAssetsLoaded: boolean;/,
       /recordsLoaded: boolean;/,
       /routeAccess: AdminWorkspaceRouteAccessState;/,
+      /const activeCollection =/,
+      /routeAccess\.isAllowed/,
+      /collections\.find/,
+      /collections\.map/,
+      /<AdminPageHeader\s+title=\{pageTitle\}/,
+      /Choose schema/,
+      /Loading content schema/,
+      /Content schema is unavailable/,
+      /Content schema not found/,
+      /Content editing is restricted/,
+      /Content save is restricted/,
+      /Content is unavailable/,
+      /Content not found/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
-      /<ContentEditorRoute\b[\s\S]*client:only="react"[\s\S]*routeAccess=\{routeAccess\}[\s\S]*workspace=\{workspace\}/,
+      /<ContentEditorFormIsland\b[\s\S]*client:only="react"[\s\S]*collections=\{collections\}[\s\S]*workspace=\{workspace\}/,
     ],
   },
   {
@@ -354,7 +370,7 @@ const statefulClientRoutes = [
     path: "apps/web/src/admin/_screens/schema-builder.tsx",
   },
   {
-    exportName: "ContentEditorRoute",
+    exportName: "ContentEditorFormIsland",
     path: "apps/web/src/admin/_screens/content-editor.tsx",
   },
   {
@@ -601,6 +617,7 @@ test("retained client screens are route-body islands without provider fallbacks"
       const source = await readFile(path.resolve(screenPath), "utf8");
 
       if (
+        exportName !== "ContentEditorFormIsland" &&
         exportName !== "MediaLibraryInteractionsIsland" &&
         exportName !== "SchemaBuilderFormIsland" &&
         exportName !== "SchemaBuilderSaveButtonIsland"
@@ -649,6 +666,22 @@ test("retained client screens are route-body islands without provider fallbacks"
     schemaBuilderSource,
     /export function SchemaBuilderRoute\b|export function SchemaBuilderContent\b|AdminPageHeader|useDelayedLoadingIndicator|AdminLoadingReserve/,
     "schema-builder.tsx should not keep the deleted whole-route schema builder body",
+  );
+
+  const contentEditorSource = await readFile(
+    path.resolve("apps/web/src/admin/_screens/content-editor.tsx"),
+    "utf8",
+  );
+
+  assert.match(
+    contentEditorSource,
+    /export function ContentEditorFormIsland/,
+    "content-editor.tsx should export the targeted content editor form island",
+  );
+  assert.doesNotMatch(
+    contentEditorSource,
+    /export function ContentEditorRoute\b|export function ContentEditorContent\b|AdminPageHeader|AdminSectionCard|useDelayedLoadingIndicator|AdminLoadingReserve/,
+    "content-editor.tsx should not keep the deleted whole-route content editor body",
   );
 
   const teamAndRolesSource = await readFile(
