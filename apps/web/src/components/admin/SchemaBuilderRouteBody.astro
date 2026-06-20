@@ -1,9 +1,17 @@
 ---
-import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
+import {
+  SchemaBuilderFormIsland,
+  SchemaBuilderSaveButtonIsland,
+} from "@/admin/_screens/schema-builder";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { buttonVariants } from "@/components/ui/button";
 import type { StoredCollectionDefinition } from "@/server/collections";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminStateBox from "./AdminStateBox.astro";
 
 type Props = {
   collectionLoadError: string | null;
@@ -24,34 +32,110 @@ const {
   schemaId,
   workspace,
 } = Astro.props;
+
+const { permissions } = workspace;
+const isEditingExistingSchema = mode === "edit";
+const schemaIndexHref = adminRoutes.schema.index().href;
+const schemaIndexButtonClass = buttonVariants({ variant: "outline" });
+
+function decodeSchemaId(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
+const activeCollection =
+  isEditingExistingSchema && decodedSchemaId !== null
+    ? collections.find((collection) => collection.id === decodedSchemaId) ?? null
+    : null;
+const canSaveCurrentSchema = isEditingExistingSchema
+  ? permissions.canUpdateCollections
+  : permissions.canCreateCollections;
+const shouldBlockSchemaUntilLoaded =
+  isEditingExistingSchema &&
+  permissions.canViewCollections && !collectionsLoaded && !collectionLoadError;
+const pageTitle =
+  mode === "create"
+    ? "New schema"
+    : shouldBlockSchemaUntilLoaded
+      ? "Schema"
+      : activeCollection
+        ? `${activeCollection.definition.label} schema`
+        : "Schema";
+const shouldRenderSchemaBuilderForm =
+  routeAccess.isAllowed &&
+  (!isEditingExistingSchema ||
+    (permissions.canViewCollections &&
+      !shouldBlockSchemaUntilLoaded &&
+      !(collectionLoadError && collections.length === 0) &&
+      !(collectionsLoaded && activeCollection === null)));
 ---
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
   <div class="flex justify-end">
     <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
   </div>
+
+  <AdminPageHeader title={pageTitle}>
+    <Fragment slot="action">
+      <div class="flex flex-wrap gap-2">
+        <a class={schemaIndexButtonClass} href={schemaIndexHref}>All schemas</a>
+        <SchemaBuilderSaveButtonIsland
+          client:only="react"
+          canSave={canSaveCurrentSchema}
+          mode={mode}
+        />
+      </div>
+    </Fragment>
+  </AdminPageHeader>
+
   {
-    mode === "edit" ? (
-      <SchemaBuilderRoute
+    !routeAccess.isAllowed ? (
+      <AdminStateBox body={routeAccess.body} title={routeAccess.title} tone="warning" />
+    ) : isEditingExistingSchema && !permissions.canViewCollections ? (
+      <AdminStateBox
+        body="Your current role cannot browse saved schemas, so Datamix cannot load this schema for editing."
+        title="Schema editing is restricted"
+        tone="warning"
+      />
+    ) : shouldBlockSchemaUntilLoaded ? (
+      <AdminStateBox
+        body="Loading saved schema details before opening the builder."
+        title="Loading schema"
+      />
+    ) : isEditingExistingSchema &&
+      collectionLoadError &&
+      collections.length === 0 ? (
+      <AdminStateBox
+        body={collectionLoadError}
+        title="Schema is unavailable"
+        tone="error"
+      />
+    ) : isEditingExistingSchema &&
+      collectionsLoaded &&
+      activeCollection === null ? (
+      <AdminStateBox
+        body={`Datamix could not find a saved schema with id ${decodedSchemaId ?? "this route"}.`}
+        title="Schema not found"
+        tone="warning"
+      >
+        <Fragment slot="action">
+          <a class={schemaIndexButtonClass} href={schemaIndexHref}>Back to schemas</a>
+        </Fragment>
+      </AdminStateBox>
+    ) : shouldRenderSchemaBuilderForm ? (
+      <SchemaBuilderFormIsland
         client:only="react"
         collectionLoadError={collectionLoadError}
         collections={collections}
         collectionsLoaded={collectionsLoaded}
-        mode="edit"
-        routeAccess={routeAccess}
+        mode={mode}
         schemaId={schemaId ?? ""}
         workspace={workspace}
       />
-    ) : (
-      <SchemaBuilderRoute
-        client:only="react"
-        collectionLoadError={collectionLoadError}
-        collections={collections}
-        collectionsLoaded={collectionsLoaded}
-        mode="create"
-        routeAccess={routeAccess}
-        workspace={workspace}
-      />
-    )
+    ) : null
   }
 </div>

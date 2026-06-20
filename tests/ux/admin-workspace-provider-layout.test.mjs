@@ -2,12 +2,21 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const buttonComponent = path.join(repoRoot, "apps/web/src/components/ui/button.tsx");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+const buttonComponent = path.join(
+  repoRoot,
+  "apps/web/src/components/ui/button.tsx",
+);
 const globalStyles = path.join(repoRoot, "apps/web/src/styles/globals.css");
 const adminRoot = path.join(repoRoot, "apps/web/src/admin");
 const adminPagesRoot = path.join(repoRoot, "apps/web/src/pages/admin");
-const adminShell = path.join(repoRoot, "apps/web/src/components/admin/AdminWorkspaceShell.astro");
+const adminShell = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/AdminWorkspaceShell.astro",
+);
 const accountRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/AccountRouteBody.astro",
@@ -19,6 +28,10 @@ const schemaOverviewRouteBody = path.join(
 const contentIndexRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/ContentIndexRouteBody.astro",
+);
+const schemaBuilderRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/SchemaBuilderRouteBody.astro",
 );
 const mediaLibraryRouteBody = path.join(
   repoRoot,
@@ -97,7 +110,11 @@ const protectedWorkspacePages = [
   ],
   ["media.astro", "MediaLibraryRouteBody", "resolveMediaLibraryPage"],
   ["schema/new.astro", "SchemaBuilderRouteBody", "resolveSchemaBuilderPage"],
-  ["schema/[schemaId].astro", "SchemaBuilderRouteBody", "resolveSchemaBuilderPage"],
+  [
+    "schema/[schemaId].astro",
+    "SchemaBuilderRouteBody",
+    "resolveSchemaBuilderPage",
+  ],
   ["settings.astro", "SettingsRouteBody", "resolveSettingsPage"],
   ["team.astro", "TeamRouteBody", "resolveTeamPage"],
 ];
@@ -144,7 +161,9 @@ assert(
 
 assert(
   !existsSync(path.join(adminRoot, "_workspace/admin-workspace-page.tsx")) &&
-    !existsSync(path.join(adminRoot, "_workspace/admin-workspace-provider.tsx")) &&
+    !existsSync(
+      path.join(adminRoot, "_workspace/admin-workspace-provider.tsx"),
+    ) &&
     !existsSync(path.join(adminRoot, "_workspace/admin-workspace-hooks.ts")),
   "Protected admin route islands should not depend on the old workspace provider wrapper or context hooks.",
 );
@@ -230,11 +249,15 @@ assert(
   schemaOverviewPageSource.includes("AdminWorkspaceShell") &&
     schemaOverviewPageSource.includes("SchemaOverviewRouteBody") &&
     schemaOverviewPageSource.includes("resolveSchemaOverviewPage") &&
-    schemaOverviewPageSource.includes("collections={page.schemaOverview.collections}") &&
+    schemaOverviewPageSource.includes(
+      "collections={page.schemaOverview.collections}",
+    ) &&
     schemaOverviewPageSource.includes(
       "collectionLoadError={page.schemaOverview.collectionLoadError}",
     ) &&
-    schemaOverviewPageSource.includes("routeAccess={page.workspace.routeAccess}") &&
+    schemaOverviewPageSource.includes(
+      "routeAccess={page.workspace.routeAccess}",
+    ) &&
     schemaOverviewPageSource.includes("workspace={page.workspace}"),
   "schema/index.astro should render the Astro-native schema overview body with server-loaded collection data.",
 );
@@ -252,12 +275,18 @@ assert(
     contentIndexPageSource.includes(
       "collectionLoadError={page.contentIndex.collectionLoadError}",
     ) &&
-    contentIndexPageSource.includes("collections={page.contentIndex.collections}") &&
+    contentIndexPageSource.includes(
+      "collections={page.contentIndex.collections}",
+    ) &&
     contentIndexPageSource.includes(
       "recordLoadError={page.contentIndex.recordLoadError}",
     ) &&
-    contentIndexPageSource.includes("recordRows={page.contentIndex.recordRows}") &&
-    contentIndexPageSource.includes("routeAccess={page.workspace.routeAccess}") &&
+    contentIndexPageSource.includes(
+      "recordRows={page.contentIndex.recordRows}",
+    ) &&
+    contentIndexPageSource.includes(
+      "routeAccess={page.workspace.routeAccess}",
+    ) &&
     contentIndexPageSource.includes("workspace={page.workspace}"),
   "content/index.astro should render the Astro-native content index body with server-loaded collection and record data.",
 );
@@ -289,27 +318,41 @@ for (const pagePath of standaloneAuthPages) {
 }
 
 for (const screenFile of screenFiles) {
-  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
+  const source = readFileSync(
+    path.join(adminRoot, "_screens", screenFile),
+    "utf8",
+  );
 
   assert(
     !source.includes("AdminWorkspaceProvider"),
     `${screenFile} should not mount or import the old workspace provider.`,
   );
   assert(
-    !source.includes("AdminWorkspaceRouteFrame") && !source.includes("AdminFrame"),
+    !source.includes("AdminWorkspaceRouteFrame") &&
+      !source.includes("AdminFrame"),
     `${screenFile} should not render the workspace shell from React.`,
   );
 }
 
 const shellSource = readFileSync(adminShell, "utf8");
 const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
-const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf8");
+const schemaOverviewRouteBodySource = readFileSync(
+  schemaOverviewRouteBody,
+  "utf8",
+);
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
+const schemaBuilderRouteBodySource = readFileSync(
+  schemaBuilderRouteBody,
+  "utf8",
+);
 const mediaLibraryRouteBodySource = readFileSync(mediaLibraryRouteBody, "utf8");
 const teamRouteBodySource = readFileSync(teamRouteBody, "utf8");
 const settingsRouteBodySource = readFileSync(settingsRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
-const adminDashboardRouteBodySource = readFileSync(adminDashboardRouteBody, "utf8");
+const adminDashboardRouteBodySource = readFileSync(
+  adminDashboardRouteBody,
+  "utf8",
+);
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
 const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
@@ -375,7 +418,10 @@ assert(
   "The admin dashboard should not render a manual Refresh overview action or keep its local refresh handler.",
 );
 
-assert(existsSync(adminSkeleton), "Admin screens should share skeleton primitives.");
+assert(
+  existsSync(adminSkeleton),
+  "Admin screens should share skeleton primitives.",
+);
 
 const adminSkeletonSource = readFileSync(adminSkeleton, "utf8");
 
@@ -416,6 +462,43 @@ assert(
 );
 
 assert(
+  schemaBuilderRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    schemaBuilderRouteBodySource.includes('client:only="react"') &&
+    schemaBuilderRouteBodySource.includes("SchemaBuilderFormIsland") &&
+    schemaBuilderRouteBodySource.includes("SchemaBuilderSaveButtonIsland") &&
+    schemaBuilderRouteBodySource.includes(
+      "<AdminPageHeader title={pageTitle}",
+    ) &&
+    schemaBuilderRouteBodySource.includes("!routeAccess.isAllowed") &&
+    schemaBuilderRouteBodySource.includes("collections.find") &&
+    schemaBuilderRouteBodySource.includes("Schema editing is restricted") &&
+    schemaBuilderRouteBodySource.includes("Loading schema") &&
+    schemaBuilderRouteBodySource.includes("Schema is unavailable") &&
+    schemaBuilderRouteBodySource.includes("Schema not found") &&
+    !schemaBuilderRouteBodySource.includes("SchemaBuilderRoute"),
+  "The Astro-native schema builder body should render server-loaded schema states and hydrate only targeted schema interactions.",
+);
+
+const schemaBuilderScreenSource = readFileSync(schemaBuilderSourcePath, "utf8");
+
+assert(
+  schemaBuilderScreenSource.includes(
+    "export function SchemaBuilderFormIsland",
+  ) &&
+    schemaBuilderScreenSource.includes(
+      "export function SchemaBuilderSaveButtonIsland",
+    ) &&
+    !schemaBuilderScreenSource.includes("export function SchemaBuilderRoute") &&
+    !schemaBuilderScreenSource.includes(
+      "export function SchemaBuilderContent",
+    ) &&
+    !schemaBuilderScreenSource.includes("AdminPageHeader") &&
+    !schemaBuilderScreenSource.includes("useDelayedLoadingIndicator") &&
+    !schemaBuilderScreenSource.includes("AdminLoadingReserve"),
+  "The schema builder client screen should expose only targeted interaction islands after the Astro body owns the static page.",
+);
+
+assert(
   mediaLibraryRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
     mediaLibraryRouteBodySource.includes('client:only="react"') &&
     mediaLibraryRouteBodySource.includes("MediaLibraryInteractionsIsland") &&
@@ -431,7 +514,9 @@ assert(
 const mediaLibraryScreenSource = readFileSync(mediaLibrarySourcePath, "utf8");
 
 assert(
-  mediaLibraryScreenSource.includes("export function MediaLibraryInteractionsIsland") &&
+  mediaLibraryScreenSource.includes(
+    "export function MediaLibraryInteractionsIsland",
+  ) &&
     !mediaLibraryScreenSource.includes("export function MediaLibraryRoute") &&
     !mediaLibraryScreenSource.includes("export function MediaLibraryContent") &&
     !mediaLibraryScreenSource.includes("AdminPageHeader"),
@@ -455,7 +540,9 @@ assert(
 const teamAndRolesScreenSource = readFileSync(teamAndRolesSourcePath, "utf8");
 
 assert(
-  teamAndRolesScreenSource.includes("export function TeamAndRolesInteractionsIsland") &&
+  teamAndRolesScreenSource.includes(
+    "export function TeamAndRolesInteractionsIsland",
+  ) &&
     !teamAndRolesScreenSource.includes("export function TeamAndRolesRoute") &&
     !teamAndRolesScreenSource.includes("export function TeamAndRolesContent") &&
     !teamAndRolesScreenSource.includes("AdminPageHeader") &&
@@ -467,7 +554,7 @@ assert(
   settingsRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
     settingsRouteBodySource.includes('client:only="react"') &&
     settingsRouteBodySource.includes("SettingsInteractionsIsland") &&
-    settingsRouteBodySource.includes("<AdminPageHeader title=\"Settings\"") &&
+    settingsRouteBodySource.includes('<AdminPageHeader title="Settings"') &&
     settingsRouteBodySource.includes("Settings are restricted") &&
     settingsRouteBodySource.includes("Optional OAuth sign-in") &&
     settingsRouteBodySource.includes("Public API keys") &&
@@ -483,16 +570,25 @@ assert(
 const settingsApiKeysScreenSource = readFileSync(settingsApiKeysScreen, "utf8");
 
 assert(
-  settingsApiKeysScreenSource.includes("export function SettingsInteractionsIsland") &&
-    !settingsApiKeysScreenSource.includes("export function SettingsApiKeysRoute") &&
-    !settingsApiKeysScreenSource.includes("export function SettingsApiKeysContent") &&
+  settingsApiKeysScreenSource.includes(
+    "export function SettingsInteractionsIsland",
+  ) &&
+    !settingsApiKeysScreenSource.includes(
+      "export function SettingsApiKeysRoute",
+    ) &&
+    !settingsApiKeysScreenSource.includes(
+      "export function SettingsApiKeysContent",
+    ) &&
     !settingsApiKeysScreenSource.includes("AdminPageHeader") &&
     !settingsApiKeysScreenSource.includes("AdminSectionCard"),
   "The settings client screen should expose only the targeted interaction island after the Astro body owns the static page.",
 );
 
 for (const screenFile of manualRefreshFreeScreens) {
-  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
+  const source = readFileSync(
+    path.join(adminRoot, "_screens", screenFile),
+    "utf8",
+  );
 
   assert(
     !source.includes("RefreshCcw") &&
@@ -511,8 +607,8 @@ for (const screenFile of manualRefreshFreeScreens) {
 assert(
   !adminCommandPaletteSource.includes("refreshCurrentRoute") &&
     !adminCommandPaletteSource.includes("Refresh ") &&
-    !adminCommandPaletteSource.includes("group: \"refresh\"") &&
-    !adminCommandPaletteSource.includes("keywords: [\"refresh\"") &&
+    !adminCommandPaletteSource.includes('group: "refresh"') &&
+    !adminCommandPaletteSource.includes('keywords: ["refresh"') &&
     !commandPaletteDialogSource.includes('"refresh"') &&
     !commandPaletteDialogSource.includes("Refresh"),
   "The command palette should not include refresh commands or a refresh command group.",
@@ -575,7 +671,10 @@ assert(
 );
 
 for (const screenFile of screenFiles) {
-  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
+  const source = readFileSync(
+    path.join(adminRoot, "_screens", screenFile),
+    "utf8",
+  );
 
   assert(
     !/mx-auto\s+flex\s+max-w-(?:5xl|6xl)/.test(source),
@@ -598,13 +697,17 @@ assert(
 assert(
   !settingsApiKeysSource.includes('"Refresh API keys"') &&
     settingsRouteBodySource.includes('title="Public API keys"') &&
-    !settingsApiKeysSource.includes('{isLoadingApiKeys ? "Refreshing" : "Refresh"}'),
+    !settingsApiKeysSource.includes(
+      '{isLoadingApiKeys ? "Refreshing" : "Refresh"}',
+    ),
   "Settings should not render manual refresh buttons for Public API keys.",
 );
 
 assert(
   contentIndexSource.includes("recordRows.map") &&
-    contentIndexSource.includes("collectionLoadError && collections.length === 0") &&
+    contentIndexSource.includes(
+      "collectionLoadError && collections.length === 0",
+    ) &&
     contentIndexSource.includes("recordLoadError && recordRows.length === 0") &&
     contentIndexSource.includes("Content list may be out of date") &&
     !contentIndexSource.includes("useDelayedLoadingIndicator") &&
@@ -618,7 +721,9 @@ assert(
   ) &&
     contentEditorSource.includes("const isInitialRecordLoad =") &&
     contentEditorSource.includes("!recordLoadError") &&
-    contentEditorSource.includes("(!isActiveRecordCollection || !hasLoadedRecords)") &&
+    contentEditorSource.includes(
+      "(!isActiveRecordCollection || !hasLoadedRecords)",
+    ) &&
     contentEditorSource.includes("shouldShowContentSchemaLoadingState") &&
     contentEditorSource.includes("shouldShowContentRecordLoadingState") &&
     !contentEditorSource.includes("Loading content record id"),
@@ -626,14 +731,13 @@ assert(
 );
 
 assert(
-  schemaBuilderSource.includes(
-    "permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError",
+  schemaBuilderRouteBodySource.includes(
+    "permissions.canViewCollections && !collectionsLoaded && !collectionLoadError",
   ) &&
-    schemaBuilderSource.includes("shouldBlockSchemaUntilLoaded") &&
-    schemaBuilderSource.includes("shouldShowSchemaLoadingState") &&
-    schemaBuilderSource.includes("AdminLoadingReserve") &&
-    !schemaBuilderSource.includes("`${decodedSchemaId} schema`") &&
-    !schemaBuilderSource.includes(
+    schemaBuilderRouteBodySource.includes("shouldBlockSchemaUntilLoaded") &&
+    schemaBuilderRouteBodySource.includes("Loading schema") &&
+    !schemaBuilderRouteBodySource.includes("`${decodedSchemaId} schema`") &&
+    !schemaBuilderRouteBodySource.includes(
       "const isInitialCollectionLoad = isLoadingCollections && !hasLoadedCollections;",
     ),
   "Schema builder edit routes should not show the route id as the page title before schema data loads.",

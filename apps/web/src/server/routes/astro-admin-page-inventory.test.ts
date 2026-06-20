@@ -22,7 +22,10 @@ const pagesAdminDirectory = path.resolve("apps/web/src/pages/admin");
 const adminDirectory = path.resolve("apps/web/src/admin");
 const adminComponentsDirectory = path.resolve("apps/web/src/components/admin");
 const serverRoutesDirectory = path.resolve("apps/web/src/server/routes");
-const workspaceResolverPath = path.join(serverRoutesDirectory, "astro-workspace-page.ts");
+const workspaceResolverPath = path.join(
+  serverRoutesDirectory,
+  "astro-workspace-page.ts",
+);
 const schemaOverviewResolverPath = path.join(
   serverRoutesDirectory,
   "astro-admin-schema-overview-page.ts",
@@ -89,7 +92,7 @@ const protectedAdminRoutes: ProtectedAdminRouteExpectation[] = [
       "collections={page.schemaBuilder.collections}",
       "collectionsLoaded={page.schemaBuilder.collectionsLoaded}",
       'mode="edit"',
-      "schemaId={schemaId ?? \"\"}",
+      'schemaId={schemaId ?? ""}',
       "routeAccess={page.workspace.routeAccess}",
       "workspace={page.workspace}",
     ],
@@ -141,12 +144,12 @@ const protectedAdminRoutes: ProtectedAdminRouteExpectation[] = [
       "mediaAssetsLoaded={page.contentEditor.mediaAssetsLoaded}",
       "mediaLoadError={page.contentEditor.mediaLoadError}",
       'mode="edit"',
-      "recordId={recordId ?? \"\"}",
+      'recordId={recordId ?? ""}',
       "recordLoadError={page.contentEditor.recordLoadError}",
       "records={page.contentEditor.records}",
       "recordsLoaded={page.contentEditor.recordsLoaded}",
       "routeAccess={page.workspace.routeAccess}",
-      "schemaId={schemaId ?? \"\"}",
+      'schemaId={schemaId ?? ""}',
       "workspace={page.workspace}",
     ],
     resolver: "resolveContentEditorPage",
@@ -247,11 +250,21 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
   },
   {
     bodyFile: "SchemaBuilderRouteBody.astro",
+    forbiddenSignals: [/\bSchemaBuilderRoute\b/, /\bSchemaBuilderContent\b/],
     requiredSignals: [
       /collectionsLoaded: boolean;/,
       /routeAccess: AdminWorkspaceRouteAccessState;/,
+      /const activeCollection =/,
+      /routeAccess\.isAllowed/,
+      /collections\.find/,
+      /<AdminPageHeader\s+title=\{pageTitle\}/,
+      /Schema editing is restricted/,
+      /Loading schema/,
+      /Schema is unavailable/,
+      /Schema not found/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
-      /<SchemaBuilderRoute\b[\s\S]*client:only="react"[\s\S]*routeAccess=\{routeAccess\}[\s\S]*workspace=\{workspace\}/,
+      /<SchemaBuilderSaveButtonIsland\b[\s\S]*client:only="react"[\s\S]*canSave=\{canSaveCurrentSchema\}[\s\S]*mode=\{mode\}/,
+      /<SchemaBuilderFormIsland\b[\s\S]*client:only="react"[\s\S]*collections=\{collections\}[\s\S]*workspace=\{workspace\}/,
     ],
   },
   {
@@ -295,7 +308,10 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
   },
   {
     bodyFile: "SettingsRouteBody.astro",
-    forbiddenSignals: [/\bSettingsApiKeysRoute\b/, /\bSettingsApiKeysContent\b/],
+    forbiddenSignals: [
+      /\bSettingsApiKeysRoute\b/,
+      /\bSettingsApiKeysContent\b/,
+    ],
     requiredSignals: [
       /apiKeysLoaded: boolean;/,
       /rolesLoaded: boolean;/,
@@ -330,7 +346,11 @@ const clientScreenPaths = [
 
 const statefulClientRoutes = [
   {
-    exportName: "SchemaBuilderRoute",
+    exportName: "SchemaBuilderFormIsland",
+    path: "apps/web/src/admin/_screens/schema-builder.tsx",
+  },
+  {
+    exportName: "SchemaBuilderSaveButtonIsland",
     path: "apps/web/src/admin/_screens/schema-builder.tsx",
   },
   {
@@ -365,7 +385,10 @@ async function collectSourceFiles(directory: string): Promise<string[]> {
         return collectSourceFiles(entryPath);
       }
 
-      if (!/\.(?:astro|ts|tsx)$/.test(entry.name) || /\.test\./.test(entry.name)) {
+      if (
+        !/\.(?:astro|ts|tsx)$/.test(entry.name) ||
+        /\.test\./.test(entry.name)
+      ) {
         return [];
       }
 
@@ -382,50 +405,60 @@ function assertSourceIncludes(source: string, signal: string, message: string) {
 
 test("protected admin pages render Astro route bodies from server-resolved data", async () => {
   await Promise.all(
-    protectedAdminRoutes.map(async ({ body, bodyFile, pageSignals, resolver, route }) => {
-      const pageSource = await readFile(path.join(pagesAdminDirectory, route), "utf8");
-      const bodyPath = path.join(adminComponentsDirectory, bodyFile);
-
-      assert.ok(existsSync(bodyPath), `${bodyFile} should exist for ${route}`);
-      assert.match(
-        pageSource,
-        new RegExp(`import ${body} from "@\\/components\\/admin\\/${bodyFile}"`),
-        `${route} should import ${body}`,
-      );
-      assert.match(
-        pageSource,
-        /AdminWorkspaceShell/,
-        `${route} should render the Astro workspace shell`,
-      );
-      assert.match(
-        pageSource,
-        /DatamixRootLayout/,
-        `${route} should use the shared Astro root layout`,
-      );
-      assert.match(
-        pageSource,
-        new RegExp(`${resolver}\\(Astro\\.request`),
-        `${route} should resolve its page data in Astro frontmatter`,
-      );
-      assert.match(
-        pageSource,
-        new RegExp(`<${body}\\b`),
-        `${route} should render ${body}`,
-      );
-      assert.doesNotMatch(
-        pageSource,
-        new RegExp(`${reactClientDirective}|@/admin/islands|Island\\b`),
-        `${route} should not mount a whole-route retained React island`,
-      );
-
-      for (const signal of pageSignals) {
-        assertSourceIncludes(
-          pageSource,
-          signal,
-          `${route} should pass ${signal} into ${body}`,
+    protectedAdminRoutes.map(
+      async ({ body, bodyFile, pageSignals, resolver, route }) => {
+        const pageSource = await readFile(
+          path.join(pagesAdminDirectory, route),
+          "utf8",
         );
-      }
-    }),
+        const bodyPath = path.join(adminComponentsDirectory, bodyFile);
+
+        assert.ok(
+          existsSync(bodyPath),
+          `${bodyFile} should exist for ${route}`,
+        );
+        assert.match(
+          pageSource,
+          new RegExp(
+            `import ${body} from "@\\/components\\/admin\\/${bodyFile}"`,
+          ),
+          `${route} should import ${body}`,
+        );
+        assert.match(
+          pageSource,
+          /AdminWorkspaceShell/,
+          `${route} should render the Astro workspace shell`,
+        );
+        assert.match(
+          pageSource,
+          /DatamixRootLayout/,
+          `${route} should use the shared Astro root layout`,
+        );
+        assert.match(
+          pageSource,
+          new RegExp(`${resolver}\\(Astro\\.request`),
+          `${route} should resolve its page data in Astro frontmatter`,
+        );
+        assert.match(
+          pageSource,
+          new RegExp(`<${body}\\b`),
+          `${route} should render ${body}`,
+        );
+        assert.doesNotMatch(
+          pageSource,
+          new RegExp(`${reactClientDirective}|@/admin/islands|Island\\b`),
+          `${route} should not mount a whole-route retained React island`,
+        );
+
+        for (const signal of pageSignals) {
+          assertSourceIncludes(
+            pageSource,
+            signal,
+            `${route} should pass ${signal} into ${body}`,
+          );
+        }
+      },
+    ),
   );
 });
 
@@ -461,17 +494,26 @@ test("protected admin route inventory covers every Astro workspace page exactly 
 
 test("Astro route bodies own all retained client hydration points", async () => {
   await Promise.all(
-    routeBodyExpectations.map(async ({ bodyFile, forbiddenSignals, requiredSignals }) => {
-      const source = await readFile(path.join(adminComponentsDirectory, bodyFile), "utf8");
+    routeBodyExpectations.map(
+      async ({ bodyFile, forbiddenSignals, requiredSignals }) => {
+        const source = await readFile(
+          path.join(adminComponentsDirectory, bodyFile),
+          "utf8",
+        );
 
-      for (const signal of requiredSignals) {
-        assert.match(source, signal, `${bodyFile} should match ${signal}`);
-      }
+        for (const signal of requiredSignals) {
+          assert.match(source, signal, `${bodyFile} should match ${signal}`);
+        }
 
-      for (const signal of forbiddenSignals ?? []) {
-        assert.doesNotMatch(source, signal, `${bodyFile} should not match ${signal}`);
-      }
-    }),
+        for (const signal of forbiddenSignals ?? []) {
+          assert.doesNotMatch(
+            source,
+            signal,
+            `${bodyFile} should not match ${signal}`,
+          );
+        }
+      },
+    ),
   );
 });
 
@@ -558,7 +600,11 @@ test("retained client screens are route-body islands without provider fallbacks"
     statefulClientRoutes.map(async ({ exportName, path: screenPath }) => {
       const source = await readFile(path.resolve(screenPath), "utf8");
 
-      if (exportName !== "MediaLibraryInteractionsIsland") {
+      if (
+        exportName !== "MediaLibraryInteractionsIsland" &&
+        exportName !== "SchemaBuilderFormIsland" &&
+        exportName !== "SchemaBuilderSaveButtonIsland"
+      ) {
         assert.match(
           source,
           /routeAccess: AdminWorkspaceRouteAccessState/,
@@ -582,6 +628,27 @@ test("retained client screens are route-body islands without provider fallbacks"
     mediaLibrarySource,
     /export function MediaLibraryRoute\b|export function MediaLibraryContent\b|AdminPageHeader/,
     "media-library.tsx should not keep the deleted whole-route media body",
+  );
+
+  const schemaBuilderSource = await readFile(
+    path.resolve("apps/web/src/admin/_screens/schema-builder.tsx"),
+    "utf8",
+  );
+
+  assert.match(
+    schemaBuilderSource,
+    /export function SchemaBuilderFormIsland/,
+    "schema-builder.tsx should export the targeted schema form island",
+  );
+  assert.match(
+    schemaBuilderSource,
+    /export function SchemaBuilderSaveButtonIsland/,
+    "schema-builder.tsx should export the targeted schema save button island",
+  );
+  assert.doesNotMatch(
+    schemaBuilderSource,
+    /export function SchemaBuilderRoute\b|export function SchemaBuilderContent\b|AdminPageHeader|useDelayedLoadingIndicator|AdminLoadingReserve/,
+    "schema-builder.tsx should not keep the deleted whole-route schema builder body",
   );
 
   const teamAndRolesSource = await readFile(
@@ -630,7 +697,10 @@ test("retained client screens are route-body islands without provider fallbacks"
 
 test("workspace and route-specific resolvers keep protected routes server-first", async () => {
   const workspaceResolver = await readFile(workspaceResolverPath, "utf8");
-  const schemaOverviewResolver = await readFile(schemaOverviewResolverPath, "utf8");
+  const schemaOverviewResolver = await readFile(
+    schemaOverviewResolverPath,
+    "utf8",
+  );
   const contentIndexResolver = await readFile(contentIndexResolverPath, "utf8");
   const statefulResolver = await readFile(statefulResolverPath, "utf8");
 

@@ -3,9 +3,15 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
 const adminPagesRoot = path.join(repoRoot, "apps/web/src/pages/admin");
-const adminComponentsRoot = path.join(repoRoot, "apps/web/src/components/admin");
+const adminComponentsRoot = path.join(
+  repoRoot,
+  "apps/web/src/components/admin",
+);
 
 const astroNativeRoutes = [
   {
@@ -67,7 +73,10 @@ const astroNativeRoutes = [
 ];
 
 for (const route of astroNativeRoutes) {
-  const pageSource = readFileSync(path.join(adminPagesRoot, route.page), "utf8");
+  const pageSource = readFileSync(
+    path.join(adminPagesRoot, route.page),
+    "utf8",
+  );
   const bodyPath = path.join(adminComponentsRoot, route.bodyFile);
 
   assert.ok(
@@ -76,7 +85,9 @@ for (const route of astroNativeRoutes) {
   );
   assert.match(
     pageSource,
-    new RegExp(`import ${route.body} from "@\\/components\\/admin\\/${route.bodyFile}"`),
+    new RegExp(
+      `import ${route.body} from "@\\/components\\/admin\\/${route.bodyFile}"`,
+    ),
     `${route.page} should import ${route.body}.`,
   );
   assert.match(
@@ -98,6 +109,10 @@ for (const route of astroNativeRoutes) {
 
 const dashboardBodySource = readFileSync(
   path.join(adminComponentsRoot, "AdminDashboardRouteBody.astro"),
+  "utf8",
+);
+const schemaBuilderBodySource = readFileSync(
+  path.join(adminComponentsRoot, "SchemaBuilderRouteBody.astro"),
   "utf8",
 );
 const mediaLibraryBodySource = readFileSync(
@@ -122,6 +137,42 @@ assert.doesNotMatch(
   dashboardBodySource,
   /useAdminDashboardData|AdminHomeRoute/,
   "AdminDashboardRouteBody should not keep the old client dashboard data route.",
+);
+
+assert.match(
+  schemaBuilderBodySource,
+  /<AdminPageHeader\s+title=\{pageTitle\}/,
+  "SchemaBuilderRouteBody should render the selected schema page header in Astro.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /routeAccess\.isAllowed/,
+  "SchemaBuilderRouteBody should render route access states in Astro.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /collections\.find/,
+  "SchemaBuilderRouteBody should resolve the selected schema from server-loaded collections in Astro.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /Schema editing is restricted|Loading schema|Schema is unavailable|Schema not found/,
+  "SchemaBuilderRouteBody should render schema builder load and missing states in Astro.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /<SchemaBuilderFormIsland\b[\s\S]*client:only="react"/,
+  "SchemaBuilderRouteBody should keep only the targeted schema form hydrated.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /<SchemaBuilderSaveButtonIsland\b[\s\S]*client:only="react"/,
+  "SchemaBuilderRouteBody should hydrate only the targeted schema save control in the header.",
+);
+assert.doesNotMatch(
+  schemaBuilderBodySource,
+  /<SchemaBuilderRoute\b[\s\S]*client:only="react"|import \{ SchemaBuilderRoute \}/,
+  "SchemaBuilderRouteBody should not hydrate the whole schema builder route body.",
 );
 
 assert.match(

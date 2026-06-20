@@ -10,18 +10,9 @@ import { Plus } from "lucide-react";
 import type { SubmitEvent } from "react";
 import * as React from "react";
 
-import {
-  AdminField,
-  AdminPageHeader,
-  AdminSectionCard,
-} from "../_components/admin-design";
-import {
-  AdminLoadingReserve,
-  useDelayedLoadingIndicator,
-} from "../_components/admin-skeleton";
+import { AdminField, AdminSectionCard } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
 import { useAdminCollectionsState } from "../_state/admin-collections-state";
-import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes } from "../_workspace/admin-routes";
 import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 import {
@@ -50,6 +41,7 @@ import { cn } from "@/lib/utils";
 const fieldTypeOptions = [...datamixFieldTypes];
 const selectClassName =
   "h-9 w-full rounded-md border border-input bg-white px-2.5 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50";
+const schemaBuilderSavingEventName = "datamix:schema-builder-saving";
 
 type SchemaBuilderRouteModeProps =
   | {
@@ -60,22 +52,18 @@ type SchemaBuilderRouteModeProps =
       schemaId: string;
     };
 
-type SchemaBuilderContentProps = {
+type SchemaBuilderFormIslandProps = {
   collectionLoadError?: string | null;
   collections?: StoredCollectionDefinition[];
   collectionsLoaded?: boolean;
   mode: SchemaBuilderRouteModeProps["mode"];
-  routeAccess: AdminWorkspaceRouteAccessState;
   schemaId?: string;
   workspace: AdminWorkspaceProps;
 };
 
-type SchemaBuilderRouteProps = SchemaBuilderRouteModeProps & {
-  collectionLoadError?: string | null;
-  collections?: StoredCollectionDefinition[];
-  collectionsLoaded?: boolean;
-  routeAccess: AdminWorkspaceRouteAccessState;
-  workspace: AdminWorkspaceProps;
+type SchemaBuilderSaveButtonIslandProps = {
+  canSave: boolean;
+  mode: SchemaBuilderRouteModeProps["mode"];
 };
 
 function formatFieldTypeLabel(type: DatamixFieldType) {
@@ -107,10 +95,7 @@ function decodeSchemaId(value: string) {
 
 function hasDraftInput(draft: CollectionDraft) {
   return Boolean(
-    draft.name ||
-      draft.label ||
-      draft.description ||
-      draft.fields.length > 0,
+    draft.name || draft.label || draft.description || draft.fields.length > 0,
   );
 }
 
@@ -118,16 +103,61 @@ function createFieldSummary(field: CollectionFieldDraft) {
   return `${field.type} · ${field.required ? "Required" : "Optional"}`;
 }
 
-export function SchemaBuilderContent({
+function publishSchemaBuilderSavingState(isSaving: boolean) {
+  window.dispatchEvent(
+    new CustomEvent(schemaBuilderSavingEventName, {
+      detail: { isSaving },
+    }),
+  );
+}
+
+export function SchemaBuilderSaveButtonIsland({
+  canSave,
+  mode,
+}: SchemaBuilderSaveButtonIslandProps) {
+  const [isSavingCollection, setIsSavingCollection] = React.useState(false);
+  const isEditingExistingSchema = mode === "edit";
+
+  React.useEffect(() => {
+    const handleSavingState = (event: Event) => {
+      const detail = (event as CustomEvent<{ isSaving?: boolean }>).detail;
+
+      setIsSavingCollection(Boolean(detail?.isSaving));
+    };
+
+    window.addEventListener(schemaBuilderSavingEventName, handleSavingState);
+
+    return () => {
+      window.removeEventListener(
+        schemaBuilderSavingEventName,
+        handleSavingState,
+      );
+    };
+  }, []);
+
+  return (
+    <Button
+      disabled={isSavingCollection || !canSave}
+      form="schema-builder-form"
+      type="submit"
+    >
+      {isSavingCollection
+        ? "Saving schema..."
+        : isEditingExistingSchema
+          ? "Save schema"
+          : "Create schema"}
+    </Button>
+  );
+}
+
+export function SchemaBuilderFormIsland({
   collectionLoadError: initialCollectionLoadError,
   collections: initialCollections,
   collectionsLoaded: initialCollectionsLoaded,
   mode,
-  routeAccess,
   schemaId,
   workspace,
-}: SchemaBuilderContentProps) {
-  const access = routeAccess;
+}: SchemaBuilderFormIslandProps) {
   const {
     collectionLoadError,
     collections,
@@ -144,48 +174,35 @@ export function SchemaBuilderContent({
   const activeCollection =
     decodedSchemaId === null
       ? null
-      : collections.find(
-          (collection) => collection.id === decodedSchemaId,
-        ) ?? null;
-  const [draft, setDraft] = React.useState<CollectionDraft>(
-    createEmptyCollectionDraft,
+      : (collections.find((collection) => collection.id === decodedSchemaId) ??
+        null);
+  const [draft, setDraft] = React.useState<CollectionDraft>(() =>
+    activeCollection
+      ? createDraftFromDefinition(activeCollection.definition)
+      : createEmptyCollectionDraft(),
   );
   const [draftSourceName, setDraftSourceName] = React.useState<string | null>(
-    mode === "create" ? "new" : null,
+    mode === "create" ? "new" : (activeCollection?.id ?? null),
   );
   const [collectionIssues, setCollectionIssues] = React.useState<
     DatamixSchemaValidationIssue[]
   >([]);
-  const [collectionMessage, setCollectionMessage] = React.useState<string | null>(
-    null,
-  );
+  const [collectionMessage, setCollectionMessage] = React.useState<
+    string | null
+  >(null);
   const [isSavingCollection, setIsSavingCollection] = React.useState(false);
-  const [newFieldType, setNewFieldType] = React.useState<DatamixFieldType>("text");
+  const [newFieldType, setNewFieldType] =
+    React.useState<DatamixFieldType>("text");
   const isEditingExistingSchema = mode === "edit";
   const canSaveCurrentSchema = isEditingExistingSchema
     ? permissions.canUpdateCollections
     : permissions.canCreateCollections;
-  const isInitialCollectionLoad =
-    permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
-  const shouldBlockSchemaUntilLoaded =
-    isEditingExistingSchema && isInitialCollectionLoad;
-  const shouldShowSchemaLoadingState = useDelayedLoadingIndicator(
-    shouldBlockSchemaUntilLoaded,
-  );
   const hasUnsavedSchemaChanges =
     activeCollection !== null
       ? JSON.stringify(activeCollection.definition) !==
         JSON.stringify(serializeDraft(draft))
       : hasDraftInput(draft);
   const statusTone = collectionIssues.length > 0 ? "error" : "success";
-  const pageTitle =
-    mode === "create"
-      ? "New schema"
-      : shouldBlockSchemaUntilLoaded
-        ? "Schema"
-      : activeCollection
-        ? `${activeCollection.definition.label} schema`
-        : "Schema";
 
   React.useEffect(() => {
     if (
@@ -333,6 +350,7 @@ export function SchemaBuilderContent({
     }
 
     setIsSavingCollection(true);
+    publishSchemaBuilderSavingState(true);
     setCollectionIssues([]);
     setCollectionMessage(null);
 
@@ -344,14 +362,18 @@ export function SchemaBuilderContent({
       }
 
       if (mode === "create") {
-        window.location.href = adminRoutes.schema.detail(result.collection.id).href;
+        window.location.href = adminRoutes.schema.detail(
+          result.collection.id,
+        ).href;
         return;
       }
 
       setDraft(createDraftFromDefinition(result.collection.definition));
       setDraftSourceName(result.collection.id);
       setCollectionMessage(
-        formatSchemaLanguage(`${result.message} ${formatPlanSummary(result.plan)}`),
+        formatSchemaLanguage(
+          `${result.message} ${formatPlanSummary(result.plan)}`,
+        ),
       );
     } catch (error) {
       if (error instanceof CollectionDefinitionRequestError) {
@@ -366,307 +388,436 @@ export function SchemaBuilderContent({
       }
     } finally {
       setIsSavingCollection(false);
+      publishSchemaBuilderSavingState(false);
     }
   };
 
   return (
-    <>
-        <AdminPageHeader
-          action={
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline">
-                <a href={adminRoutes.schema.index().href}>All schemas</a>
-              </Button>
-              <Button
-                disabled={isSavingCollection || !canSaveCurrentSchema}
-                form="schema-builder-form"
-                type="submit"
-              >
-                {isSavingCollection
-                  ? "Saving schema..."
-                  : isEditingExistingSchema
-                    ? "Save schema"
-                    : "Create schema"}
-              </Button>
-            </div>
+    <form
+      className="grid gap-4 lg:grid-cols-[270px_minmax(0,1fr)]"
+      id="schema-builder-form"
+      onSubmit={handleSaveSchema}
+    >
+      <aside className="space-y-4">
+        <AdminSectionCard
+          description={
+            isEditingExistingSchema
+              ? "The schema name is the stable storage identifier."
+              : "Name the schema before saving it."
           }
-          title={pageTitle}
-        />
+          title="Schema details"
+        >
+          <fieldset
+            className="space-y-3"
+            disabled={isSavingCollection || !canSaveCurrentSchema}
+          >
+            <AdminField
+              label="Schema label"
+              onChange={(event) => updateDraft({ label: event.target.value })}
+              placeholder="Articles"
+              value={draft.label}
+            />
+            <AdminField
+              disabled={isEditingExistingSchema}
+              hint={
+                isEditingExistingSchema
+                  ? "Schema names cannot be edited after save."
+                  : "Use lowercase letters, numbers, and underscores."
+              }
+              label="Schema name"
+              onChange={(event) => updateDraft({ name: event.target.value })}
+              placeholder="articles"
+              value={draft.name}
+            />
+            <div className="space-y-1.5">
+              <Label htmlFor="schema-description">Description</Label>
+              <Textarea
+                className="min-h-24 bg-white"
+                id="schema-description"
+                onChange={(event) =>
+                  updateDraft({ description: event.target.value })
+                }
+                placeholder="Long-form content for the public site"
+                value={draft.description}
+              />
+            </div>
+          </fieldset>
+        </AdminSectionCard>
 
-        {!access.isAllowed ? (
-          <AdminStateBox body={access.body} title={access.title} tone="warning" />
-        ) : isEditingExistingSchema && !permissions.canViewCollections ? (
+        <AdminSectionCard
+          description="Field order here becomes the generated content editing order."
+          title="Fields"
+        >
+          <div className="space-y-3">
+            <div className="grid gap-2">
+              <Label htmlFor="new-field-type">New field type</Label>
+              <div className="flex gap-2">
+                <select
+                  className={selectClassName}
+                  disabled={isSavingCollection || !canSaveCurrentSchema}
+                  id="new-field-type"
+                  onChange={(event) =>
+                    setNewFieldType(event.target.value as DatamixFieldType)
+                  }
+                  value={newFieldType}
+                >
+                  {fieldTypeOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {formatFieldTypeLabel(type)}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  disabled={isSavingCollection || !canSaveCurrentSchema}
+                  onClick={handleAddField}
+                  type="button"
+                >
+                  <Plus />
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            {draft.fields.length === 0 ? (
+              <AdminStateBox
+                body="Start with a text or markdown field, then layer on selects, relationships, and media references."
+                compact
+                title="No fields yet"
+              />
+            ) : (
+              <div className="space-y-2">
+                {draft.fields.map((field, index) => (
+                  <div
+                    className={cn(
+                      "rounded-lg border p-3 text-left",
+                      index === 0
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-border bg-white text-slate-950",
+                    )}
+                    key={field.key}
+                  >
+                    <span className="block truncate text-sm font-semibold">
+                      {field.label || `Field ${index + 1}`}
+                    </span>
+                    <span
+                      className={cn(
+                        "block truncate text-[10px]",
+                        index === 0 ? "text-slate-300" : "text-slate-500",
+                      )}
+                    >
+                      {createFieldSummary(field)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </AdminSectionCard>
+      </aside>
+
+      <AdminSectionCard
+        action={
+          <Button
+            disabled={
+              !hasUnsavedSchemaChanges ||
+              isSavingCollection ||
+              !canSaveCurrentSchema
+            }
+            onClick={resetDraft}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Reset draft
+          </Button>
+        }
+        description="Configure labels, API names, required state, and type-specific settings."
+        title="Field settings"
+      >
+        {!canSaveCurrentSchema ? (
           <AdminStateBox
-            body="Your current role cannot browse saved schemas, so Datamix cannot load this schema for editing."
-            title="Schema editing is restricted"
+            body={
+              isEditingExistingSchema
+                ? "Your current role can view this schema, but it cannot save schema changes."
+                : "Your current role cannot create schemas."
+            }
+            compact
+            title="Schema changes are read-only"
             tone="warning"
           />
-        ) : shouldBlockSchemaUntilLoaded ? (
-          shouldShowSchemaLoadingState ? (
+        ) : null}
+        {collectionMessage ? (
+          <AdminStateBox
+            body={
+              collectionIssues.length > 0
+                ? collectionMessage
+                : `${collectionMessage} The generated content editor will use this saved schema.`
+            }
+            compact
+            title={
+              collectionIssues.length > 0
+                ? "Schema needs attention"
+                : "Schema saved"
+            }
+            tone={statusTone}
+          />
+        ) : null}
+        {collectionLoadError && collections.length > 0 ? (
+          <AdminStateBox
+            body={`${collectionLoadError} You can keep editing the current draft with the last saved schema list that loaded.`}
+            compact
+            title="Saved schema list may be out of date"
+            tone="warning"
+          />
+        ) : null}
+        {collectionIssues.length > 0 ? (
+          <ul className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+            {collectionIssues.map((issue) => (
+              <li key={`${issue.path}-${issue.message}`}>
+                <strong>{formatIssuePath(issue.path)}</strong>: {issue.message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <fieldset
+          className="mt-4 space-y-4"
+          disabled={isSavingCollection || !canSaveCurrentSchema}
+        >
+          {draft.fields.length === 0 ? (
             <AdminStateBox
-              body="Loading saved schema details before opening the builder."
-              title="Loading schema"
+              body="Add a field from the left panel to begin configuring this schema."
+              title="No field settings"
             />
           ) : (
-            <AdminLoadingReserve className="min-h-[520px]" />
-          )
-        ) : isEditingExistingSchema &&
-          collectionLoadError &&
-          collections.length === 0 ? (
-          <AdminStateBox
-            body={collectionLoadError}
-            title="Schema is unavailable"
-            tone="error"
-          />
-        ) : isEditingExistingSchema &&
-          hasLoadedCollections &&
-          activeCollection === null ? (
-          <AdminStateBox
-            actionLabel="Back to schemas"
-            body={`Datamix could not find a saved schema with id ${decodedSchemaId ?? "this route"}.`}
-            onAction={() => {
-              window.location.href = adminRoutes.schema.index().href;
-            }}
-            title="Schema not found"
-            tone="warning"
-          />
-        ) : (
-          <form
-            className="grid gap-4 lg:grid-cols-[270px_minmax(0,1fr)]"
-            id="schema-builder-form"
-            onSubmit={handleSaveSchema}
-          >
-            <aside className="space-y-4">
-              <AdminSectionCard
-                description={
-                  isEditingExistingSchema
-                    ? "The schema name is the stable storage identifier."
-                    : "Name the schema before saving it."
-                }
-                title="Schema details"
+            draft.fields.map((field, index) => (
+              <article
+                className="rounded-lg border border-border bg-white p-4"
+                key={field.key}
               >
-                <fieldset
-                  className="space-y-3"
-                  disabled={isSavingCollection || !canSaveCurrentSchema}
-                >
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-heading text-base font-semibold text-slate-950">
+                      Field {index + 1}: {field.label || "Untitled field"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      <Badge className="mr-2" variant="outline">
+                        {formatFieldTypeLabel(field.type)}
+                      </Badge>
+                      {field.required ? "Required" : "Optional"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      disabled={index === 0}
+                      onClick={() => handleMoveField(field.key, -1)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Move up
+                    </Button>
+                    <Button
+                      disabled={index === draft.fields.length - 1}
+                      onClick={() => handleMoveField(field.key, 1)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Move down
+                    </Button>
+                    <Button
+                      onClick={() => handleRemoveField(field.key)}
+                      size="sm"
+                      type="button"
+                      variant="destructive"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
                   <AdminField
-                    label="Schema label"
-                    onChange={(event) => updateDraft({ label: event.target.value })}
-                    placeholder="Articles"
-                    value={draft.label}
+                    label="Label"
+                    onChange={(event) =>
+                      updateField(field.key, (currentField) => ({
+                        ...currentField,
+                        label: event.target.value,
+                      }))
+                    }
+                    placeholder="Title"
+                    value={field.label}
                   />
                   <AdminField
-                    disabled={isEditingExistingSchema}
-                    hint={
-                      isEditingExistingSchema
-                        ? "Schema names cannot be edited after save."
-                        : "Use lowercase letters, numbers, and underscores."
+                    label="API name"
+                    onChange={(event) =>
+                      updateField(field.key, (currentField) => ({
+                        ...currentField,
+                        name: event.target.value,
+                      }))
                     }
-                    label="Schema name"
-                    onChange={(event) => updateDraft({ name: event.target.value })}
-                    placeholder="articles"
-                    value={draft.name}
+                    placeholder="title"
+                    value={field.name}
                   />
                   <div className="space-y-1.5">
-                    <Label htmlFor="schema-description">Description</Label>
-                    <Textarea
-                      className="min-h-24 bg-white"
-                      id="schema-description"
+                    <Label htmlFor={`${field.key}-type`}>Field type</Label>
+                    <select
+                      className={selectClassName}
+                      id={`${field.key}-type`}
                       onChange={(event) =>
-                        updateDraft({ description: event.target.value })
+                        handleFieldTypeChange(
+                          field.key,
+                          event.target.value as DatamixFieldType,
+                        )
                       }
-                      placeholder="Long-form content for the public site"
-                      value={draft.description}
-                    />
+                      value={field.type}
+                    >
+                      {fieldTypeOptions.map((type) => (
+                        <option key={type} value={type}>
+                          {formatFieldTypeLabel(type)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </fieldset>
-              </AdminSectionCard>
+                  <label className="flex items-center gap-2 self-end rounded-md border border-border bg-white px-3 py-2 text-sm">
+                    <input
+                      checked={field.required}
+                      onChange={(event) =>
+                        updateField(field.key, (currentField) => ({
+                          ...currentField,
+                          required: event.target.checked,
+                        }))
+                      }
+                      type="checkbox"
+                    />
+                    Required field
+                  </label>
+                </div>
 
-              <AdminSectionCard
-                description="Field order here becomes the generated content editing order."
-                title="Fields"
-              >
-                <div className="space-y-3">
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-field-type">New field type</Label>
-                    <div className="flex gap-2">
-                      <select
-                        className={selectClassName}
-                        disabled={isSavingCollection || !canSaveCurrentSchema}
-                        id="new-field-type"
-                        onChange={(event) =>
-                          setNewFieldType(event.target.value as DatamixFieldType)
-                        }
-                        value={newFieldType}
-                      >
-                        {fieldTypeOptions.map((type) => (
-                          <option key={type} value={type}>
-                            {formatFieldTypeLabel(type)}
-                          </option>
-                        ))}
-                      </select>
+                <div className="mt-3 space-y-1.5">
+                  <Label htmlFor={`${field.key}-description`}>
+                    Description
+                  </Label>
+                  <Textarea
+                    className="min-h-20 bg-white"
+                    id={`${field.key}-description`}
+                    onChange={(event) =>
+                      updateField(field.key, (currentField) => ({
+                        ...currentField,
+                        description: event.target.value,
+                      }))
+                    }
+                    placeholder="What this field is for"
+                    value={field.description}
+                  />
+                </div>
+
+                {field.type === "select" ? (
+                  <div className="mt-4 rounded-lg border border-border bg-muted/50 p-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          Select options
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Keep option values stable and lowercase.
+                        </p>
+                      </div>
                       <Button
-                        disabled={isSavingCollection || !canSaveCurrentSchema}
-                        onClick={handleAddField}
+                        onClick={() =>
+                          updateField(field.key, (currentField) =>
+                            currentField.type !== "select"
+                              ? currentField
+                              : {
+                                  ...currentField,
+                                  options: [
+                                    ...currentField.options,
+                                    { label: "", value: "" },
+                                  ],
+                                },
+                          )
+                        }
+                        size="sm"
                         type="button"
+                        variant="outline"
                       >
-                        <Plus />
-                        Add
+                        Add option
                       </Button>
                     </div>
-                  </div>
-
-                  {draft.fields.length === 0 ? (
-                    <AdminStateBox
-                      body="Start with a text or markdown field, then layer on selects, relationships, and media references."
-                      compact
-                      title="No fields yet"
-                    />
-                  ) : (
-                    <div className="space-y-2">
-                      {draft.fields.map((field, index) => (
+                    <div className="space-y-3">
+                      {field.options.map((option, optionIndex) => (
                         <div
-                          className={cn(
-                            "rounded-lg border p-3 text-left",
-                            index === 0
-                              ? "border-slate-950 bg-slate-950 text-white"
-                              : "border-border bg-white text-slate-950",
-                          )}
-                          key={field.key}
+                          className="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
+                          key={`${field.key}-option-${optionIndex}`}
                         >
-                          <span className="block truncate text-sm font-semibold">
-                            {field.label || `Field ${index + 1}`}
-                          </span>
-                          <span
-                            className={cn(
-                              "block truncate text-[10px]",
-                              index === 0 ? "text-slate-300" : "text-slate-500",
-                            )}
-                          >
-                            {createFieldSummary(field)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </AdminSectionCard>
-            </aside>
-
-            <AdminSectionCard
-              action={
-                <Button
-                  disabled={
-                    !hasUnsavedSchemaChanges ||
-                    isSavingCollection ||
-                    !canSaveCurrentSchema
-                  }
-                  onClick={resetDraft}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Reset draft
-                </Button>
-              }
-              description="Configure labels, API names, required state, and type-specific settings."
-              title="Field settings"
-            >
-              {!canSaveCurrentSchema ? (
-                <AdminStateBox
-                  body={
-                    isEditingExistingSchema
-                      ? "Your current role can view this schema, but it cannot save schema changes."
-                      : "Your current role cannot create schemas."
-                  }
-                  compact
-                  title="Schema changes are read-only"
-                  tone="warning"
-                />
-              ) : null}
-              {collectionMessage ? (
-                <AdminStateBox
-                  body={
-                    collectionIssues.length > 0
-                      ? collectionMessage
-                      : `${collectionMessage} The generated content editor will use this saved schema.`
-                  }
-                  compact
-                  title={
-                    collectionIssues.length > 0
-                      ? "Schema needs attention"
-                      : "Schema saved"
-                  }
-                  tone={statusTone}
-                />
-              ) : null}
-              {collectionLoadError && collections.length > 0 ? (
-                <AdminStateBox
-                  body={`${collectionLoadError} You can keep editing the current draft with the last saved schema list that loaded.`}
-                  compact
-                  title="Saved schema list may be out of date"
-                  tone="warning"
-                />
-              ) : null}
-              {collectionIssues.length > 0 ? (
-                <ul className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-                  {collectionIssues.map((issue) => (
-                    <li key={`${issue.path}-${issue.message}`}>
-                      <strong>{formatIssuePath(issue.path)}</strong>:{" "}
-                      {issue.message}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              <fieldset
-                className="mt-4 space-y-4"
-                disabled={isSavingCollection || !canSaveCurrentSchema}
-              >
-                {draft.fields.length === 0 ? (
-                  <AdminStateBox
-                    body="Add a field from the left panel to begin configuring this schema."
-                    title="No field settings"
-                  />
-                ) : (
-                  draft.fields.map((field, index) => (
-                    <article
-                      className="rounded-lg border border-border bg-white p-4"
-                      key={field.key}
-                    >
-                      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="font-heading text-base font-semibold text-slate-950">
-                            Field {index + 1}: {field.label || "Untitled field"}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            <Badge className="mr-2" variant="outline">
-                              {formatFieldTypeLabel(field.type)}
-                            </Badge>
-                            {field.required ? "Required" : "Optional"}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
+                          <AdminField
+                            label="Option label"
+                            onChange={(event) =>
+                              updateField(field.key, (currentField) =>
+                                currentField.type !== "select"
+                                  ? currentField
+                                  : {
+                                      ...currentField,
+                                      options: currentField.options.map(
+                                        (
+                                          currentOption: DatamixSelectOption,
+                                          currentOptionIndex: number,
+                                        ) =>
+                                          currentOptionIndex === optionIndex
+                                            ? {
+                                                ...currentOption,
+                                                label: event.target.value,
+                                              }
+                                            : currentOption,
+                                      ),
+                                    },
+                              )
+                            }
+                            value={option.label}
+                          />
+                          <AdminField
+                            label="Option value"
+                            onChange={(event) =>
+                              updateField(field.key, (currentField) =>
+                                currentField.type !== "select"
+                                  ? currentField
+                                  : {
+                                      ...currentField,
+                                      options: currentField.options.map(
+                                        (
+                                          currentOption: DatamixSelectOption,
+                                          currentOptionIndex: number,
+                                        ) =>
+                                          currentOptionIndex === optionIndex
+                                            ? {
+                                                ...currentOption,
+                                                value: event.target.value,
+                                              }
+                                            : currentOption,
+                                      ),
+                                    },
+                              )
+                            }
+                            value={option.value}
+                          />
                           <Button
-                            disabled={index === 0}
-                            onClick={() => handleMoveField(field.key, -1)}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            Move up
-                          </Button>
-                          <Button
-                            disabled={index === draft.fields.length - 1}
-                            onClick={() => handleMoveField(field.key, 1)}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            Move down
-                          </Button>
-                          <Button
-                            onClick={() => handleRemoveField(field.key)}
+                            className="self-end"
+                            onClick={() =>
+                              updateField(field.key, (currentField) =>
+                                currentField.type !== "select"
+                                  ? currentField
+                                  : {
+                                      ...currentField,
+                                      options: currentField.options.filter(
+                                        (
+                                          _currentOption: DatamixSelectOption,
+                                          currentOptionIndex: number,
+                                        ) => currentOptionIndex !== optionIndex,
+                                      ),
+                                    },
+                              )
+                            }
                             size="sm"
                             type="button"
                             variant="destructive"
@@ -674,254 +825,55 @@ export function SchemaBuilderContent({
                             Remove
                           </Button>
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <AdminField
-                          label="Label"
+                {field.type === "relationship" ? (
+                  <div className="mt-4 rounded-lg border border-border bg-muted/50 p-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <AdminField
+                        hint="Use the target schema API name."
+                        label="Target schema"
+                        onChange={(event) =>
+                          updateField(field.key, (currentField) =>
+                            currentField.type !== "relationship"
+                              ? currentField
+                              : {
+                                  ...currentField,
+                                  targetCollection: event.target.value,
+                                },
+                          )
+                        }
+                        placeholder="authors"
+                        value={field.targetCollection}
+                      />
+                      <label className="flex items-center gap-2 self-end rounded-md border border-border bg-white px-3 py-2 text-sm">
+                        <input
+                          checked={field.multiple}
                           onChange={(event) =>
-                            updateField(field.key, (currentField) => ({
-                              ...currentField,
-                              label: event.target.value,
-                            }))
+                            updateField(field.key, (currentField) =>
+                              currentField.type !== "relationship"
+                                ? currentField
+                                : {
+                                    ...currentField,
+                                    multiple: event.target.checked,
+                                  },
+                            )
                           }
-                          placeholder="Title"
-                          value={field.label}
+                          type="checkbox"
                         />
-                        <AdminField
-                          label="API name"
-                          onChange={(event) =>
-                            updateField(field.key, (currentField) => ({
-                              ...currentField,
-                              name: event.target.value,
-                            }))
-                          }
-                          placeholder="title"
-                          value={field.name}
-                        />
-                        <div className="space-y-1.5">
-                          <Label htmlFor={`${field.key}-type`}>Field type</Label>
-                          <select
-                            className={selectClassName}
-                            id={`${field.key}-type`}
-                            onChange={(event) =>
-                              handleFieldTypeChange(
-                                field.key,
-                                event.target.value as DatamixFieldType,
-                              )
-                            }
-                            value={field.type}
-                          >
-                            {fieldTypeOptions.map((type) => (
-                              <option key={type} value={type}>
-                                {formatFieldTypeLabel(type)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <label className="flex items-center gap-2 self-end rounded-md border border-border bg-white px-3 py-2 text-sm">
-                          <input
-                            checked={field.required}
-                            onChange={(event) =>
-                              updateField(field.key, (currentField) => ({
-                                ...currentField,
-                                required: event.target.checked,
-                              }))
-                            }
-                            type="checkbox"
-                          />
-                          Required field
-                        </label>
-                      </div>
-
-                      <div className="mt-3 space-y-1.5">
-                        <Label htmlFor={`${field.key}-description`}>
-                          Description
-                        </Label>
-                        <Textarea
-                          className="min-h-20 bg-white"
-                          id={`${field.key}-description`}
-                          onChange={(event) =>
-                            updateField(field.key, (currentField) => ({
-                              ...currentField,
-                              description: event.target.value,
-                            }))
-                          }
-                          placeholder="What this field is for"
-                          value={field.description}
-                        />
-                      </div>
-
-                      {field.type === "select" ? (
-                        <div className="mt-4 rounded-lg border border-border bg-muted/50 p-3">
-                          <div className="mb-3 flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-950">
-                                Select options
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                Keep option values stable and lowercase.
-                              </p>
-                            </div>
-                            <Button
-                              onClick={() =>
-                                updateField(field.key, (currentField) =>
-                                  currentField.type !== "select"
-                                    ? currentField
-                                    : {
-                                        ...currentField,
-                                        options: [
-                                          ...currentField.options,
-                                          { label: "", value: "" },
-                                        ],
-                                      },
-                                )
-                              }
-                              size="sm"
-                              type="button"
-                              variant="outline"
-                            >
-                              Add option
-                            </Button>
-                          </div>
-                          <div className="space-y-3">
-                            {field.options.map((option, optionIndex) => (
-                              <div
-                                className="grid gap-2 md:grid-cols-[1fr_1fr_auto]"
-                                key={`${field.key}-option-${optionIndex}`}
-                              >
-                                <AdminField
-                                  label="Option label"
-                                  onChange={(event) =>
-                                    updateField(field.key, (currentField) =>
-                                      currentField.type !== "select"
-                                        ? currentField
-                                        : {
-                                            ...currentField,
-                                            options: currentField.options.map(
-                                              (
-                                                currentOption: DatamixSelectOption,
-                                                currentOptionIndex: number,
-                                              ) =>
-                                                currentOptionIndex === optionIndex
-                                                  ? {
-                                                      ...currentOption,
-                                                      label: event.target.value,
-                                                    }
-                                                  : currentOption,
-                                            ),
-                                          },
-                                    )
-                                  }
-                                  value={option.label}
-                                />
-                                <AdminField
-                                  label="Option value"
-                                  onChange={(event) =>
-                                    updateField(field.key, (currentField) =>
-                                      currentField.type !== "select"
-                                        ? currentField
-                                        : {
-                                            ...currentField,
-                                            options: currentField.options.map(
-                                              (
-                                                currentOption: DatamixSelectOption,
-                                                currentOptionIndex: number,
-                                              ) =>
-                                                currentOptionIndex === optionIndex
-                                                  ? {
-                                                      ...currentOption,
-                                                      value: event.target.value,
-                                                    }
-                                                  : currentOption,
-                                            ),
-                                          },
-                                    )
-                                  }
-                                  value={option.value}
-                                />
-                                <Button
-                                  className="self-end"
-                                  onClick={() =>
-                                    updateField(field.key, (currentField) =>
-                                      currentField.type !== "select"
-                                        ? currentField
-                                        : {
-                                            ...currentField,
-                                            options: currentField.options.filter(
-                                              (
-                                                _currentOption: DatamixSelectOption,
-                                                currentOptionIndex: number,
-                                              ) => currentOptionIndex !== optionIndex,
-                                            ),
-                                          },
-                                    )
-                                  }
-                                  size="sm"
-                                  type="button"
-                                  variant="destructive"
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {field.type === "relationship" ? (
-                        <div className="mt-4 rounded-lg border border-border bg-muted/50 p-3">
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <AdminField
-                              hint="Use the target schema API name."
-                              label="Target schema"
-                              onChange={(event) =>
-                                updateField(field.key, (currentField) =>
-                                  currentField.type !== "relationship"
-                                    ? currentField
-                                    : {
-                                        ...currentField,
-                                        targetCollection: event.target.value,
-                                      },
-                                )
-                              }
-                              placeholder="authors"
-                              value={field.targetCollection}
-                            />
-                            <label className="flex items-center gap-2 self-end rounded-md border border-border bg-white px-3 py-2 text-sm">
-                              <input
-                                checked={field.multiple}
-                                onChange={(event) =>
-                                  updateField(field.key, (currentField) =>
-                                    currentField.type !== "relationship"
-                                      ? currentField
-                                      : {
-                                          ...currentField,
-                                          multiple: event.target.checked,
-                                        },
-                                  )
-                                }
-                                type="checkbox"
-                              />
-                              Allow multiple content items
-                            </label>
-                          </div>
-                        </div>
-                      ) : null}
-                    </article>
-                  ))
-                )}
-              </fieldset>
-            </AdminSectionCard>
-          </form>
-        )}
-    </>
+                        Allow multiple content items
+                      </label>
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            ))
+          )}
+        </fieldset>
+      </AdminSectionCard>
+    </form>
   );
-}
-
-export function SchemaBuilderRoute({
-  routeAccess,
-  ...props
-}: SchemaBuilderRouteProps) {
-  return <SchemaBuilderContent routeAccess={routeAccess} {...props} />;
 }
