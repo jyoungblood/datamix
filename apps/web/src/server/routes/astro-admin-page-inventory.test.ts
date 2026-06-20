@@ -264,6 +264,33 @@ test("Slice 19 media island consumes serialized workspace route access", async (
   );
 });
 
+test("Slice 20 team island consumes serialized workspace route access", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const teamIslandSource =
+    workspaceSource.match(
+      /export function TeamIsland\([\s\S]*?\nexport function SettingsIsland/,
+    )?.[0] ?? "";
+
+  assert.match(
+    teamIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "TeamIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    teamIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "TeamIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    teamIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "TeamIsland should not read route metadata or permissions to derive access",
+  );
+});
+
 test("Slice 12 team body requires explicit route access from the server workspace prop", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
@@ -501,7 +528,7 @@ test("Slice 18 content editor bodies require explicit route access from the serv
   );
 });
 
-test("Slice 3 team island derives route access from server workspace props", async () => {
+test("Slice 3 team island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -511,11 +538,15 @@ test("Slice 3 team island derives route access from server workspace props", asy
     "utf8",
   );
   const teamSource = await readFile(teamAndRolesSourcePath, "utf8");
+  const teamIslandSource =
+    workspaceSource.match(
+      /export function TeamIsland\([\s\S]*?\nexport function SettingsIsland/,
+    )?.[0] ?? "";
 
   assert.match(
-    workspaceSource,
-    /export function TeamIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<TeamBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "TeamIsland should derive route access from the server workspace prop",
+    teamIslandSource,
+    /<TeamBody\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "TeamIsland should pass explicit route access into the retained team body",
   );
   assert.match(
     bodySource,
