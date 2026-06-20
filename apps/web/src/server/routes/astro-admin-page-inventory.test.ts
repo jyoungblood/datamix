@@ -850,7 +850,7 @@ test("Slice 24 schema builder islands consume serialized workspace route access"
   );
 });
 
-test("Slice 8 content index island derives route access from server workspace props", async () => {
+test("Slice 8 content index island consumes serialized route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -860,11 +860,27 @@ test("Slice 8 content index island derives route access from server workspace pr
     "utf8",
   );
   const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
+  const contentIndexIslandStart = workspaceSource.indexOf(
+    "export function ContentIndexIsland",
+  );
+  const contentIndexIslandEnd = workspaceSource.indexOf(
+    "export function NewContentIsland",
+    contentIndexIslandStart,
+  );
+  const contentIndexIslandSource = workspaceSource.slice(
+    contentIndexIslandStart,
+    contentIndexIslandEnd,
+  );
 
   assert.match(
-    workspaceSource,
-    /export function ContentIndexIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<ContentIndexBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "ContentIndexIsland should derive route access from the server workspace prop",
+    contentIndexIslandSource,
+    /export function ContentIndexIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentIndexBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "ContentIndexIsland should consume serialized route access from the server workspace prop",
+  );
+  assert.doesNotMatch(
+    contentIndexIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)/,
+    "ContentIndexIsland should not recompute route access from workspace permissions",
   );
   assert.match(
     bodySource,
