@@ -10,6 +10,8 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { listMediaAssets } from "@/lib/media";
+import type { StoredCollectionDefinition } from "@/lib/collection-definitions";
+import type { StoredCollectionRecord } from "@/lib/records";
 import { GeneratedRecordFieldInput } from "../_components/generated-record-field-input";
 import {
   AdminPageHeader,
@@ -36,18 +38,38 @@ import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 type ContentEditorMode = "create" | "edit";
 
 type ContentEditorContentProps = {
+  collectionLoadError?: string | null | undefined;
+  collections?: StoredCollectionDefinition[] | undefined;
+  collectionsLoaded?: boolean | undefined;
+  mediaAssets?: DatamixMediaAsset[] | undefined;
+  mediaAssetsLoaded?: boolean | undefined;
+  mediaLoadError?: string | null | undefined;
   mode: ContentEditorMode;
-  recordId?: string;
+  recordLoadError?: string | null | undefined;
+  recordId?: string | undefined;
+  recordSupportedFieldNames?: string | undefined;
+  records?: StoredCollectionRecord[] | undefined;
+  recordsLoaded?: boolean | undefined;
   routeAccess: AdminWorkspaceRouteAccessState;
-  schemaId?: string;
+  schemaId?: string | undefined;
   workspace: AdminWorkspaceProps;
 };
 
 type ContentEditorRouteProps = {
+  collectionLoadError?: string | null | undefined;
+  collections?: StoredCollectionDefinition[] | undefined;
+  collectionsLoaded?: boolean | undefined;
+  mediaAssets?: DatamixMediaAsset[] | undefined;
+  mediaAssetsLoaded?: boolean | undefined;
+  mediaLoadError?: string | null | undefined;
   mode: ContentEditorMode;
-  recordId?: string;
+  recordLoadError?: string | null | undefined;
+  recordId?: string | undefined;
+  recordSupportedFieldNames?: string | undefined;
+  records?: StoredCollectionRecord[] | undefined;
+  recordsLoaded?: boolean | undefined;
   routeAccess: AdminWorkspaceRouteAccessState;
-  schemaId?: string;
+  schemaId?: string | undefined;
   workspace: AdminWorkspaceProps;
 };
 
@@ -63,20 +85,36 @@ function decodeSchemaId(value: string) {
 }
 
 export function ContentEditorContent({
+  collectionLoadError: initialCollectionLoadError,
+  collections: initialCollections,
+  collectionsLoaded: initialCollectionsLoaded,
+  mediaAssets: initialMediaAssets,
+  mediaAssetsLoaded: initialMediaAssetsLoaded,
+  mediaLoadError: initialMediaLoadError,
   mode,
+  recordLoadError: initialRecordLoadError,
   recordId,
+  recordSupportedFieldNames: initialRecordSupportedFieldNames,
+  records: initialRecords,
+  recordsLoaded: initialRecordsLoaded,
   routeAccess,
   schemaId,
   workspace,
 }: ContentEditorContentProps) {
   const access = routeAccess;
+  const { permissions, role } = workspace;
+  const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
   const {
     collectionLoadError,
     collections,
     hasLoadedCollections,
     isLoadingCollections,
     loadCollections,
-  } = useAdminCollectionsState();
+  } = useAdminCollectionsState({
+    initialCollectionLoadError,
+    initialCollections,
+    initialCollectionsLoaded,
+  });
   const {
     hasLoadedRecords,
     isLoadingRecords,
@@ -94,14 +132,29 @@ export function ContentEditorContent({
     selectRecord,
     startNewRecord,
     updateRecordDraftValue,
-  } = useAdminRecordsState();
-  const { permissions, role } = workspace;
-  const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
+  } = useAdminRecordsState({
+    initialCollection:
+      decodedSchemaId === null
+        ? null
+        : initialCollections?.find((item) => item.id === decodedSchemaId) ?? null,
+    initialRecordLoadError,
+    initialRecords,
+    initialRecordsLoaded,
+    initialRecordSupportedFieldNames,
+    initialSelectedRecordId: recordId,
+  });
   const [selectedSchemaId, setSelectedSchemaId] = React.useState<string | null>(
     decodedSchemaId,
   );
-  const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>([]);
-  const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(null);
+  const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>(
+    () => initialMediaAssets ?? [],
+  );
+  const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(
+    () => initialMediaLoadError ?? null,
+  );
+  const [hasLoadedMediaAssets, setHasLoadedMediaAssets] = React.useState(
+    () => initialMediaAssetsLoaded ?? false,
+  );
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = React.useState(false);
   const mediaLoadRequestId = React.useRef(0);
   const activeSchemaId = decodedSchemaId ?? selectedSchemaId;
@@ -239,7 +292,12 @@ export function ContentEditorContent({
     if (!permissions.canViewMedia) {
       setMediaAssets([]);
       setMediaLoadError(null);
+      setHasLoadedMediaAssets(false);
       setIsLoadingMediaAssets(false);
+      return;
+    }
+
+    if (hasLoadedMediaAssets) {
       return;
     }
 
@@ -256,6 +314,7 @@ export function ContentEditorContent({
         }
 
         setMediaAssets(assets);
+        setHasLoadedMediaAssets(true);
       })
       .catch((error: unknown) => {
         if (mediaLoadRequestId.current !== requestId) {
@@ -271,7 +330,7 @@ export function ContentEditorContent({
           setIsLoadingMediaAssets(false);
         }
       });
-  }, [permissions.canViewMedia]);
+  }, [hasLoadedMediaAssets, permissions.canViewMedia]);
 
   const handleResetContent = () => {
     if (!collection) {

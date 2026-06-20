@@ -1,5 +1,6 @@
 "use client";
 
+import type { DatamixMediaAsset } from "@datamix/core";
 import { Copy, Upload } from "lucide-react";
 import type { SubmitEvent } from "react";
 import * as React from "react";
@@ -30,16 +31,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type MediaLibraryContentProps = {
+  mediaAssets?: DatamixMediaAsset[];
+  mediaAssetsLoaded?: boolean;
+  mediaLoadError?: string | null;
   routeAccess: AdminWorkspaceRouteAccessState;
   workspace: AdminWorkspaceProps;
 };
 
 type MediaLibraryRouteProps = {
+  mediaAssets?: DatamixMediaAsset[];
+  mediaAssetsLoaded?: boolean;
+  mediaLoadError?: string | null;
   routeAccess: AdminWorkspaceRouteAccessState;
   workspace: AdminWorkspaceProps;
 };
 
 export function MediaLibraryContent({
+  mediaAssets: initialMediaAssets,
+  mediaAssetsLoaded: initialMediaAssetsLoaded,
+  mediaLoadError: initialMediaLoadError,
   routeAccess,
   workspace,
 }: MediaLibraryContentProps) {
@@ -62,7 +72,11 @@ export function MediaLibraryContent({
     setMediaSearchQuery,
     setSelectedMediaFile,
     uploadMediaAsset,
-  } = useAdminMediaState();
+  } = useAdminMediaState({
+    initialMediaAssets,
+    initialMediaAssetsLoaded,
+    initialMediaLoadError,
+  });
   const { permissions, role } = workspace;
   const isInitialMediaLoad =
     permissions.canViewMedia && !hasLoadedMediaAssets && !mediaLoadError;
@@ -395,7 +409,7 @@ export function MediaLibraryContent({
 
 export function MediaLibraryRoute({
   routeAccess,
-  workspace,
+  ...props
 }: MediaLibraryRouteProps) {
-  return <MediaLibraryContent routeAccess={routeAccess} workspace={workspace} />;
+  return <MediaLibraryContent routeAccess={routeAccess} {...props} />;
 }

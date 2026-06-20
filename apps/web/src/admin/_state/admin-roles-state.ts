@@ -24,28 +24,44 @@ import {
 
 type AdminRolesStateOptions = {
   currentRoleId: string | null;
+  initialRoles?: DatamixRoleDefinition[] | undefined;
+  initialRolesLoadError?: string | null | undefined;
+  initialRolesLoaded?: boolean | undefined;
   onCurrentRoleChanged?: () => Promise<void>;
   permissions: Pick<AdminWorkspacePermissions, "canUpdateSettings">;
 };
 
 export function useAdminRolesState({
   currentRoleId,
+  initialRoles,
+  initialRolesLoadError,
+  initialRolesLoaded,
   onCurrentRoleChanged,
   permissions,
 }: AdminRolesStateOptions) {
   const rolesLoadRequestId = React.useRef(0);
-  const [availableRoles, setAvailableRoles] = React.useState<DatamixRoleDefinition[]>([
-    ...datamixRolePresets,
-  ]);
-  const [rolesLoadError, setRolesLoadError] = React.useState<string | null>(null);
+  const [availableRoles, setAvailableRoles] = React.useState<DatamixRoleDefinition[]>(
+    () => initialRoles ?? [...datamixRolePresets],
+  );
+  const [rolesLoadError, setRolesLoadError] = React.useState<string | null>(
+    () => initialRolesLoadError ?? null,
+  );
   const [rolesMessage, setRolesMessage] = React.useState<string | null>(null);
   const [roleIssues, setRoleIssues] = React.useState<DatamixSchemaValidationIssue[]>([]);
-  const [hasLoadedRoles, setHasLoadedRoles] = React.useState(false);
+  const [hasLoadedRoles, setHasLoadedRoles] = React.useState(
+    () => initialRolesLoaded ?? false,
+  );
   const [isLoadingRoles, setIsLoadingRoles] = React.useState(false);
   const [isSavingRole, setIsSavingRole] = React.useState(false);
   const [isCreatingRole, setIsCreatingRole] = React.useState(false);
-  const [selectedRoleId, setSelectedRoleId] = React.useState<string | null>(null);
-  const [roleDraft, setRoleDraft] = React.useState<RoleDraft>(createEmptyRoleDraft);
+  const [selectedRoleId, setSelectedRoleId] = React.useState<string | null>(
+    () => (initialRoles ?? [])[0]?.id ?? null,
+  );
+  const [roleDraft, setRoleDraft] = React.useState<RoleDraft>(() =>
+    initialRoles?.[0]
+      ? createRoleDraftFromRole(initialRoles[0])
+      : createEmptyRoleDraft(),
+  );
 
   const resetRoleWorkspace = React.useCallback(() => {
     rolesLoadRequestId.current += 1;

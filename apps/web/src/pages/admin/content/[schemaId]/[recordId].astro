@@ -1,14 +1,14 @@
 ---
 import { adminRoutes } from "@/admin/_workspace/admin-routes";
-import { ContentRecordIsland } from "@/admin/islands/workspace-routes";
+import ContentEditorRouteBody from "@/components/admin/ContentEditorRouteBody.astro";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
-import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
+import { resolveContentEditorPage } from "@/server/routes/astro-admin-stateful-pages";
 
 import DatamixRootLayout from "../../../../layouts/DatamixRootLayout.astro";
 
 const { recordId, schemaId } = Astro.params;
 const route = adminRoutes.content.record(schemaId ?? "", recordId ?? "");
-const page = await resolveWorkspacePage(Astro.request, route);
+const page = await resolveContentEditorPage(Astro.request, route, { schemaId });
 
 if (page.kind === "redirect") {
   return Astro.redirect(page.location);
@@ -17,11 +17,26 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <ContentRecordIsland
-      client:only="react"
-      recordId={recordId ?? ""}
-      schemaId={schemaId ?? ""}
-      workspace={page.workspace}
-    />
+    {
+      page.workspace ? (
+        <ContentEditorRouteBody
+          collectionLoadError={page.contentEditor.collectionLoadError}
+          collections={page.contentEditor.collections}
+          collectionsLoaded={page.contentEditor.collectionsLoaded}
+          mediaAssets={page.contentEditor.mediaAssets}
+          mediaAssetsLoaded={page.contentEditor.mediaAssetsLoaded}
+          mediaLoadError={page.contentEditor.mediaLoadError}
+          mode="edit"
+          recordId={recordId ?? ""}
+          recordLoadError={page.contentEditor.recordLoadError}
+          recordSupportedFieldNames={page.contentEditor.recordSupportedFieldNames}
+          records={page.contentEditor.records}
+          recordsLoaded={page.contentEditor.recordsLoaded}
+          routeAccess={page.workspace.routeAccess}
+          schemaId={schemaId ?? ""}
+          workspace={page.workspace}
+        />
+      ) : null
+    }
   </AdminWorkspaceShell>
 </DatamixRootLayout>

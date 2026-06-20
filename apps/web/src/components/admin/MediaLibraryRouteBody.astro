@@ -1,0 +1,33 @@
+---
+import type { DatamixMediaAsset } from "@datamix/core";
+
+import { MediaLibraryRoute } from "@/admin/_screens/media-library";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+
+type Props = {
+  mediaAssets: DatamixMediaAsset[];
+  mediaAssetsLoaded: boolean;
+  mediaLoadError: string | null;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
+};
+
+const { mediaAssets, mediaAssetsLoaded, mediaLoadError, routeAccess, workspace } =
+  Astro.props;
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+  <MediaLibraryRoute
+    client:only="react"
+    mediaAssets={mediaAssets}
+    mediaAssetsLoaded={mediaAssetsLoaded}
+    mediaLoadError={mediaLoadError}
+    routeAccess={routeAccess}
+    workspace={workspace}
+  />
+</div>

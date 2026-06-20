@@ -22,25 +22,51 @@ import {
 } from "@/lib/api-keys";
 
 type AdminApiKeysStateOptions = {
+  initialApiKeys?: DatamixApiKeySummary[] | undefined;
+  initialApiKeysLoadError?: string | null | undefined;
+  initialApiKeysLoaded?: boolean | undefined;
+  initialPublicApiRuntime?: PublicApiRuntimeSummary | null | undefined;
   permissions: Pick<AdminWorkspacePermissions, "canUpdateSettings">;
 };
 
-export function useAdminApiKeysState({ permissions }: AdminApiKeysStateOptions) {
+export function useAdminApiKeysState({
+  initialApiKeys,
+  initialApiKeysLoadError,
+  initialApiKeysLoaded,
+  initialPublicApiRuntime,
+  permissions,
+}: AdminApiKeysStateOptions) {
   const apiKeysLoadRequestId = React.useRef(0);
-  const [apiKeys, setApiKeys] = React.useState<DatamixApiKeySummary[]>([]);
+  const [apiKeys, setApiKeys] = React.useState<DatamixApiKeySummary[]>(
+    () => initialApiKeys ?? [],
+  );
   const [apiKeyDraft, setApiKeyDraft] = React.useState<ApiKeyDraft>(
     createEmptyApiKeyDraft,
   );
-  const [apiKeyDrafts, setApiKeyDrafts] = React.useState<Record<string, ApiKeyDraft>>({});
-  const [apiKeysLoadError, setApiKeysLoadError] = React.useState<string | null>(null);
+  const [apiKeyDrafts, setApiKeyDrafts] = React.useState<
+    Record<string, ApiKeyDraft>
+  >(() => {
+    const drafts: Record<string, ApiKeyDraft> = {};
+
+    (initialApiKeys ?? []).forEach((apiKey) => {
+      drafts[apiKey.id] = createApiKeyDraftFromApiKey(apiKey);
+    });
+
+    return drafts;
+  });
+  const [apiKeysLoadError, setApiKeysLoadError] = React.useState<string | null>(
+    () => initialApiKeysLoadError ?? null,
+  );
   const [apiKeysMessage, setApiKeysMessage] = React.useState<string | null>(null);
   const [apiKeySecret, setApiKeySecret] = React.useState<string | null>(null);
   const [apiKeySecretMessage, setApiKeySecretMessage] = React.useState<string | null>(
     null,
   );
   const [publicApiRuntime, setPublicApiRuntime] =
-    React.useState<PublicApiRuntimeSummary | null>(null);
-  const [hasLoadedApiKeys, setHasLoadedApiKeys] = React.useState(false);
+    React.useState<PublicApiRuntimeSummary | null>(() => initialPublicApiRuntime ?? null);
+  const [hasLoadedApiKeys, setHasLoadedApiKeys] = React.useState(
+    () => initialApiKeysLoaded ?? false,
+  );
   const [isLoadingApiKeys, setIsLoadingApiKeys] = React.useState(false);
   const [isCreatingApiKey, setIsCreatingApiKey] = React.useState(false);
   const [savingApiKeyId, setSavingApiKeyId] = React.useState<string | null>(null);

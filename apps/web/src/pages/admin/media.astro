@@ -1,13 +1,13 @@
 ---
 import { adminRoutes } from "@/admin/_workspace/admin-routes";
-import { MediaIsland } from "@/admin/islands/workspace-routes";
+import MediaLibraryRouteBody from "@/components/admin/MediaLibraryRouteBody.astro";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
-import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
+import { resolveMediaLibraryPage } from "@/server/routes/astro-admin-stateful-pages";
 
 import DatamixRootLayout from "../../layouts/DatamixRootLayout.astro";
 
 const route = adminRoutes.media();
-const page = await resolveWorkspacePage(Astro.request, route);
+const page = await resolveMediaLibraryPage(Astro.request, route);
 
 if (page.kind === "redirect") {
   return Astro.redirect(page.location);
@@ -16,6 +16,16 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <MediaIsland client:only="react" workspace={page.workspace} />
+    {
+      page.workspace ? (
+        <MediaLibraryRouteBody
+          mediaAssets={page.mediaLibrary.mediaAssets}
+          mediaAssetsLoaded={page.mediaLibrary.mediaAssetsLoaded}
+          mediaLoadError={page.mediaLibrary.mediaLoadError}
+          routeAccess={page.workspace.routeAccess}
+          workspace={page.workspace}
+        />
+      ) : null
+    }
   </AdminWorkspaceShell>
 </DatamixRootLayout>

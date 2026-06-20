@@ -1,13 +1,13 @@
 ---
 import { adminRoutes } from "@/admin/_workspace/admin-routes";
-import { TeamIsland } from "@/admin/islands/workspace-routes";
+import TeamRouteBody from "@/components/admin/TeamRouteBody.astro";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
-import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
+import { resolveTeamPage } from "@/server/routes/astro-admin-stateful-pages";
 
 import DatamixRootLayout from "../../layouts/DatamixRootLayout.astro";
 
 const route = adminRoutes.team();
-const page = await resolveWorkspacePage(Astro.request, route);
+const page = await resolveTeamPage(Astro.request, route);
 
 if (page.kind === "redirect") {
   return Astro.redirect(page.location);
@@ -16,6 +16,19 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <TeamIsland client:only="react" workspace={page.workspace} />
+    {
+      page.workspace ? (
+        <TeamRouteBody
+          roles={page.team.roles}
+          rolesLoadError={page.team.rolesLoadError}
+          rolesLoaded={page.team.rolesLoaded}
+          routeAccess={page.workspace.routeAccess}
+          users={page.team.users}
+          usersLoadError={page.team.usersLoadError}
+          usersLoaded={page.team.usersLoaded}
+          workspace={page.workspace}
+        />
+      ) : null
+    }
   </AdminWorkspaceShell>
 </DatamixRootLayout>

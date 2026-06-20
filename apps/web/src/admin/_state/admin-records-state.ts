@@ -21,22 +21,54 @@ import {
   type StoredCollectionRecord,
 } from "@/lib/records";
 
-export function useAdminRecordsState() {
+type AdminRecordsStateOptions = {
+  initialCollection?: StoredCollectionDefinition | null | undefined;
+  initialRecordLoadError?: string | null | undefined;
+  initialRecordSupportedFieldNames?: string | undefined;
+  initialRecords?: StoredCollectionRecord[] | undefined;
+  initialRecordsLoaded?: boolean | undefined;
+  initialSelectedRecordId?: string | null | undefined;
+};
+
+export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
+  const initialRecords = options?.initialRecords ?? [];
+  const initialSelectedRecord =
+    options?.initialSelectedRecordId && options.initialCollection
+      ? initialRecords.find((record) => record.id === options.initialSelectedRecordId) ??
+        null
+      : null;
+  const initialRecordDraft = options?.initialCollection
+    ? initialSelectedRecord
+      ? createGeneratedRecordFormStateFromRecord(
+          options.initialCollection.definition,
+          initialSelectedRecord,
+        )
+      : createGeneratedRecordFormState(options.initialCollection.definition)
+    : {};
   const recordLoadRequestId = React.useRef(0);
   const [recordCollectionName, setRecordCollectionName] = React.useState<string | null>(
-    null,
+    () => options?.initialCollection?.definition.name ?? null,
   );
-  const [records, setRecords] = React.useState<StoredCollectionRecord[]>([]);
-  const [selectedRecordId, setSelectedRecordId] = React.useState<string | null>(null);
-  const [recordDraft, setRecordDraft] = React.useState<GeneratedRecordFormState>({});
-  const [recordIssues, setRecordIssues] = React.useState<DatamixSchemaValidationIssue[]>(
-    [],
+  const [records, setRecords] = React.useState<StoredCollectionRecord[]>(
+    () => initialRecords,
   );
-  const [recordLoadError, setRecordLoadError] = React.useState<string | null>(null);
+  const [selectedRecordId, setSelectedRecordId] = React.useState<string | null>(
+    () => initialSelectedRecord?.id ?? options?.initialSelectedRecordId ?? null,
+  );
+  const [recordDraft, setRecordDraft] =
+    React.useState<GeneratedRecordFormState>(initialRecordDraft);
+  const [recordIssues, setRecordIssues] = React.useState<
+    DatamixSchemaValidationIssue[]
+  >([]);
+  const [recordLoadError, setRecordLoadError] = React.useState<string | null>(
+    () => options?.initialRecordLoadError ?? null,
+  );
   const [recordMessage, setRecordMessage] = React.useState<string | null>(null);
   const [recordSupportedFieldNames, setRecordSupportedFieldNames] =
-    React.useState("none");
-  const [hasLoadedRecords, setHasLoadedRecords] = React.useState(false);
+    React.useState(() => options?.initialRecordSupportedFieldNames ?? "none");
+  const [hasLoadedRecords, setHasLoadedRecords] = React.useState(
+    () => options?.initialRecordsLoaded ?? false,
+  );
   const [isLoadingRecords, setIsLoadingRecords] = React.useState(false);
   const [isSavingRecord, setIsSavingRecord] = React.useState(false);
 

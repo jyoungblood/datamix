@@ -1,0 +1,57 @@
+---
+import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import type { StoredCollectionDefinition } from "@/server/collections";
+
+type Props = {
+  collectionLoadError: string | null;
+  collections: StoredCollectionDefinition[];
+  collectionsLoaded: boolean;
+  mode: "create" | "edit";
+  routeAccess: AdminWorkspaceRouteAccessState;
+  schemaId?: string;
+  workspace: AdminWorkspaceProps;
+};
+
+const {
+  collectionLoadError,
+  collections,
+  collectionsLoaded,
+  mode,
+  routeAccess,
+  schemaId,
+  workspace,
+} = Astro.props;
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+  {
+    mode === "edit" ? (
+      <SchemaBuilderRoute
+        client:only="react"
+        collectionLoadError={collectionLoadError}
+        collections={collections}
+        collectionsLoaded={collectionsLoaded}
+        mode="edit"
+        routeAccess={routeAccess}
+        schemaId={schemaId ?? ""}
+        workspace={workspace}
+      />
+    ) : (
+      <SchemaBuilderRoute
+        client:only="react"
+        collectionLoadError={collectionLoadError}
+        collections={collections}
+        collectionsLoaded={collectionsLoaded}
+        mode="create"
+        routeAccess={routeAccess}
+        workspace={workspace}
+      />
+    )
+  }
+</div>

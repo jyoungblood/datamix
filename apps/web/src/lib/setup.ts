@@ -1,5 +1,5 @@
 import type { AuthSetupStatus, DatamixAuthRuntimeSummary } from "@datamix/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { buildDatamixAdminApiUrl } from "./runtime";
 
@@ -12,7 +12,7 @@ type SetupStatusResponse = {
   auth: AuthSetupRuntime;
 };
 
-type SetupStatusState = {
+export type SetupStatusState = {
   data: AuthSetupStatus | null;
   errorMessage: string | null;
   isPending: boolean;
@@ -55,9 +55,10 @@ export async function fetchSetupStatus() {
   return (await fetchSetupRuntime()).setup;
 }
 
-export function useSetupStatus() {
+export function useSetupStatus(initialState?: SetupStatusState) {
   const [reloadToken, setReloadToken] = useState(0);
-  const [state, setState] = useState<SetupStatusState>({
+  const shouldUseInitialState = useRef(Boolean(initialState));
+  const [state, setState] = useState<SetupStatusState>(() => initialState ?? {
     data: null,
     errorMessage: null,
     isPending: true,
@@ -69,6 +70,11 @@ export function useSetupStatus() {
     let isCancelled = false;
 
     async function load() {
+      if (shouldUseInitialState.current) {
+        shouldUseInitialState.current = false;
+        return;
+      }
+
       if (!isCancelled) {
         setState((currentState) => ({
           ...currentState,

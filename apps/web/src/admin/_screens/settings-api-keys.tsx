@@ -4,6 +4,7 @@ import {
   datamixApiKeyAccessLevels,
   datamixRolePresets,
   type DatamixApiKeySummary,
+  type DatamixRoleDefinition,
 } from "@datamix/core";
 import { Copy, KeyRound, Plus, Save, Shield, Trash2 } from "lucide-react";
 import type { SubmitEvent } from "react";
@@ -39,15 +40,32 @@ import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { adminPublicEnv } from "@/lib/runtime";
-import { useSetupStatus } from "@/lib/setup";
+import { useSetupStatus, type SetupStatusState } from "@/lib/setup";
+import type { PublicApiRuntimeSummary } from "@/lib/api-keys";
 
 type SettingsApiKeysContentProps = {
+  apiKeys?: DatamixApiKeySummary[];
+  apiKeysLoadError?: string | null;
+  apiKeysLoaded?: boolean;
+  publicApiRuntime?: PublicApiRuntimeSummary | null;
+  roles?: DatamixRoleDefinition[];
+  rolesLoadError?: string | null;
+  rolesLoaded?: boolean;
   routeAccess: AdminWorkspaceRouteAccessState;
+  setupStatus?: SetupStatusState;
   workspace: AdminWorkspaceProps;
 };
 
 type SettingsApiKeysRouteProps = {
+  apiKeys?: DatamixApiKeySummary[];
+  apiKeysLoadError?: string | null;
+  apiKeysLoaded?: boolean;
+  publicApiRuntime?: PublicApiRuntimeSummary | null;
+  roles?: DatamixRoleDefinition[];
+  rolesLoadError?: string | null;
+  rolesLoaded?: boolean;
   routeAccess: AdminWorkspaceRouteAccessState;
+  setupStatus?: SetupStatusState;
   workspace: AdminWorkspaceProps;
 };
 
@@ -158,10 +176,18 @@ function SettingsApiKeyRow({
 }
 
 export function SettingsApiKeysContent({
+  apiKeys: initialApiKeys,
+  apiKeysLoadError: initialApiKeysLoadError,
+  apiKeysLoaded: initialApiKeysLoaded,
+  publicApiRuntime: initialPublicApiRuntime,
+  roles: initialRoles,
+  rolesLoadError: initialRolesLoadError,
+  rolesLoaded: initialRolesLoaded,
   routeAccess,
+  setupStatus: initialSetupStatus,
   workspace,
 }: SettingsApiKeysContentProps) {
-  const setupStatus = useSetupStatus();
+  const setupStatus = useSetupStatus(initialSetupStatus);
   const access = routeAccess;
   const { permissions, role } = workspace;
   const reloadWorkspace = React.useCallback(async () => {
@@ -177,9 +203,18 @@ export function SettingsApiKeysContent({
       workspace.account.name,
     ],
   );
-  const apiKeysState = useAdminApiKeysState({ permissions });
+  const apiKeysState = useAdminApiKeysState({
+    initialApiKeys,
+    initialApiKeysLoadError,
+    initialApiKeysLoaded,
+    initialPublicApiRuntime,
+    permissions,
+  });
   const rolesState = useAdminRolesState({
     currentRoleId: workspace.authorization.role.id,
+    initialRoles,
+    initialRolesLoadError,
+    initialRolesLoaded,
     onCurrentRoleChanged: reloadWorkspace,
     permissions,
   });
@@ -702,7 +737,7 @@ export function SettingsApiKeysContent({
 
 export function SettingsApiKeysRoute({
   routeAccess,
-  workspace,
+  ...props
 }: SettingsApiKeysRouteProps) {
-  return <SettingsApiKeysContent routeAccess={routeAccess} workspace={workspace} />;
+  return <SettingsApiKeysContent routeAccess={routeAccess} {...props} />;
 }

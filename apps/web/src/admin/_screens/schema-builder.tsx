@@ -43,6 +43,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   CollectionDefinitionRequestError,
   saveCollectionDefinition,
+  type StoredCollectionDefinition,
 } from "@/lib/collection-definitions";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,9 @@ type SchemaBuilderRouteModeProps =
     };
 
 type SchemaBuilderContentProps = {
+  collectionLoadError?: string | null;
+  collections?: StoredCollectionDefinition[];
+  collectionsLoaded?: boolean;
   mode: SchemaBuilderRouteModeProps["mode"];
   routeAccess: AdminWorkspaceRouteAccessState;
   schemaId?: string;
@@ -67,6 +71,9 @@ type SchemaBuilderContentProps = {
 };
 
 type SchemaBuilderRouteProps = SchemaBuilderRouteModeProps & {
+  collectionLoadError?: string | null;
+  collections?: StoredCollectionDefinition[];
+  collectionsLoaded?: boolean;
   routeAccess: AdminWorkspaceRouteAccessState;
   workspace: AdminWorkspaceProps;
 };
@@ -112,6 +119,9 @@ function createFieldSummary(field: CollectionFieldDraft) {
 }
 
 export function SchemaBuilderContent({
+  collectionLoadError: initialCollectionLoadError,
+  collections: initialCollections,
+  collectionsLoaded: initialCollectionsLoaded,
   mode,
   routeAccess,
   schemaId,
@@ -124,7 +134,11 @@ export function SchemaBuilderContent({
     hasLoadedCollections,
     isLoadingCollections,
     loadCollections,
-  } = useAdminCollectionsState();
+  } = useAdminCollectionsState({
+    initialCollectionLoadError,
+    initialCollections,
+    initialCollectionsLoaded,
+  });
   const { permissions } = workspace;
   const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
   const activeCollection =

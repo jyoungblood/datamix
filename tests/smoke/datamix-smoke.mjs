@@ -438,9 +438,11 @@ async function main() {
     });
     assertOk(adminHomePage.response, "Expected the routed admin home page to load.");
     assert.ok(
-      adminHomePage.text.includes('data-admin-homepage="overview-v1"') ||
-        adminHomePage.text.includes('\\"data-admin-homepage\\":\\"overview-v1\\"'),
-      "Expected /admin to render the routed admin overview.",
+      adminHomePage.text.includes('data-admin-dashboard-placeholder="overview-v2"') ||
+        adminHomePage.text.includes(
+          '\\"data-admin-dashboard-placeholder\\":\\"overview-v2\\"',
+        ),
+      "Expected /admin to render the routed admin dashboard placeholder.",
     );
     assert.doesNotMatch(
       adminHomePage.text,

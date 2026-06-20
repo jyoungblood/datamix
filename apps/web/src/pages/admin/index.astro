@@ -1,6 +1,6 @@
 ---
 import { adminRoutes } from "@/admin/_workspace/admin-routes";
-import { AdminHomeIsland } from "@/admin/islands/workspace-routes";
+import AdminDashboardRouteBody from "@/components/admin/AdminDashboardRouteBody.astro";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
 import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
 
@@ -16,8 +16,6 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <div data-admin-homepage="overview-v1">
-      <AdminHomeIsland client:only="react" workspace={page.workspace} />
-    </div>
+    {page.workspace ? <AdminDashboardRouteBody workspace={page.workspace} /> : null}
   </AdminWorkspaceShell>
 </DatamixRootLayout>

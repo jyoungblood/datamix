@@ -1,13 +1,13 @@
 ---
 import { adminRoutes } from "@/admin/_workspace/admin-routes";
-import { NewContentIsland } from "@/admin/islands/workspace-routes";
+import ContentEditorRouteBody from "@/components/admin/ContentEditorRouteBody.astro";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
-import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
+import { resolveContentEditorPage } from "@/server/routes/astro-admin-stateful-pages";
 
 import DatamixRootLayout from "../../../layouts/DatamixRootLayout.astro";
 
 const route = adminRoutes.content.newRecord();
-const page = await resolveWorkspacePage(Astro.request, route);
+const page = await resolveContentEditorPage(Astro.request, route);
 
 if (page.kind === "redirect") {
   return Astro.redirect(page.location);
@@ -16,6 +16,24 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <NewContentIsland client:only="react" workspace={page.workspace} />
+    {
+      page.workspace ? (
+        <ContentEditorRouteBody
+          collectionLoadError={page.contentEditor.collectionLoadError}
+          collections={page.contentEditor.collections}
+          collectionsLoaded={page.contentEditor.collectionsLoaded}
+          mediaAssets={page.contentEditor.mediaAssets}
+          mediaAssetsLoaded={page.contentEditor.mediaAssetsLoaded}
+          mediaLoadError={page.contentEditor.mediaLoadError}
+          mode="create"
+          recordLoadError={page.contentEditor.recordLoadError}
+          recordSupportedFieldNames={page.contentEditor.recordSupportedFieldNames}
+          records={page.contentEditor.records}
+          recordsLoaded={page.contentEditor.recordsLoaded}
+          routeAccess={page.workspace.routeAccess}
+          workspace={page.workspace}
+        />
+      ) : null
+    }
   </AdminWorkspaceShell>
 </DatamixRootLayout>

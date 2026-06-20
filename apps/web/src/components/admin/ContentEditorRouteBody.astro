@@ -1,0 +1,92 @@
+---
+import type { DatamixMediaAsset } from "@datamix/core";
+
+import { ContentEditorRoute } from "@/admin/_screens/content-editor";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import type { StoredCollectionDefinition } from "@/server/collections";
+import type { StoredCollectionRecord } from "@/server/records";
+
+type Props = {
+  collectionLoadError: string | null;
+  collections: StoredCollectionDefinition[];
+  collectionsLoaded: boolean;
+  mediaAssets: DatamixMediaAsset[];
+  mediaAssetsLoaded: boolean;
+  mediaLoadError: string | null;
+  mode: "create" | "edit";
+  recordId?: string | undefined;
+  recordLoadError: string | null;
+  recordSupportedFieldNames: string;
+  records: StoredCollectionRecord[];
+  recordsLoaded: boolean;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  schemaId?: string | undefined;
+  workspace: AdminWorkspaceProps;
+};
+
+const {
+  collectionLoadError,
+  collections,
+  collectionsLoaded,
+  mediaAssets,
+  mediaAssetsLoaded,
+  mediaLoadError,
+  mode,
+  recordId,
+  recordLoadError,
+  recordSupportedFieldNames,
+  records,
+  recordsLoaded,
+  routeAccess,
+  schemaId,
+  workspace,
+} = Astro.props;
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+  {
+    mode === "edit" ? (
+      <ContentEditorRoute
+        client:only="react"
+        collectionLoadError={collectionLoadError}
+        collections={collections}
+        collectionsLoaded={collectionsLoaded}
+        mediaAssets={mediaAssets}
+        mediaAssetsLoaded={mediaAssetsLoaded}
+        mediaLoadError={mediaLoadError}
+        mode="edit"
+        recordId={recordId ?? ""}
+        recordLoadError={recordLoadError}
+        recordSupportedFieldNames={recordSupportedFieldNames}
+        records={records}
+        recordsLoaded={recordsLoaded}
+        routeAccess={routeAccess}
+        schemaId={schemaId ?? ""}
+        workspace={workspace}
+      />
+    ) : (
+      <ContentEditorRoute
+        client:only="react"
+        collectionLoadError={collectionLoadError}
+        collections={collections}
+        collectionsLoaded={collectionsLoaded}
+        mediaAssets={mediaAssets}
+        mediaAssetsLoaded={mediaAssetsLoaded}
+        mediaLoadError={mediaLoadError}
+        mode="create"
+        recordLoadError={recordLoadError}
+        recordSupportedFieldNames={recordSupportedFieldNames}
+        records={records}
+        recordsLoaded={recordsLoaded}
+        routeAccess={routeAccess}
+        schemaId={schemaId}
+        workspace={workspace}
+      />
+    )
+  }
+</div>

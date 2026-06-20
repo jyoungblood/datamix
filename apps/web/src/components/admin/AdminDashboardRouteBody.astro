@@ -1,0 +1,158 @@
+---
+import {
+  Activity,
+  Database,
+  FileText,
+  Image,
+  KeyRound,
+  UsersRound,
+} from "lucide-react";
+
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { buttonVariants } from "@/components/ui/button";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
+
+type Props = {
+  workspace: AdminWorkspaceProps;
+};
+
+const { workspace } = Astro.props;
+const secondaryButtonClass = buttonVariants({ size: "sm", variant: "outline" });
+const primaryLinks = [
+  {
+    body: "Model content types and field order.",
+    href: adminRoutes.schema.index().href,
+    icon: Database,
+    label: "Schema",
+  },
+  {
+    body: "Create and edit saved records.",
+    href: adminRoutes.content.index().href,
+    icon: FileText,
+    label: "Content",
+  },
+  {
+    body: "Upload files and copy delivery keys.",
+    href: adminRoutes.media().href,
+    icon: Image,
+    label: "Media",
+  },
+  {
+    body: "Review users, roles, and API posture.",
+    href: adminRoutes.team().href,
+    icon: UsersRound,
+    label: "Team",
+  },
+];
+---
+
+<div
+  class="mx-auto flex w-full max-w-6xl flex-col gap-4"
+  data-admin-dashboard-placeholder="overview-v2"
+>
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+
+  <AdminPageHeader title="Dashboard">
+    <Fragment slot="action">
+      <a class={secondaryButtonClass} href={adminRoutes.settings().href}>
+        <KeyRound className="size-4" />
+        Settings
+      </a>
+    </Fragment>
+  </AdminPageHeader>
+
+  <section class="grid gap-3 md:grid-cols-4">
+    {
+      primaryLinks.map((item) => {
+        const Icon = item.icon;
+
+        return (
+          <a
+            class="group rounded-lg border border-border bg-white p-4 text-sm shadow-none ring-1 ring-foreground/10 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-muted/30"
+            href={item.href}
+          >
+            <span class="mb-4 flex size-9 items-center justify-center rounded-md bg-slate-950 text-white">
+              <Icon className="size-4" />
+            </span>
+            <span class="block font-heading text-base font-medium text-slate-950">
+              {item.label}
+            </span>
+            <span class="mt-1 block text-xs leading-5 text-muted-foreground">
+              {item.body}
+            </span>
+          </a>
+        );
+      })
+    }
+  </section>
+
+  <div class="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+    <AdminSectionCard
+      description="A temporary landing surface for the admin workspace."
+      title="Workspace pulse"
+    >
+      <div class="grid gap-3 md:grid-cols-3">
+        <div class="rounded-lg border border-border bg-muted/40 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-normal text-slate-500">
+            Schema posture
+          </p>
+          <p class="mt-3 font-heading text-3xl font-semibold text-slate-950">
+            Ready
+          </p>
+          <p class="mt-1 text-xs leading-5 text-muted-foreground">
+            Builders and generated editors are available from the sidebar.
+          </p>
+        </div>
+        <div class="rounded-lg border border-border bg-muted/40 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-normal text-slate-500">
+            Content flow
+          </p>
+          <p class="mt-3 font-heading text-3xl font-semibold text-slate-950">
+            Live
+          </p>
+          <p class="mt-1 text-xs leading-5 text-muted-foreground">
+            Records save through the same admin API used by public routes.
+          </p>
+        </div>
+        <div class="rounded-lg border border-border bg-muted/40 p-4">
+          <p class="text-[11px] font-bold uppercase tracking-normal text-slate-500">
+            Access
+          </p>
+          <p class="mt-3 font-heading text-3xl font-semibold text-slate-950">
+            Scoped
+          </p>
+          <p class="mt-1 text-xs leading-5 text-muted-foreground">
+            Visible routes match the current role permissions.
+          </p>
+        </div>
+      </div>
+    </AdminSectionCard>
+
+    <AdminSectionCard title="Session">
+      <div class="space-y-3 text-sm">
+        <div class="flex items-center gap-3">
+          <span class="flex size-9 items-center justify-center rounded-md bg-slate-950 text-white">
+            <Activity className="size-4" />
+          </span>
+          <div class="min-w-0">
+            <p class="truncate font-medium text-slate-950">
+              {workspace.account.name}
+            </p>
+            <p class="truncate text-xs text-muted-foreground">
+              {workspace.role.label}
+            </p>
+          </div>
+        </div>
+        <a class={secondaryButtonClass} href={adminRoutes.account().href}>
+          Open account
+        </a>
+      </div>
+    </AdminSectionCard>
+  </div>
+</div>

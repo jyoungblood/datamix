@@ -7,11 +7,23 @@ import {
   type StoredCollectionDefinition,
 } from "@/lib/collection-definitions";
 
-export function useAdminCollectionsState() {
+type AdminCollectionsStateOptions = {
+  initialCollectionLoadError?: string | null | undefined;
+  initialCollections?: StoredCollectionDefinition[] | undefined;
+  initialCollectionsLoaded?: boolean | undefined;
+};
+
+export function useAdminCollectionsState(options?: AdminCollectionsStateOptions) {
   const collectionLoadRequestId = React.useRef(0);
-  const [collections, setCollections] = React.useState<StoredCollectionDefinition[]>([]);
-  const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(null);
-  const [hasLoadedCollections, setHasLoadedCollections] = React.useState(false);
+  const [collections, setCollections] = React.useState<StoredCollectionDefinition[]>(
+    () => options?.initialCollections ?? [],
+  );
+  const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(
+    () => options?.initialCollectionLoadError ?? null,
+  );
+  const [hasLoadedCollections, setHasLoadedCollections] = React.useState(
+    () => options?.initialCollectionsLoaded ?? false,
+  );
   const [isLoadingCollections, setIsLoadingCollections] = React.useState(false);
 
   const resetCollectionsWorkspace = React.useCallback(() => {

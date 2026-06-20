@@ -9,20 +9,32 @@ import {
   uploadMediaAsset as uploadMediaAssetRequest,
 } from "@/lib/media";
 
-export function useAdminMediaState() {
+type AdminMediaStateOptions = {
+  initialMediaAssets?: DatamixMediaAsset[] | undefined;
+  initialMediaAssetsLoaded?: boolean | undefined;
+  initialMediaLoadError?: string | null | undefined;
+};
+
+export function useAdminMediaState(options?: AdminMediaStateOptions) {
   const mediaAssetsLoadRequestId = React.useRef(0);
-  const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>([]);
-  const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(null);
+  const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>(
+    () => options?.initialMediaAssets ?? [],
+  );
+  const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(
+    () => options?.initialMediaLoadError ?? null,
+  );
   const [mediaMessage, setMediaMessage] = React.useState<string | null>(null);
   const [mediaClipboardMessage, setMediaClipboardMessage] = React.useState<string | null>(
     null,
   );
   const [mediaSearchQuery, setMediaSearchQuery] = React.useState("");
   const [selectedMediaAssetId, setSelectedMediaAssetId] = React.useState<string | null>(
-    null,
+    () => options?.initialMediaAssets?.[0]?.id ?? null,
   );
   const [selectedMediaFile, setSelectedMediaFile] = React.useState<File | null>(null);
-  const [hasLoadedMediaAssets, setHasLoadedMediaAssets] = React.useState(false);
+  const [hasLoadedMediaAssets, setHasLoadedMediaAssets] = React.useState(
+    () => options?.initialMediaAssetsLoaded ?? false,
+  );
   const [isLoadingMediaAssets, setIsLoadingMediaAssets] = React.useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = React.useState(false);
 

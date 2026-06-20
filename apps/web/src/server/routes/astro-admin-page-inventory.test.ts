@@ -8,6 +8,11 @@ type WorkspacePageExpectation = {
   route: string;
 };
 
+type AstroNativePageExpectation = {
+  body: string;
+  route: string;
+};
+
 type WorkspaceBodyMigrationStage =
   | "workspace-props-resolved"
   | "server-data-needed"
@@ -37,6 +42,17 @@ const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "SettingsIsland", route: "settings.astro" },
 ];
 
+const astroNativePageExpectations: AstroNativePageExpectation[] = [
+  { body: "AdminDashboardRouteBody", route: "index.astro" },
+  { body: "SchemaBuilderRouteBody", route: "schema/new.astro" },
+  { body: "SchemaBuilderRouteBody", route: "schema/[schemaId].astro" },
+  { body: "ContentEditorRouteBody", route: "content/new.astro" },
+  { body: "ContentEditorRouteBody", route: "content/[schemaId]/[recordId].astro" },
+  { body: "MediaLibraryRouteBody", route: "media.astro" },
+  { body: "TeamRouteBody", route: "team.astro" },
+  { body: "SettingsRouteBody", route: "settings.astro" },
+];
+
 const protectedWorkspaceRoutes = [
   ...workspacePageExpectations.map(({ route }) => route),
   "account.astro",
@@ -46,12 +62,12 @@ const protectedWorkspaceRoutes = [
 
 const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
   {
-    clientOnlySignals: ["useAdminDashboardData", "useAdminCollectionsState"],
-    island: "AdminHomeIsland",
-    rendering: "retained-react-body",
+    clientOnlySignals: ["data-admin-dashboard-placeholder"],
+    island: "AdminDashboardRouteBody",
+    rendering: "astro-native-body",
     route: "index.astro",
-    screen: "apps/web/src/admin/_screens/admin-home.tsx",
-    stage: "server-data-needed",
+    screen: "apps/web/src/components/admin/AdminDashboardRouteBody.astro",
+    stage: "workspace-props-resolved",
   },
   {
     clientOnlySignals: ["AdminWorkspaceCommandPalette"],
@@ -63,19 +79,19 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
   },
   {
     clientOnlySignals: ["SchemaBuilderRoute", "handleSaveSchema"],
-    island: "NewSchemaIsland",
-    rendering: "retained-react-body",
+    island: "SchemaBuilderRouteBody",
+    rendering: "astro-native-body",
     route: "schema/new.astro",
     screen: "apps/web/src/admin/_screens/schema-builder.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["SchemaBuilderRoute", "handleSaveSchema"],
-    island: "SchemaDetailIsland",
-    rendering: "retained-react-body",
+    island: "SchemaBuilderRouteBody",
+    rendering: "astro-native-body",
     route: "schema/[schemaId].astro",
     screen: "apps/web/src/admin/_screens/schema-builder.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["AdminWorkspaceCommandPalette"],
@@ -87,43 +103,43 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
   },
   {
     clientOnlySignals: ["ContentEditorRoute", "GeneratedRecordFieldInput"],
-    island: "NewContentIsland",
-    rendering: "retained-react-body",
+    island: "ContentEditorRouteBody",
+    rendering: "astro-native-body",
     route: "content/new.astro",
     screen: "apps/web/src/admin/_screens/content-editor.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["ContentEditorRoute", "GeneratedRecordFieldInput"],
-    island: "ContentRecordIsland",
-    rendering: "retained-react-body",
+    island: "ContentEditorRouteBody",
+    rendering: "astro-native-body",
     route: "content/[schemaId]/[recordId].astro",
     screen: "apps/web/src/admin/_screens/content-editor.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["useAdminMediaState", "uploadMediaAsset"],
-    island: "MediaIsland",
-    rendering: "retained-react-body",
+    island: "MediaLibraryRouteBody",
+    rendering: "astro-native-body",
     route: "media.astro",
     screen: "apps/web/src/admin/_screens/media-library.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["useAdminTeamState", "sendInvite"],
-    island: "TeamIsland",
-    rendering: "retained-react-body",
+    island: "TeamRouteBody",
+    rendering: "astro-native-body",
     route: "team.astro",
     screen: "apps/web/src/admin/_screens/team-and-roles.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["useAdminApiKeysState", "useAdminRolesState"],
-    island: "SettingsIsland",
-    rendering: "retained-react-body",
+    island: "SettingsRouteBody",
+    rendering: "astro-native-body",
     route: "settings.astro",
     screen: "apps/web/src/admin/_screens/settings-api-keys.tsx",
-    stage: "client-only-deferred",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["AccountProfileSettingsIsland", "AccountSignOutButton"],
@@ -245,20 +261,15 @@ async function collectSourceFiles(directory: string): Promise<string[]> {
   return files.flat();
 }
 
-test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
+test("Astro admin workspace pages render the Astro shell", async () => {
   await Promise.all(
-    workspacePageExpectations.map(async ({ island, route }) => {
+    protectedWorkspaceRoutes.map(async (route) => {
       const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
 
       assert.match(
         source,
         /AdminWorkspaceShell/,
         `${route} should render the Astro workspace shell`,
-      );
-      assert.match(
-        source,
-        new RegExp(`<${island}\\b[^>]*${reactClientDirective}`),
-        `${route} should mount ${island} as the retained React body island`,
       );
       assert.match(
         source,
@@ -269,15 +280,20 @@ test("Slice 3 Astro admin workspace pages render the Astro shell and retained Re
   );
 });
 
-test("Slice 1 protected admin pages pass server workspace props to retained islands", async () => {
+test("State-heavy admin pages render Astro-native route bodies", async () => {
   await Promise.all(
-    workspacePageExpectations.map(async ({ island, route }) => {
+    astroNativePageExpectations.map(async ({ body, route }) => {
       const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
 
       assert.match(
         source,
-        new RegExp(`<${island}\\b(?=[^>]*${reactClientDirective})(?=[^>]*workspace=\\{page\\.workspace\\})[^>]*`),
-        `${route} should pass page.workspace into ${island}`,
+        new RegExp(`<${body}\\b`),
+        `${route} should render ${body}`,
+      );
+      assert.doesNotMatch(
+        source,
+        new RegExp(`${reactClientDirective}|Island\\b`),
+        `${route} should not mount a whole-route retained React island`,
       );
     }),
   );
@@ -311,21 +327,25 @@ test("Astro-native body migration inventory covers every protected workspace rou
   );
   assert.deepEqual(
     astroNativeRoutes,
-    ["account.astro", "content/index.astro", "schema/index.astro"],
-    "Account, schema overview, and content index should be tracked as Astro-native workspace bodies",
-  );
-  assert.deepEqual(
-    deferredRoutes.sort(),
     [
+      "account.astro",
       "content/[schemaId]/[recordId].astro",
+      "content/index.astro",
       "content/new.astro",
+      "index.astro",
       "media.astro",
       "schema/[schemaId].astro",
+      "schema/index.astro",
       "schema/new.astro",
       "settings.astro",
       "team.astro",
     ],
-    "State-heavy editor, media, team, and settings routes should remain explicitly deferred",
+    "Every protected workspace page should be tracked as an Astro-native workspace body",
+  );
+  assert.deepEqual(
+    deferredRoutes.sort(),
+    [],
+    "No protected workspace route should remain in the client-only deferred bucket",
   );
 });
 

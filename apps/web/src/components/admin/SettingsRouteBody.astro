@@ -1,0 +1,55 @@
+---
+import type { DatamixApiKeySummary, DatamixRoleDefinition } from "@datamix/core";
+
+import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import type { PublicApiRuntimeSummary } from "@/lib/api-keys";
+import type { SetupStatusState } from "@/lib/setup";
+
+type Props = {
+  apiKeys: DatamixApiKeySummary[];
+  apiKeysLoadError: string | null;
+  apiKeysLoaded: boolean;
+  publicApiRuntime: PublicApiRuntimeSummary | null;
+  roles: DatamixRoleDefinition[];
+  rolesLoadError: string | null;
+  rolesLoaded: boolean;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  setupStatus: SetupStatusState;
+  workspace: AdminWorkspaceProps;
+};
+
+const {
+  apiKeys,
+  apiKeysLoadError,
+  apiKeysLoaded,
+  publicApiRuntime,
+  roles,
+  rolesLoadError,
+  rolesLoaded,
+  routeAccess,
+  setupStatus,
+  workspace,
+} = Astro.props;
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+  <SettingsApiKeysRoute
+    client:only="react"
+    apiKeys={apiKeys}
+    apiKeysLoadError={apiKeysLoadError}
+    apiKeysLoaded={apiKeysLoaded}
+    publicApiRuntime={publicApiRuntime}
+    roles={roles}
+    rolesLoadError={rolesLoadError}
+    rolesLoaded={rolesLoaded}
+    routeAccess={routeAccess}
+    setupStatus={setupStatus}
+    workspace={workspace}
+  />
+</div>

@@ -27,6 +27,7 @@ import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { DatamixUserSummary } from "@/lib/users";
 
 function createRolePermissionSummary(role: DatamixRoleDefinition) {
   const grants = listDatamixPermissionGrantsForRole(role);
@@ -47,17 +48,35 @@ function createRolePermissionSummary(role: DatamixRoleDefinition) {
 }
 
 type TeamAndRolesContentProps = {
+  roles?: DatamixRoleDefinition[];
+  rolesLoadError?: string | null;
+  rolesLoaded?: boolean;
   routeAccess: AdminWorkspaceRouteAccessState;
+  users?: DatamixUserSummary[];
+  usersLoadError?: string | null;
+  usersLoaded?: boolean;
   workspace: AdminWorkspaceProps;
 };
 
 type TeamAndRolesRouteProps = {
+  roles?: DatamixRoleDefinition[];
+  rolesLoadError?: string | null;
+  rolesLoaded?: boolean;
   routeAccess: AdminWorkspaceRouteAccessState;
+  users?: DatamixUserSummary[];
+  usersLoadError?: string | null;
+  usersLoaded?: boolean;
   workspace: AdminWorkspaceProps;
 };
 
 export function TeamAndRolesContent({
+  roles: initialRoles,
+  rolesLoadError: initialRolesLoadError,
+  rolesLoaded: initialRolesLoaded,
   routeAccess,
+  users: initialUsers,
+  usersLoadError: initialUsersLoadError,
+  usersLoaded: initialUsersLoaded,
   workspace,
 }: TeamAndRolesContentProps) {
   const access = routeAccess;
@@ -67,12 +86,18 @@ export function TeamAndRolesContent({
   }, []);
   const rolesState = useAdminRolesState({
     currentRoleId: workspace.authorization.role.id,
+    initialRoles,
+    initialRolesLoadError,
+    initialRolesLoaded,
     onCurrentRoleChanged: reloadWorkspace,
     permissions,
   });
   const teamState = useAdminTeamState({
     availableRoles: rolesState.availableRoles,
     currentUserId: workspace.account.id,
+    initialUsers,
+    initialUsersLoadError,
+    initialUsersLoaded,
     onCurrentUserRoleUpdated: reloadWorkspace,
     permissions,
   });
@@ -394,7 +419,7 @@ export function TeamAndRolesContent({
 
 export function TeamAndRolesRoute({
   routeAccess,
-  workspace,
+  ...props
 }: TeamAndRolesRouteProps) {
-  return <TeamAndRolesContent routeAccess={routeAccess} workspace={workspace} />;
+  return <TeamAndRolesContent routeAccess={routeAccess} {...props} />;
 }

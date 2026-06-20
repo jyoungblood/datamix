@@ -1,0 +1,48 @@
+---
+import type { DatamixRoleDefinition } from "@datamix/core";
+
+import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import type { DatamixUserSummary } from "@/lib/users";
+
+type Props = {
+  roles: DatamixRoleDefinition[];
+  rolesLoadError: string | null;
+  rolesLoaded: boolean;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  users: DatamixUserSummary[];
+  usersLoadError: string | null;
+  usersLoaded: boolean;
+  workspace: AdminWorkspaceProps;
+};
+
+const {
+  roles,
+  rolesLoadError,
+  rolesLoaded,
+  routeAccess,
+  users,
+  usersLoadError,
+  usersLoaded,
+  workspace,
+} = Astro.props;
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+  <TeamAndRolesRoute
+    client:only="react"
+    roles={roles}
+    rolesLoadError={rolesLoadError}
+    rolesLoaded={rolesLoaded}
+    routeAccess={routeAccess}
+    users={users}
+    usersLoadError={usersLoadError}
+    usersLoaded={usersLoaded}
+    workspace={workspace}
+  />
+</div>

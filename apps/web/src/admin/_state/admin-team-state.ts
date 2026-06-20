@@ -16,6 +16,9 @@ import {
 type AdminTeamStateOptions = {
   availableRoles: DatamixRoleDefinition[];
   currentUserId: string | null;
+  initialUsers?: DatamixUserSummary[] | undefined;
+  initialUsersLoadError?: string | null | undefined;
+  initialUsersLoaded?: boolean | undefined;
   onCurrentUserRoleUpdated?: () => Promise<void>;
   permissions: Pick<
     AdminWorkspacePermissions,
@@ -26,17 +29,36 @@ type AdminTeamStateOptions = {
 export function useAdminTeamState({
   availableRoles,
   currentUserId,
+  initialUsers,
+  initialUsersLoadError,
+  initialUsersLoaded,
   onCurrentUserRoleUpdated,
   permissions,
 }: AdminTeamStateOptions) {
   const usersLoadRequestId = React.useRef(0);
-  const [users, setUsers] = React.useState<DatamixUserSummary[]>([]);
-  const [usersLoadError, setUsersLoadError] = React.useState<string | null>(null);
+  const [users, setUsers] = React.useState<DatamixUserSummary[]>(
+    () => initialUsers ?? [],
+  );
+  const [usersLoadError, setUsersLoadError] = React.useState<string | null>(
+    () => initialUsersLoadError ?? null,
+  );
   const [usersMessage, setUsersMessage] = React.useState<string | null>(null);
-  const [hasLoadedUsers, setHasLoadedUsers] = React.useState(false);
+  const [hasLoadedUsers, setHasLoadedUsers] = React.useState(
+    () => initialUsersLoaded ?? false,
+  );
   const [isLoadingUsers, setIsLoadingUsers] = React.useState(false);
   const [updatingUserRoleId, setUpdatingUserRoleId] = React.useState<string | null>(null);
-  const [userRoleDrafts, setUserRoleDrafts] = React.useState<Record<string, string>>({});
+  const [userRoleDrafts, setUserRoleDrafts] = React.useState<Record<string, string>>(
+    () => {
+      const drafts: Record<string, string> = {};
+
+      (initialUsers ?? []).forEach((user) => {
+        drafts[user.id] = user.roleId ?? "";
+      });
+
+      return drafts;
+    },
+  );
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [inviteName, setInviteName] = React.useState("");
   const [inviteRoleId, setInviteRoleId] = React.useState<string>(

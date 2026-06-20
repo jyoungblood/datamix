@@ -76,14 +76,18 @@ const reactClientDirective = `client:only=${'"react"'}`;
 const nextLinkImport = `from "next${"/"}link"`;
 
 const protectedWorkspacePages = [
-  ["index.astro", "AdminHomeIsland"],
-  ["content/new.astro", "NewContentIsland"],
-  ["content/[schemaId]/[recordId].astro", "ContentRecordIsland"],
-  ["media.astro", "MediaIsland"],
-  ["schema/new.astro", "NewSchemaIsland"],
-  ["schema/[schemaId].astro", "SchemaDetailIsland"],
-  ["settings.astro", "SettingsIsland"],
-  ["team.astro", "TeamIsland"],
+  ["index.astro", "AdminDashboardRouteBody", "resolveWorkspacePage"],
+  ["content/new.astro", "ContentEditorRouteBody", "resolveContentEditorPage"],
+  [
+    "content/[schemaId]/[recordId].astro",
+    "ContentEditorRouteBody",
+    "resolveContentEditorPage",
+  ],
+  ["media.astro", "MediaLibraryRouteBody", "resolveMediaLibraryPage"],
+  ["schema/new.astro", "SchemaBuilderRouteBody", "resolveSchemaBuilderPage"],
+  ["schema/[schemaId].astro", "SchemaBuilderRouteBody", "resolveSchemaBuilderPage"],
+  ["settings.astro", "SettingsRouteBody", "resolveSettingsPage"],
+  ["team.astro", "TeamRouteBody", "resolveTeamPage"],
 ];
 const astroNativeWorkspacePages = ["account.astro"];
 
@@ -127,7 +131,7 @@ assert(
   "Protected admin route islands should not depend on the old workspace provider wrapper or context hooks.",
 );
 
-for (const [pagePath, islandName] of protectedWorkspacePages) {
+for (const [pagePath, bodyName, resolverName] of protectedWorkspacePages) {
   const fullPath = path.join(adminPagesRoot, pagePath);
 
   assert(
@@ -142,11 +146,13 @@ for (const [pagePath, islandName] of protectedWorkspacePages) {
     `Protected admin page should render the Astro workspace shell: ${pagePath}.`,
   );
   assert(
-    new RegExp(`<${islandName}\\b[^>]*${reactClientDirective}`).test(source),
-    `Protected admin page should mount the retained React body island: ${pagePath}.`,
+    source.includes(bodyName) &&
+      new RegExp(`<${bodyName}\\b`).test(source) &&
+      !source.includes(reactClientDirective),
+    `Protected admin page should render its Astro-native route body: ${pagePath}.`,
   );
   assert(
-    source.includes("resolveWorkspacePage"),
+    source.includes(resolverName),
     `Protected admin page should resolve workspace access in Astro frontmatter: ${pagePath}.`,
   );
   assert(
