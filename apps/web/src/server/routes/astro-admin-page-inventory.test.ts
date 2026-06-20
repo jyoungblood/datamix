@@ -8,6 +8,20 @@ type WorkspacePageExpectation = {
   route: string;
 };
 
+type WorkspaceBodyMigrationStage =
+  | "first-astro-native-candidate"
+  | "server-data-needed"
+  | "client-only-deferred";
+
+type WorkspaceBodyRenderingMode = "retained-react-body" | "astro-native-body";
+
+type WorkspaceBodyMigrationInventoryItem = WorkspacePageExpectation & {
+  clientOnlySignals: string[];
+  rendering: WorkspaceBodyRenderingMode;
+  screen: string;
+  stage: WorkspaceBodyMigrationStage;
+};
+
 const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "AdminHomeIsland", route: "index.astro" },
   { island: "SchemaOverviewIsland", route: "schema/index.astro" },
@@ -23,6 +37,97 @@ const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "TeamIsland", route: "team.astro" },
   { island: "SettingsIsland", route: "settings.astro" },
   { island: "AccountIsland", route: "account.astro" },
+];
+
+const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
+  {
+    clientOnlySignals: ["useAdminDashboardData", "useAdminCollectionsState"],
+    island: "AdminHomeIsland",
+    rendering: "retained-react-body",
+    route: "index.astro",
+    screen: "apps/web/src/admin/_screens/admin-home.tsx",
+    stage: "server-data-needed",
+  },
+  {
+    clientOnlySignals: ["useAdminCollectionsState", "loadCollections"],
+    island: "SchemaOverviewIsland",
+    rendering: "retained-react-body",
+    route: "schema/index.astro",
+    screen: "apps/web/src/admin/_screens/schema-overview.tsx",
+    stage: "server-data-needed",
+  },
+  {
+    clientOnlySignals: ["SchemaBuilderRoute", "handleSaveSchema"],
+    island: "NewSchemaIsland",
+    rendering: "retained-react-body",
+    route: "schema/new.astro",
+    screen: "apps/web/src/admin/_screens/schema-builder.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["SchemaBuilderRoute", "handleSaveSchema"],
+    island: "SchemaDetailIsland",
+    rendering: "retained-react-body",
+    route: "schema/[schemaId].astro",
+    screen: "apps/web/src/admin/_screens/schema-builder.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["useAdminCollectionsState", "listCollectionRecords"],
+    island: "ContentIndexIsland",
+    rendering: "retained-react-body",
+    route: "content/index.astro",
+    screen: "apps/web/src/admin/_screens/content-index.tsx",
+    stage: "server-data-needed",
+  },
+  {
+    clientOnlySignals: ["ContentEditorRoute", "GeneratedRecordFieldInput"],
+    island: "NewContentIsland",
+    rendering: "retained-react-body",
+    route: "content/new.astro",
+    screen: "apps/web/src/admin/_screens/content-editor.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["ContentEditorRoute", "GeneratedRecordFieldInput"],
+    island: "ContentRecordIsland",
+    rendering: "retained-react-body",
+    route: "content/[schemaId]/[recordId].astro",
+    screen: "apps/web/src/admin/_screens/content-editor.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["useAdminMediaState", "uploadMediaAsset"],
+    island: "MediaIsland",
+    rendering: "retained-react-body",
+    route: "media.astro",
+    screen: "apps/web/src/admin/_screens/media-library.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["useAdminTeamState", "sendInvite"],
+    island: "TeamIsland",
+    rendering: "retained-react-body",
+    route: "team.astro",
+    screen: "apps/web/src/admin/_screens/team-and-roles.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["useAdminApiKeysState", "useAdminRolesState"],
+    island: "SettingsIsland",
+    rendering: "retained-react-body",
+    route: "settings.astro",
+    screen: "apps/web/src/admin/_screens/settings-api-keys.tsx",
+    stage: "client-only-deferred",
+  },
+  {
+    clientOnlySignals: ["useAdminAccountState", "updateAccountProfile"],
+    island: "AccountIsland",
+    rendering: "retained-react-body",
+    route: "account.astro",
+    screen: "apps/web/src/admin/_screens/user-account.tsx",
+    stage: "first-astro-native-candidate",
+  },
 ];
 
 const workspaceIslands = [
@@ -166,6 +271,76 @@ test("Slice 1 protected admin pages pass server workspace props to retained isla
         `${route} should pass page.workspace into ${island}`,
       );
     }),
+  );
+});
+
+test("Astro-native body migration inventory covers every protected workspace route", () => {
+  const expectedRoutes = workspacePageExpectations.map(({ route }) => route).sort();
+  const inventoryRoutes = workspaceBodyMigrationInventory
+    .map(({ route }) => route)
+    .sort();
+  const duplicateRoutes = inventoryRoutes.filter(
+    (route, index) => inventoryRoutes.indexOf(route) !== index,
+  );
+  const candidateRoutes = workspaceBodyMigrationInventory
+    .filter(({ stage }) => stage === "first-astro-native-candidate")
+    .map(({ route }) => route);
+
+  assert.deepEqual(
+    inventoryRoutes,
+    expectedRoutes,
+    "Astro-native migration inventory should classify every protected workspace route exactly once",
+  );
+  assert.deepEqual(
+    duplicateRoutes,
+    [],
+    "Astro-native migration inventory should not classify a route more than once",
+  );
+  assert.deepEqual(
+    candidateRoutes,
+    ["account.astro"],
+    "Account should remain the first Astro-native body candidate until server data loaders exist for read-only collection routes",
+  );
+});
+
+test("Astro-native body migration inventory matches current page rendering modes", async () => {
+  await Promise.all(
+    workspaceBodyMigrationInventory.map(async ({ island, rendering, route }) => {
+      const source = await readFile(path.join(pagesAdminDirectory, route), "utf8");
+
+      if (rendering === "retained-react-body") {
+        assert.match(
+          source,
+          new RegExp(`<${island}\\b[^>]*${reactClientDirective}`),
+          `${route} should still mount ${island} while the inventory marks it retained React`,
+        );
+        return;
+      }
+
+      assert.doesNotMatch(
+        source,
+        new RegExp(`<${island}\\b[^>]*${reactClientDirective}`),
+        `${route} should not mount a whole-route React island once marked Astro-native`,
+      );
+    }),
+  );
+});
+
+test("Astro-native body migration inventory records client-only blockers", async () => {
+  await Promise.all(
+    workspaceBodyMigrationInventory.map(
+      async ({ clientOnlySignals, route, screen, stage }) => {
+        const source = await readFile(path.resolve(screen), "utf8");
+
+        for (const signal of clientOnlySignals) {
+          assert.match(
+            source,
+            new RegExp(signal),
+            `${route} should keep its inventory signal until the ${stage} blocker is migrated: ${signal}`,
+          );
+        }
+      },
+    ),
   );
 });
 

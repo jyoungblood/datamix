@@ -15,7 +15,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Workspace Map
 
 - `apps/web`
-  Unified Astro Cloudflare Worker. App source lives under `src/**`: Astro pages and API endpoints live under `src/pages/**`, retained React admin workspace code lives under `src/admin/**`, shared server logic lives under `src/server/**`, and client request helpers live under `src/lib/**`.
+  Unified Astro Cloudflare Worker. App source lives under `src/**`: Astro pages and API endpoints live under `src/pages/**`, Astro admin shell/body templates live under `src/components/admin/**` and `src/pages/admin/**`, retained React admin islands live under `src/admin/**`, shared server logic lives under `src/server/**`, and client request helpers live under `src/lib/**`.
 - `packages/core`
   Shared domain vocabulary for collections, RBAC, media, API keys, and runtime helpers. This package exists to keep contracts consistent, not to centralize everything by default.
 - `packages/create-datamix`
@@ -87,7 +87,8 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Code Shape Guidance
 
 - Auth pages are Astro templates under `apps/web/src/pages/admin/**` using the shared auth card template and small DOM scripts.
-- Authenticated admin pages render `apps/web/src/components/admin/AdminWorkspaceShell.astro`; retained React route bodies live under `apps/web/src/admin/**`, receive explicit serialized workspace props from `apps/web/src/server/routes/astro-workspace-page.ts`, and use route-scoped state hooks under `apps/web/src/admin/_state/**` instead of a global admin React context.
+- Authenticated admin pages render `apps/web/src/components/admin/AdminWorkspaceShell.astro` and resolve access through `apps/web/src/server/routes/astro-workspace-page.ts`. Route bodies should be Astro-native when server props or server-loaded data can cover the initial render; keep React only as targeted islands for mutation state, rich editors, upload/search widgets, or other client-only behavior.
+- Retained React route bodies live under `apps/web/src/admin/**`, receive explicit serialized workspace props, and use route-scoped state hooks under `apps/web/src/admin/_state/**` instead of a global admin React context. Do not reintroduce a global admin workspace provider.
 - `apps/web/src/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/src/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 
