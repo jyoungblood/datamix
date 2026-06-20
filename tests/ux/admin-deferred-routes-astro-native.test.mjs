@@ -165,8 +165,18 @@ assert.match(
 );
 assert.match(
   schemaBuilderBodySource,
-  /<SchemaBuilderFormIsland\b[\s\S]*client:only="react"/,
-  "SchemaBuilderRouteBody should keep only the targeted schema form hydrated.",
+  /<AdminSectionCard\b[\s\S]*title="Schema details"[\s\S]*<AdminSectionCard\b[\s\S]*title="Fields"[\s\S]*<AdminSectionCard\b[\s\S]*title="Field settings"/,
+  "SchemaBuilderRouteBody should render the static schema builder form card shells in Astro.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /data-schema-builder-region="schema-details"[\s\S]*data-schema-builder-region="field-summary"[\s\S]*data-schema-builder-region="field-settings"/,
+  "SchemaBuilderRouteBody should expose targeted mount regions for schema draft controls.",
+);
+assert.match(
+  schemaBuilderBodySource,
+  /<SchemaBuilderFormIsland\b[\s\S]*client:only="react"[\s\S]*activeCollection=\{activeCollection\}[\s\S]*canSave=\{canSaveCurrentSchema\}/,
+  "SchemaBuilderRouteBody should keep only the targeted schema draft controls hydrated.",
 );
 assert.match(
   schemaBuilderBodySource,

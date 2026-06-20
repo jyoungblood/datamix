@@ -1,20 +1,19 @@
 "use client";
 
 import {
+  type DatamixCollectionDefinition,
   datamixFieldTypes,
   type DatamixFieldType,
   type DatamixSchemaValidationIssue,
   type DatamixSelectOption,
 } from "@datamix/core";
 import { Plus } from "lucide-react";
-import type { SubmitEvent } from "react";
 import * as React from "react";
+import { createPortal } from "react-dom";
 
-import { AdminField, AdminSectionCard } from "../_components/admin-design";
+import { AdminField } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
-import { useAdminCollectionsState } from "../_state/admin-collections-state";
 import { adminRoutes } from "../_workspace/admin-routes";
-import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 import {
   createDraftFromDefinition,
   createEmptyCollectionDraft,
@@ -41,29 +40,27 @@ import { cn } from "@/lib/utils";
 const fieldTypeOptions = [...datamixFieldTypes];
 const selectClassName =
   "h-9 w-full rounded-md border border-input bg-white px-2.5 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50";
+const schemaBuilderFormId = "schema-builder-form";
 const schemaBuilderSavingEventName = "datamix:schema-builder-saving";
+type SchemaBuilderRegion =
+  | "field-add"
+  | "field-settings"
+  | "field-summary"
+  | "reset-draft"
+  | "schema-details"
+  | "schema-status";
 
-type SchemaBuilderRouteModeProps =
-  | {
-      mode: "create";
-    }
-  | {
-      mode: "edit";
-      schemaId: string;
-    };
+type SchemaBuilderRouteMode = "create" | "edit";
 
 type SchemaBuilderFormIslandProps = {
-  collectionLoadError?: string | null;
-  collections?: StoredCollectionDefinition[];
-  collectionsLoaded?: boolean;
-  mode: SchemaBuilderRouteModeProps["mode"];
-  schemaId?: string;
-  workspace: AdminWorkspaceProps;
+  activeCollection?: StoredCollectionDefinition | null;
+  canSave: boolean;
+  mode: SchemaBuilderRouteMode;
 };
 
 type SchemaBuilderSaveButtonIslandProps = {
   canSave: boolean;
-  mode: SchemaBuilderRouteModeProps["mode"];
+  mode: SchemaBuilderRouteMode;
 };
 
 function formatFieldTypeLabel(type: DatamixFieldType) {
@@ -85,14 +82,6 @@ function formatSchemaLanguage(value: string) {
     .replaceAll("collection", "schema");
 }
 
-function decodeSchemaId(value: string) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
 function hasDraftInput(draft: CollectionDraft) {
   return Boolean(
     draft.name || draft.label || draft.description || draft.fields.length > 0,
@@ -109,6 +98,32 @@ function publishSchemaBuilderSavingState(isSaving: boolean) {
       detail: { isSaving },
     }),
   );
+}
+
+function useSchemaBuilderRegion(region: SchemaBuilderRegion) {
+  const [target, setTarget] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    setTarget(
+      document.querySelector<HTMLElement>(
+        `[data-schema-builder-region="${region}"]`,
+      ),
+    );
+  }, [region]);
+
+  return target;
+}
+
+function SchemaBuilderPortal({
+  children,
+  region,
+}: {
+  children: React.ReactNode;
+  region: SchemaBuilderRegion;
+}) {
+  const target = useSchemaBuilderRegion(region);
+
+  return target ? createPortal(children, target) : null;
 }
 
 export function SchemaBuilderSaveButtonIsland({
@@ -151,36 +166,19 @@ export function SchemaBuilderSaveButtonIsland({
 }
 
 export function SchemaBuilderFormIsland({
-  collectionLoadError: initialCollectionLoadError,
-  collections: initialCollections,
-  collectionsLoaded: initialCollectionsLoaded,
+  activeCollection = null,
+  canSave,
   mode,
-  schemaId,
-  workspace,
 }: SchemaBuilderFormIslandProps) {
-  const {
-    collectionLoadError,
-    collections,
-    hasLoadedCollections,
-    isLoadingCollections,
-    loadCollections,
-  } = useAdminCollectionsState({
-    initialCollectionLoadError,
-    initialCollections,
-    initialCollectionsLoaded,
-  });
-  const { permissions } = workspace;
-  const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
-  const activeCollection =
-    decodedSchemaId === null
-      ? null
-      : (collections.find((collection) => collection.id === decodedSchemaId) ??
-        null);
   const [draft, setDraft] = React.useState<CollectionDraft>(() =>
     activeCollection
       ? createDraftFromDefinition(activeCollection.definition)
       : createEmptyCollectionDraft(),
   );
+  const [savedDefinition, setSavedDefinition] =
+    React.useState<DatamixCollectionDefinition | null>(
+      () => activeCollection?.definition ?? null,
+    );
   const [draftSourceName, setDraftSourceName] = React.useState<string | null>(
     mode === "create" ? "new" : (activeCollection?.id ?? null),
   );
@@ -194,36 +192,17 @@ export function SchemaBuilderFormIsland({
   const [newFieldType, setNewFieldType] =
     React.useState<DatamixFieldType>("text");
   const isEditingExistingSchema = mode === "edit";
-  const canSaveCurrentSchema = isEditingExistingSchema
-    ? permissions.canUpdateCollections
-    : permissions.canCreateCollections;
+  const serializedDraft = React.useMemo(() => serializeDraft(draft), [draft]);
   const hasUnsavedSchemaChanges =
-    activeCollection !== null
-      ? JSON.stringify(activeCollection.definition) !==
-        JSON.stringify(serializeDraft(draft))
+    savedDefinition !== null
+      ? JSON.stringify(savedDefinition) !== JSON.stringify(serializedDraft)
       : hasDraftInput(draft);
   const statusTone = collectionIssues.length > 0 ? "error" : "success";
 
   React.useEffect(() => {
-    if (
-      !permissions.canViewCollections ||
-      hasLoadedCollections ||
-      isLoadingCollections
-    ) {
-      return;
-    }
-
-    void loadCollections();
-  }, [
-    hasLoadedCollections,
-    isLoadingCollections,
-    loadCollections,
-    permissions.canViewCollections,
-  ]);
-
-  React.useEffect(() => {
     if (mode === "create" && draftSourceName !== "new") {
       setDraft(createEmptyCollectionDraft());
+      setSavedDefinition(null);
       setDraftSourceName("new");
       setCollectionIssues([]);
       setCollectionMessage(null);
@@ -240,6 +219,7 @@ export function SchemaBuilderFormIsland({
     }
 
     setDraft(createDraftFromDefinition(activeCollection.definition));
+    setSavedDefinition(activeCollection.definition);
     setDraftSourceName(activeCollection.id);
     setCollectionIssues([]);
     setCollectionMessage(null);
@@ -331,9 +311,9 @@ export function SchemaBuilderFormIsland({
   };
 
   const resetDraft = () => {
-    if (activeCollection) {
-      setDraft(createDraftFromDefinition(activeCollection.definition));
-      setDraftSourceName(activeCollection.id);
+    if (savedDefinition) {
+      setDraft(createDraftFromDefinition(savedDefinition));
+      setDraftSourceName(activeCollection?.id ?? null);
     } else {
       setDraft(createEmptyCollectionDraft());
       setDraftSourceName("new");
@@ -342,10 +322,10 @@ export function SchemaBuilderFormIsland({
     clearCollectionStatus();
   };
 
-  const handleSaveSchema = async (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSaveSchema = React.useCallback(async (event: Event) => {
     event.preventDefault();
 
-    if (!canSaveCurrentSchema) {
+    if (!canSave) {
       return;
     }
 
@@ -355,11 +335,7 @@ export function SchemaBuilderFormIsland({
     setCollectionMessage(null);
 
     try {
-      const result = await saveCollectionDefinition(serializeDraft(draft));
-
-      if (permissions.canViewCollections) {
-        await loadCollections();
-      }
+      const result = await saveCollectionDefinition(serializedDraft);
 
       if (mode === "create") {
         window.location.href = adminRoutes.schema.detail(
@@ -369,6 +345,7 @@ export function SchemaBuilderFormIsland({
       }
 
       setDraft(createDraftFromDefinition(result.collection.definition));
+      setSavedDefinition(result.collection.definition);
       setDraftSourceName(result.collection.id);
       setCollectionMessage(
         formatSchemaLanguage(
@@ -390,162 +367,142 @@ export function SchemaBuilderFormIsland({
       setIsSavingCollection(false);
       publishSchemaBuilderSavingState(false);
     }
-  };
+  }, [canSave, mode, serializedDraft]);
+
+  React.useEffect(() => {
+    const form = document.getElementById(schemaBuilderFormId);
+
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    form.addEventListener("submit", handleSaveSchema);
+
+    return () => {
+      form.removeEventListener("submit", handleSaveSchema);
+    };
+  }, [handleSaveSchema]);
 
   return (
-    <form
-      className="grid gap-4 lg:grid-cols-[270px_minmax(0,1fr)]"
-      id="schema-builder-form"
-      onSubmit={handleSaveSchema}
-    >
-      <aside className="space-y-4">
-        <AdminSectionCard
-          description={
-            isEditingExistingSchema
-              ? "The schema name is the stable storage identifier."
-              : "Name the schema before saving it."
-          }
-          title="Schema details"
+    <>
+      <SchemaBuilderPortal region="schema-details">
+        <fieldset
+          className="space-y-3"
+          disabled={isSavingCollection || !canSave}
         >
-          <fieldset
-            className="space-y-3"
-            disabled={isSavingCollection || !canSaveCurrentSchema}
-          >
-            <AdminField
-              label="Schema label"
-              onChange={(event) => updateDraft({ label: event.target.value })}
-              placeholder="Articles"
-              value={draft.label}
-            />
-            <AdminField
-              disabled={isEditingExistingSchema}
-              hint={
-                isEditingExistingSchema
-                  ? "Schema names cannot be edited after save."
-                  : "Use lowercase letters, numbers, and underscores."
-              }
-              label="Schema name"
-              onChange={(event) => updateDraft({ name: event.target.value })}
-              placeholder="articles"
-              value={draft.name}
-            />
-            <div className="space-y-1.5">
-              <Label htmlFor="schema-description">Description</Label>
-              <Textarea
-                className="min-h-24 bg-white"
-                id="schema-description"
-                onChange={(event) =>
-                  updateDraft({ description: event.target.value })
-                }
-                placeholder="Long-form content for the public site"
-                value={draft.description}
-              />
-            </div>
-          </fieldset>
-        </AdminSectionCard>
-
-        <AdminSectionCard
-          description="Field order here becomes the generated content editing order."
-          title="Fields"
-        >
-          <div className="space-y-3">
-            <div className="grid gap-2">
-              <Label htmlFor="new-field-type">New field type</Label>
-              <div className="flex gap-2">
-                <select
-                  className={selectClassName}
-                  disabled={isSavingCollection || !canSaveCurrentSchema}
-                  id="new-field-type"
-                  onChange={(event) =>
-                    setNewFieldType(event.target.value as DatamixFieldType)
-                  }
-                  value={newFieldType}
-                >
-                  {fieldTypeOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {formatFieldTypeLabel(type)}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  disabled={isSavingCollection || !canSaveCurrentSchema}
-                  onClick={handleAddField}
-                  type="button"
-                >
-                  <Plus />
-                  Add
-                </Button>
-              </div>
-            </div>
-
-            {draft.fields.length === 0 ? (
-              <AdminStateBox
-                body="Start with a text or markdown field, then layer on selects, relationships, and media references."
-                compact
-                title="No fields yet"
-              />
-            ) : (
-              <div className="space-y-2">
-                {draft.fields.map((field, index) => (
-                  <div
-                    className={cn(
-                      "rounded-lg border p-3 text-left",
-                      index === 0
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-border bg-white text-slate-950",
-                    )}
-                    key={field.key}
-                  >
-                    <span className="block truncate text-sm font-semibold">
-                      {field.label || `Field ${index + 1}`}
-                    </span>
-                    <span
-                      className={cn(
-                        "block truncate text-[10px]",
-                        index === 0 ? "text-slate-300" : "text-slate-500",
-                      )}
-                    >
-                      {createFieldSummary(field)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </AdminSectionCard>
-      </aside>
-
-      <AdminSectionCard
-        action={
-          <Button
-            disabled={
-              !hasUnsavedSchemaChanges ||
-              isSavingCollection ||
-              !canSaveCurrentSchema
-            }
-            onClick={resetDraft}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Reset draft
-          </Button>
-        }
-        description="Configure labels, API names, required state, and type-specific settings."
-        title="Field settings"
-      >
-        {!canSaveCurrentSchema ? (
-          <AdminStateBox
-            body={
-              isEditingExistingSchema
-                ? "Your current role can view this schema, but it cannot save schema changes."
-                : "Your current role cannot create schemas."
-            }
-            compact
-            title="Schema changes are read-only"
-            tone="warning"
+          <AdminField
+            label="Schema label"
+            onChange={(event) => updateDraft({ label: event.target.value })}
+            placeholder="Articles"
+            value={draft.label}
           />
-        ) : null}
+          <AdminField
+            disabled={isEditingExistingSchema}
+            hint={
+              isEditingExistingSchema
+                ? "Schema names cannot be edited after save."
+                : "Use lowercase letters, numbers, and underscores."
+            }
+            label="Schema name"
+            onChange={(event) => updateDraft({ name: event.target.value })}
+            placeholder="articles"
+            value={draft.name}
+          />
+          <div className="space-y-1.5">
+            <Label htmlFor="schema-description">Description</Label>
+            <Textarea
+              className="min-h-24 bg-white"
+              id="schema-description"
+              onChange={(event) =>
+                updateDraft({ description: event.target.value })
+              }
+              placeholder="Long-form content for the public site"
+              value={draft.description}
+            />
+          </div>
+        </fieldset>
+      </SchemaBuilderPortal>
+
+      <SchemaBuilderPortal region="field-add">
+        <div className="grid gap-2">
+          <Label htmlFor="new-field-type">New field type</Label>
+          <div className="flex gap-2">
+            <select
+              className={selectClassName}
+              disabled={isSavingCollection || !canSave}
+              id="new-field-type"
+              onChange={(event) =>
+                setNewFieldType(event.target.value as DatamixFieldType)
+              }
+              value={newFieldType}
+            >
+              {fieldTypeOptions.map((type) => (
+                <option key={type} value={type}>
+                  {formatFieldTypeLabel(type)}
+                </option>
+              ))}
+            </select>
+            <Button
+              disabled={isSavingCollection || !canSave}
+              onClick={handleAddField}
+              type="button"
+            >
+              <Plus />
+              Add
+            </Button>
+          </div>
+        </div>
+      </SchemaBuilderPortal>
+
+      <SchemaBuilderPortal region="field-summary">
+        {draft.fields.length === 0 ? (
+          <AdminStateBox
+            body="Start with a text or markdown field, then layer on selects, relationships, and media references."
+            compact
+            title="No fields yet"
+          />
+        ) : (
+          <div className="space-y-2">
+            {draft.fields.map((field, index) => (
+              <div
+                className={cn(
+                  "rounded-lg border p-3 text-left",
+                  index === 0
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-border bg-white text-slate-950",
+                )}
+                key={field.key}
+              >
+                <span className="block truncate text-sm font-semibold">
+                  {field.label || `Field ${index + 1}`}
+                </span>
+                <span
+                  className={cn(
+                    "block truncate text-[10px]",
+                    index === 0 ? "text-slate-300" : "text-slate-500",
+                  )}
+                >
+                  {createFieldSummary(field)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </SchemaBuilderPortal>
+
+      <SchemaBuilderPortal region="reset-draft">
+        <Button
+          disabled={!hasUnsavedSchemaChanges || isSavingCollection || !canSave}
+          onClick={resetDraft}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
+          Reset draft
+        </Button>
+      </SchemaBuilderPortal>
+
+      <SchemaBuilderPortal region="schema-status">
         {collectionMessage ? (
           <AdminStateBox
             body={
@@ -562,14 +519,6 @@ export function SchemaBuilderFormIsland({
             tone={statusTone}
           />
         ) : null}
-        {collectionLoadError && collections.length > 0 ? (
-          <AdminStateBox
-            body={`${collectionLoadError} You can keep editing the current draft with the last saved schema list that loaded.`}
-            compact
-            title="Saved schema list may be out of date"
-            tone="warning"
-          />
-        ) : null}
         {collectionIssues.length > 0 ? (
           <ul className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
             {collectionIssues.map((issue) => (
@@ -579,10 +528,12 @@ export function SchemaBuilderFormIsland({
             ))}
           </ul>
         ) : null}
+      </SchemaBuilderPortal>
 
+      <SchemaBuilderPortal region="field-settings">
         <fieldset
           className="mt-4 space-y-4"
-          disabled={isSavingCollection || !canSaveCurrentSchema}
+          disabled={isSavingCollection || !canSave}
         >
           {draft.fields.length === 0 ? (
             <AdminStateBox
@@ -873,7 +824,7 @@ export function SchemaBuilderFormIsland({
             ))
           )}
         </fieldset>
-      </AdminSectionCard>
-    </form>
+      </SchemaBuilderPortal>
+    </>
   );
 }

@@ -259,13 +259,21 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
       /routeAccess\.isAllowed/,
       /collections\.find/,
       /<AdminPageHeader\s+title=\{pageTitle\}/,
+      /<AdminSectionCard\b[\s\S]*title="Schema details"/,
+      /<AdminSectionCard\b[\s\S]*title="Fields"/,
+      /<AdminSectionCard\b[\s\S]*title="Field settings"/,
+      /data-schema-builder-region="schema-details"/,
+      /data-schema-builder-region="field-summary"/,
+      /data-schema-builder-region="field-settings"/,
+      /Schema changes are read-only/,
+      /Saved schema list may be out of date/,
       /Schema editing is restricted/,
       /Loading schema/,
       /Schema is unavailable/,
       /Schema not found/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
       /<SchemaBuilderSaveButtonIsland\b[\s\S]*client:only="react"[\s\S]*canSave=\{canSaveCurrentSchema\}[\s\S]*mode=\{mode\}/,
-      /<SchemaBuilderFormIsland\b[\s\S]*client:only="react"[\s\S]*collections=\{collections\}[\s\S]*workspace=\{workspace\}/,
+      /<SchemaBuilderFormIsland\b[\s\S]*client:only="react"[\s\S]*activeCollection=\{activeCollection\}[\s\S]*canSave=\{canSaveCurrentSchema\}[\s\S]*mode=\{mode\}/,
     ],
   },
   {
@@ -664,8 +672,8 @@ test("retained client screens are route-body islands without provider fallbacks"
   );
   assert.doesNotMatch(
     schemaBuilderSource,
-    /export function SchemaBuilderRoute\b|export function SchemaBuilderContent\b|AdminPageHeader|useDelayedLoadingIndicator|AdminLoadingReserve/,
-    "schema-builder.tsx should not keep the deleted whole-route schema builder body",
+    /export function SchemaBuilderRoute\b|export function SchemaBuilderContent\b|AdminPageHeader|AdminSectionCard|useAdminCollectionsState|useDelayedLoadingIndicator|AdminLoadingReserve/,
+    "schema-builder.tsx should not keep whole-route schema builder body, static card shells, or route collection loading",
   );
 
   const contentEditorSource = await readFile(

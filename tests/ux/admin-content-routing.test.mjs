@@ -22,7 +22,10 @@ const contentEditorRouteBodyPath = path.join(
   repoRoot,
   "apps/web/src/components/admin/ContentEditorRouteBody.astro",
 );
-const schemaBuilderPath = path.join(adminRoot, "_screens/schema-builder.tsx");
+const schemaBuilderRouteBodyPath = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/SchemaBuilderRouteBody.astro",
+);
 const collectionDefinitionsPath = path.join(
   repoRoot,
   "apps/web/src/lib/collection-definitions.ts",
@@ -33,7 +36,10 @@ const contentIndexRouteBodySource = readFileSync(contentIndexRouteBodyPath, "utf
 const contentIndexResolverSource = readFileSync(contentIndexResolverPath, "utf8");
 const contentEditorSource = readFileSync(contentEditorPath, "utf8");
 const contentEditorRouteBodySource = readFileSync(contentEditorRouteBodyPath, "utf8");
-const schemaBuilderSource = readFileSync(schemaBuilderPath, "utf8");
+const schemaBuilderRouteBodySource = readFileSync(
+  schemaBuilderRouteBodyPath,
+  "utf8",
+);
 const collectionDefinitionsSource = readFileSync(collectionDefinitionsPath, "utf8");
 
 assert.ok(
@@ -106,7 +112,7 @@ assert.match(
 );
 
 assert.match(
-  schemaBuilderSource,
-  /collection\.id === decodedSchemaId/,
-  "The schema builder should resolve existing schemas by stored id instead of API name.",
+  schemaBuilderRouteBodySource,
+  /collections\.find\(\(collection\) => collection\.id === decodedSchemaId\)/,
+  "The Astro schema builder body should resolve existing schemas by stored id instead of API name.",
 );

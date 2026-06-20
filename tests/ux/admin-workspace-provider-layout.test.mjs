@@ -509,6 +509,18 @@ assert(
     schemaBuilderRouteBodySource.includes(
       "<AdminPageHeader title={pageTitle}",
     ) &&
+    schemaBuilderRouteBodySource.includes('title="Schema details"') &&
+    schemaBuilderRouteBodySource.includes('title="Fields"') &&
+    schemaBuilderRouteBodySource.includes('title="Field settings"') &&
+    schemaBuilderRouteBodySource.includes(
+      'data-schema-builder-region="schema-details"',
+    ) &&
+    schemaBuilderRouteBodySource.includes(
+      'data-schema-builder-region="field-summary"',
+    ) &&
+    schemaBuilderRouteBodySource.includes(
+      'data-schema-builder-region="field-settings"',
+    ) &&
     schemaBuilderRouteBodySource.includes("!routeAccess.isAllowed") &&
     schemaBuilderRouteBodySource.includes("collections.find") &&
     schemaBuilderRouteBodySource.includes("Schema editing is restricted") &&
@@ -533,6 +545,8 @@ assert(
       "export function SchemaBuilderContent",
     ) &&
     !schemaBuilderScreenSource.includes("AdminPageHeader") &&
+    !schemaBuilderScreenSource.includes("AdminSectionCard") &&
+    !schemaBuilderScreenSource.includes("useAdminCollectionsState") &&
     !schemaBuilderScreenSource.includes("useDelayedLoadingIndicator") &&
     !schemaBuilderScreenSource.includes("AdminLoadingReserve"),
   "The schema builder client screen should expose only targeted interaction islands after the Astro body owns the static page.",

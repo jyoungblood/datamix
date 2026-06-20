@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { StoredCollectionDefinition } from "@/server/collections";
 
 import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
 import AdminStateBox from "./AdminStateBox.astro";
 
 type Props = {
@@ -72,6 +73,16 @@ const shouldRenderSchemaBuilderForm =
       !shouldBlockSchemaUntilLoaded &&
       !(collectionLoadError && collections.length === 0) &&
       !(collectionsLoaded && activeCollection === null)));
+const schemaDetailsDescription = isEditingExistingSchema
+  ? "The schema name is the stable storage identifier."
+  : "Name the schema before saving it.";
+const schemaReadOnlyBody = isEditingExistingSchema
+  ? "Your current role can view this schema, but it cannot save schema changes."
+  : "Your current role cannot create schemas.";
+const staleSchemaListBody =
+  collectionLoadError && collections.length > 0
+    ? `${collectionLoadError} You can keep editing the current draft with the last saved schema list that loaded.`
+    : null;
 ---
 
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -127,15 +138,67 @@ const shouldRenderSchemaBuilderForm =
         </Fragment>
       </AdminStateBox>
     ) : shouldRenderSchemaBuilderForm ? (
-      <SchemaBuilderFormIsland
-        client:only="react"
-        collectionLoadError={collectionLoadError}
-        collections={collections}
-        collectionsLoaded={collectionsLoaded}
-        mode={mode}
-        schemaId={schemaId ?? ""}
-        workspace={workspace}
-      />
+      <Fragment>
+        <form
+          class="grid gap-4 lg:grid-cols-[270px_minmax(0,1fr)]"
+          id="schema-builder-form"
+          onsubmit="return false"
+        >
+          <aside class="space-y-4">
+            <AdminSectionCard
+              description={schemaDetailsDescription}
+              title="Schema details"
+            >
+              <div data-schema-builder-region="schema-details"></div>
+            </AdminSectionCard>
+
+            <AdminSectionCard
+              description="Field order here becomes the generated content editing order."
+              title="Fields"
+            >
+              <div class="space-y-3">
+                <div data-schema-builder-region="field-add"></div>
+                <div data-schema-builder-region="field-summary"></div>
+              </div>
+            </AdminSectionCard>
+          </aside>
+
+          <AdminSectionCard
+            description="Configure labels, API names, required state, and type-specific settings."
+            title="Field settings"
+          >
+            <Fragment slot="action">
+              <div data-schema-builder-region="reset-draft"></div>
+            </Fragment>
+
+            {!canSaveCurrentSchema ? (
+              <AdminStateBox
+                body={schemaReadOnlyBody}
+                compact
+                title="Schema changes are read-only"
+                tone="warning"
+              />
+            ) : null}
+            {staleSchemaListBody ? (
+              <AdminStateBox
+                body={staleSchemaListBody}
+                compact
+                title="Saved schema list may be out of date"
+                tone="warning"
+              />
+            ) : null}
+            <div data-schema-builder-region="schema-status"></div>
+            <div data-schema-builder-region="field-settings"></div>
+          </AdminSectionCard>
+        </form>
+
+        <SchemaBuilderFormIsland
+          client:only="react"
+          activeCollection={activeCollection}
+          canSave={canSaveCurrentSchema}
+          mode={mode}
+        />
+      </Fragment>
     ) : null
   }
 </div>
