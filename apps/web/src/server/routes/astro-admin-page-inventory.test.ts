@@ -565,7 +565,7 @@ test("Slice 3 team island forwards explicit route access to the retained body", 
   );
 });
 
-test("Slice 4 settings island derives route access from server workspace props", async () => {
+test("Slice 4 settings island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -578,8 +578,8 @@ test("Slice 4 settings island derives route access from server workspace props",
 
   assert.match(
     workspaceSource,
-    /export function SettingsIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SettingsBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "SettingsIsland should derive route access from the server workspace prop",
+    /<SettingsBody\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "SettingsIsland should pass explicit route access into the retained settings body",
   );
   assert.match(
     bodySource,
@@ -595,6 +595,33 @@ test("Slice 4 settings island derives route access from server workspace props",
     settingsSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SettingsApiKeysContent should not derive settings route access from AdminWorkspaceProvider",
+  );
+});
+
+test("Slice 21 settings island consumes serialized workspace route access", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const settingsIslandSource =
+    workspaceSource.match(
+      /export function SettingsIsland\([\s\S]*?\nexport function AccountIsland/,
+    )?.[0] ?? "";
+
+  assert.match(
+    settingsIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "SettingsIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    settingsIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "SettingsIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    settingsIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "SettingsIsland should not read route metadata or permissions to derive access",
   );
 });
 

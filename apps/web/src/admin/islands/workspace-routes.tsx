@@ -174,9 +174,7 @@ export function TeamIsland({ workspace }: AdminWorkspaceIslandProps) {
 }
 
 export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace
-    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
-    : undefined;
+  const routeAccess = workspace?.routeAccess;
 
   return (
     <AdminWorkspacePage>
