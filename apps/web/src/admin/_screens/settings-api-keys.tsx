@@ -6,6 +6,7 @@ import {
   type DatamixApiKeySummary,
 } from "@datamix/core";
 import { Copy, KeyRound, Plus, Save, Shield, Trash2 } from "lucide-react";
+import type { SubmitEvent } from "react";
 import * as React from "react";
 
 import {
@@ -276,12 +277,12 @@ export function SettingsApiKeysContent({
     permissions.canAccessSettingsWorkspace,
   ]);
 
-  const handleCreateApiKey = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateApiKey = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void createApiKey();
   };
 
-  const handleSaveRole = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveRole = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void saveRole();
   };

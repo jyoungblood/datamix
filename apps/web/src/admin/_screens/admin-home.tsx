@@ -99,13 +99,11 @@ function formatHomeTimestamp(value: string) {
 function formatMetricValue({
   hasLoaded,
   isAllowed,
-  isLoading,
   restrictedValue = "Restricted",
   value,
 }: {
   hasLoaded: boolean;
   isAllowed: boolean;
-  isLoading: boolean;
   restrictedValue?: string;
   value: React.ReactNode;
 }) {
@@ -318,7 +316,6 @@ export function AdminHomeContent({
       value: formatMetricValue({
         hasLoaded: hasLoadedCollections,
         isAllowed: permissions.canViewCollections,
-        isLoading: isLoadingCollections,
         restrictedValue: "Limited",
         value: String(collections.length),
       }),
@@ -344,7 +341,6 @@ export function AdminHomeContent({
       value: formatMetricValue({
         hasLoaded: hasLoadedCollections,
         isAllowed: permissions.canViewCollections,
-        isLoading: isLoadingCollections,
         restrictedValue: "Open",
         value: String(contentReadyCount),
       }),
@@ -362,7 +358,6 @@ export function AdminHomeContent({
       value: formatMetricValue({
         hasLoaded: hasLoadedMediaAssets,
         isAllowed: permissions.canViewMedia,
-        isLoading: isLoadingMediaAssets,
         restrictedValue: "Limited",
         value: String(mediaAssets.length),
       }),
@@ -380,7 +375,6 @@ export function AdminHomeContent({
       value: formatMetricValue({
         hasLoaded: hasLoadedUsers,
         isAllowed: permissions.canViewUsers,
-        isLoading: isLoadingUsers,
         restrictedValue: "Limited",
         value: String(users.length),
       }),
@@ -398,7 +392,6 @@ export function AdminHomeContent({
       value: formatMetricValue({
         hasLoaded: hasLoadedApiKeys,
         isAllowed: permissions.canAccessSettingsWorkspace,
-        isLoading: isLoadingApiKeys,
         value: String(activeApiKeyCount),
       }),
     },
@@ -632,7 +625,6 @@ export function AdminHomeContent({
                   {formatMetricValue({
                     hasLoaded: hasLoadedApiKeys,
                     isAllowed: permissions.canAccessSettingsWorkspace,
-                    isLoading: isLoadingApiKeys,
                     value: activeApiKeyCount,
                   })}
                 </p>
@@ -652,7 +644,6 @@ export function AdminHomeContent({
                   {formatMetricValue({
                     hasLoaded: hasLoadedUsers,
                     isAllowed: permissions.canViewUsers,
-                    isLoading: isLoadingUsers,
                     restrictedValue: permissions.canAccessTeamAccess
                       ? "Limited"
                       : "Restricted",

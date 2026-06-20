@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, Upload } from "lucide-react";
+import type { SubmitEvent } from "react";
 import * as React from "react";
 
 import {
@@ -97,7 +98,7 @@ export function MediaLibraryContent({
     void loadMediaAssets();
   }, [hasLoadedMediaAssets, loadMediaAssets, permissions.canViewMedia]);
 
-  const handleMediaUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleMediaUploadSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!permissions.canUploadMedia) {

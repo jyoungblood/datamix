@@ -6,6 +6,7 @@ import {
   type DatamixRoleDefinition,
 } from "@datamix/core";
 import { Save, UserPlus } from "lucide-react";
+import type { SubmitEvent } from "react";
 import * as React from "react";
 
 import {
@@ -141,7 +142,7 @@ export function TeamAndRolesContent({
     void loadUserList();
   }, [hasLoadedUsers, isLoadingUsers, loadUserList, permissions.canViewUsers]);
 
-  const handleInviteSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleInviteSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void sendInvite();
   };

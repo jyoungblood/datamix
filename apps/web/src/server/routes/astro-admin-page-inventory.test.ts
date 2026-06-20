@@ -109,6 +109,10 @@ const noProviderForbiddenSymbols = [
   "useAdminWorkspaceRouteAccess",
   "AdminWorkspaceContext",
 ];
+const adminTypecheckHintSourcePaths = [
+  "apps/web/src/admin/_components/TiptapRichTextEditor.tsx",
+  ...workspaceScreenPaths,
+];
 
 async function collectSourceFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -382,6 +386,36 @@ test("Task 6 admin source tree has no workspace provider context", async () => {
         );
       }
     }),
+  );
+});
+
+test("Cleanup admin source avoids deprecated event and unused loading hint patterns", async () => {
+  await Promise.all(
+    adminTypecheckHintSourcePaths.map(async (sourcePath) => {
+      const source = await readFile(path.resolve(sourcePath), "utf8");
+
+      assert.doesNotMatch(
+        source,
+        /\bkeyCode\b/,
+        `${sourcePath} should not read deprecated KeyboardEvent.keyCode`,
+      );
+      assert.doesNotMatch(
+        source,
+        /(?:React\.)?FormEvent\b/,
+        `${sourcePath} should not use React's deprecated FormEvent alias`,
+      );
+    }),
+  );
+
+  const adminHomeSource = await readFile(adminHomeSourcePath, "utf8");
+  const formatMetricValueSource =
+    adminHomeSource.match(/function formatMetricValue\([\s\S]*?\n\}/)?.[0] ??
+    "";
+
+  assert.doesNotMatch(
+    formatMetricValueSource,
+    /\bisLoading\b/,
+    "formatMetricValue should not keep an unused isLoading option",
   );
 });
 

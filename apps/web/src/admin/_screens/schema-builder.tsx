@@ -7,6 +7,7 @@ import {
   type DatamixSelectOption,
 } from "@datamix/core";
 import { Plus } from "lucide-react";
+import type { SubmitEvent } from "react";
 import * as React from "react";
 
 import {
@@ -310,7 +311,7 @@ export function SchemaBuilderContent({
     clearCollectionStatus();
   };
 
-  const handleSaveSchema = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveSchema = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!canSaveCurrentSchema) {

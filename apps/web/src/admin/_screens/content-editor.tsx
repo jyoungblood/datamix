@@ -4,6 +4,7 @@ import {
   isRecordCrudFieldDefinition,
   type DatamixMediaAsset,
 } from "@datamix/core";
+import type { SubmitEvent } from "react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -285,7 +286,7 @@ export function ContentEditorContent({
     startNewRecord(collection);
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!collection || !canSaveCurrentContent) {

@@ -118,8 +118,7 @@ export function TiptapRichTextEditor({
         if (
           event.key === "Escape" ||
           event.key === "Esc" ||
-          event.code === "Escape" ||
-          event.keyCode === 27
+          event.code === "Escape"
         ) {
           if (view.dom instanceof HTMLElement) {
             view.dom.blur();

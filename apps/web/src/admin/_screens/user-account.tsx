@@ -1,6 +1,7 @@
 "use client";
 
 import { LogOut, Save, UserRound } from "lucide-react";
+import type { SubmitEvent } from "react";
 import * as React from "react";
 
 import {
@@ -56,7 +57,7 @@ export function AccountContent({ routeAccess, workspace }: AccountContentProps) 
   } = useAdminAccountState({ initialUser });
   const role = workspace.role;
 
-  const handleSaveProfile = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveProfile = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void updateAccountProfile();
   };
