@@ -108,6 +108,10 @@ const teamBodySource = readFileSync(
   path.join(adminComponentsRoot, "TeamRouteBody.astro"),
   "utf8",
 );
+const settingsBodySource = readFileSync(
+  path.join(adminComponentsRoot, "SettingsRouteBody.astro"),
+  "utf8",
+);
 
 assert.match(
   dashboardBodySource,
@@ -165,4 +169,30 @@ assert.doesNotMatch(
   teamBodySource,
   /<TeamAndRolesRoute\b[\s\S]*client:only="react"|import \{ TeamAndRolesRoute \}/,
   "TeamRouteBody should not hydrate the whole team route body.",
+);
+
+assert.match(
+  settingsBodySource,
+  /<AdminPageHeader\s+title="Settings"/,
+  "SettingsRouteBody should render the settings page header in Astro.",
+);
+assert.match(
+  settingsBodySource,
+  /apiKeys\.map/,
+  "SettingsRouteBody should render the server-loaded API key list in Astro.",
+);
+assert.match(
+  settingsBodySource,
+  /rolePreviewItems\.map/,
+  "SettingsRouteBody should render the server-loaded role list in Astro.",
+);
+assert.match(
+  settingsBodySource,
+  /<SettingsInteractionsIsland\b[\s\S]*client:only="react"/,
+  "SettingsRouteBody should keep only targeted settings interactions hydrated.",
+);
+assert.doesNotMatch(
+  settingsBodySource,
+  /<SettingsApiKeysRoute\b[\s\S]*client:only="react"|import \{ SettingsApiKeysRoute \}/,
+  "SettingsRouteBody should not hydrate the whole settings route body.",
 );

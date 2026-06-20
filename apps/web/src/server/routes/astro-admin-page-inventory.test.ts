@@ -295,13 +295,19 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
   },
   {
     bodyFile: "SettingsRouteBody.astro",
+    forbiddenSignals: [/\bSettingsApiKeysRoute\b/, /\bSettingsApiKeysContent\b/],
     requiredSignals: [
       /apiKeysLoaded: boolean;/,
       /rolesLoaded: boolean;/,
       /setupStatus: SetupStatusState;/,
       /routeAccess: AdminWorkspaceRouteAccessState;/,
+      /<AdminPageHeader\s+title="Settings"/,
+      /!routeAccess\.isAllowed/,
+      /setupStatus\.oauth/,
+      /apiKeys\.map/,
+      /rolePreviewItems\.map/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
-      /<SettingsApiKeysRoute\b[\s\S]*client:only="react"[\s\S]*routeAccess=\{routeAccess\}[\s\S]*workspace=\{workspace\}/,
+      /<SettingsInteractionsIsland\b[\s\S]*client:only="react"[\s\S]*apiKeys=\{apiKeys\}[\s\S]*roles=\{roles\}[\s\S]*routeAccess=\{routeAccess\}[\s\S]*workspace=\{workspace\}/,
     ],
   },
 ];
@@ -340,7 +346,7 @@ const statefulClientRoutes = [
     path: "apps/web/src/admin/_screens/team-and-roles.tsx",
   },
   {
-    exportName: "SettingsApiKeysRoute",
+    exportName: "SettingsInteractionsIsland",
     path: "apps/web/src/admin/_screens/settings-api-keys.tsx",
   },
 ];
@@ -587,6 +593,17 @@ test("retained client screens are route-body islands without provider fallbacks"
     teamAndRolesSource,
     /export function TeamAndRolesRoute\b|export function TeamAndRolesContent\b|AdminPageHeader|AdminSectionCard/,
     "team-and-roles.tsx should not keep the deleted whole-route team body",
+  );
+
+  const settingsApiKeysSource = await readFile(
+    path.resolve("apps/web/src/admin/_screens/settings-api-keys.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    settingsApiKeysSource,
+    /export function SettingsApiKeysRoute\b|export function SettingsApiKeysContent\b|AdminPageHeader|AdminSectionCard/,
+    "settings-api-keys.tsx should not keep the deleted whole-route settings body",
   );
 
   const accountSource = await readFile(

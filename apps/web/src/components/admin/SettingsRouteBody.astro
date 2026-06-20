@@ -1,12 +1,32 @@
 ---
-import type { DatamixApiKeySummary, DatamixRoleDefinition } from "@datamix/core";
+import {
+  datamixApiKeyAccessLevels,
+  datamixRolePresets,
+  type DatamixApiKeySummary,
+  type DatamixRoleDefinition,
+} from "@datamix/core";
+import { Copy, KeyRound, Plus, Save, Shield, Trash2 } from "lucide-react";
 
-import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
+import {
+  formatApiKeyAccessLevel,
+  formatAuthProviderStatus,
+  formatPublicApiAccessMode,
+} from "@/admin/_lib/api-key-drafts";
+import { formatRecordTimestamp } from "@/admin/_lib/media-formatting";
+import { rolePermissionSections } from "@/admin/_lib/role-drafts";
+import { SettingsInteractionsIsland } from "@/admin/_screens/settings-api-keys";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import type { PublicApiRuntimeSummary } from "@/lib/api-keys";
+import { adminPublicEnv } from "@/lib/runtime";
 import type { SetupStatusState } from "@/lib/setup";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
+import AdminStateBox from "./AdminStateBox.astro";
 
 type Props = {
   apiKeys: DatamixApiKeySummary[];
@@ -33,23 +53,571 @@ const {
   setupStatus,
   workspace,
 } = Astro.props;
+const { permissions, role } = workspace;
+const rootId = "admin-settings";
+const badgeOutlineClass = badgeVariants({ variant: "outline" });
+const badgeSecondaryClass = badgeVariants({ variant: "secondary" });
+const badgeDestructiveClass = badgeVariants({ variant: "destructive" });
+const primaryButtonClass = buttonVariants();
+const smallButtonClass = buttonVariants({ size: "sm" });
+const smallDestructiveButtonClass = buttonVariants({
+  size: "sm",
+  variant: "destructive",
+});
+const outlineButtonClass = buttonVariants({ variant: "outline" });
+const sessionDisplayName =
+  workspace.account.name || workspace.account.email || "Datamix Admin";
+const sessionEmail = workspace.account.email ?? "Unknown";
+const rolePreviewItems = roles.length > 0 ? roles : datamixRolePresets;
+const selectedRole = roles[0] ?? null;
+const shouldShowOAuthLoading = routeAccess.isAllowed && setupStatus.isPending;
+const shouldShowOAuthList =
+  routeAccess.isAllowed && !shouldShowOAuthLoading && Boolean(setupStatus.oauth);
+const shouldShowOAuthUnavailable =
+  routeAccess.isAllowed && !shouldShowOAuthLoading && !setupStatus.oauth;
+const canAccessSettings =
+  routeAccess.isAllowed && permissions.canAccessSettingsWorkspace;
+const shouldShowApiKeyRuntimeLoading =
+  canAccessSettings && !apiKeysLoaded && !apiKeysLoadError && !publicApiRuntime;
+const shouldShowApiKeyLoading =
+  canAccessSettings && !apiKeysLoaded && !apiKeysLoadError && apiKeys.length === 0;
+const shouldShowApiKeysEmpty =
+  canAccessSettings &&
+  !shouldShowApiKeyLoading &&
+  !apiKeysLoadError &&
+  apiKeysLoaded &&
+  apiKeys.length === 0;
+const shouldShowApiKeyList =
+  canAccessSettings && !shouldShowApiKeyLoading && apiKeys.length > 0;
+const shouldShowRoleLoading =
+  canAccessSettings && !rolesLoaded && !rolesLoadError && roles.length === 0;
+const shouldShowRoleError =
+  canAccessSettings &&
+  !shouldShowRoleLoading &&
+  Boolean(rolesLoadError) &&
+  rolePreviewItems.length === 0;
+const shouldShowRoleList =
+  canAccessSettings && !shouldShowRoleLoading && !shouldShowRoleError;
+const shouldShowRoleStaleError =
+  canAccessSettings &&
+  !shouldShowRoleLoading &&
+  Boolean(rolesLoadError) &&
+  rolePreviewItems.length > 0;
+const selectedRoleDraft = selectedRole
+  ? {
+      description: selectedRole.description,
+      id: selectedRole.id,
+      label: selectedRole.label,
+      permissions: selectedRole.permissions,
+    }
+  : {
+      description: "",
+      id: "",
+      label: "",
+      permissions: [],
+    };
 ---
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4" data-settings-root id={rootId}>
   <div class="flex justify-end">
     <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
   </div>
-  <SettingsApiKeysRoute
-    client:only="react"
-    apiKeys={apiKeys}
-    apiKeysLoadError={apiKeysLoadError}
-    apiKeysLoaded={apiKeysLoaded}
-    publicApiRuntime={publicApiRuntime}
-    roles={roles}
-    rolesLoadError={rolesLoadError}
-    rolesLoaded={rolesLoaded}
-    routeAccess={routeAccess}
-    setupStatus={setupStatus}
-    workspace={workspace}
-  />
+
+  <AdminPageHeader title="Settings" />
+
+  {
+    !routeAccess.isAllowed ? (
+      <AdminStateBox
+        body={`Your ${role.label} role cannot access settings yet.`}
+        title="Settings are restricted"
+        tone="warning"
+      />
+    ) : (
+      <>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <AdminSectionCard title="Session details">
+            <dl class="grid grid-cols-2 gap-y-2 text-[11px]">
+              <dt class="font-bold text-slate-500">Signed in as</dt>
+              <dd class="m-0 min-w-0 text-slate-950">{sessionDisplayName}</dd>
+              <dt class="font-bold text-slate-500">Current role</dt>
+              <dd class="m-0 min-w-0 text-slate-950">{role.label}</dd>
+              <dt class="font-bold text-slate-500">Email</dt>
+              <dd class="m-0 min-w-0 text-slate-950">{sessionEmail}</dd>
+              <dt class="font-bold text-slate-500">App environment</dt>
+              <dd class="m-0 min-w-0 text-slate-950">
+                {adminPublicEnv.NEXT_PUBLIC_APP_ENV}
+              </dd>
+              <dt class="font-bold text-slate-500">App</dt>
+              <dd class="m-0 min-w-0 text-slate-950">
+                Admin and API routes share this origin
+              </dd>
+              <dt class="font-bold text-slate-500">Auth</dt>
+              <dd class="m-0 min-w-0 text-slate-950">Session cookie active</dd>
+            </dl>
+          </AdminSectionCard>
+
+          <AdminSectionCard
+            description="Enable GitHub or Google for invited users through environment configuration."
+            title="Optional OAuth sign-in"
+          >
+            <div data-settings-oauth-loading hidden={!shouldShowOAuthLoading}>
+              <div class="min-h-[126px]" aria-hidden="true"></div>
+            </div>
+
+            <div class="mini-list" data-settings-oauth-list hidden={!shouldShowOAuthList}>
+              {
+                setupStatus.oauth
+                  ? setupStatus.oauth.providers.map((provider) => (
+                      <div class="mini-list-item mini-list-item-stacked">
+                        <div class="mini-list-content">
+                          <strong>{provider.label}</strong>
+                          <small>{provider.message}</small>
+                        </div>
+                        <span class={badgeOutlineClass}>
+                          {formatAuthProviderStatus(provider.status)}
+                        </span>
+                      </div>
+                    ))
+                  : null
+              }
+            </div>
+
+            <div data-settings-oauth-unavailable hidden={!shouldShowOAuthUnavailable}>
+              <AdminStateBox
+                body={
+                  setupStatus.errorMessage ??
+                  "OAuth provider status is unavailable right now."
+                }
+                compact
+                title="OAuth status unavailable"
+                tone={setupStatus.errorMessage ? "warning" : "neutral"}
+              />
+            </div>
+          </AdminSectionCard>
+        </div>
+
+        <AdminSectionCard
+          description="Create read-only or write-capable keys. Raw secrets are shown once."
+          title="Public API keys"
+        >
+          <div data-settings-api-runtime-loading hidden={!shouldShowApiKeyRuntimeLoading}>
+            <div class="mb-4 min-h-[76px]" aria-hidden="true"></div>
+          </div>
+
+          <div data-settings-api-runtime hidden={!publicApiRuntime}>
+            {
+              publicApiRuntime ? (
+                <dl
+                  class="mb-4 grid grid-cols-2 gap-y-2 text-[11px]"
+                  data-settings-api-runtime-details
+                >
+                  <dt class="font-bold text-slate-500">Public read access</dt>
+                  <dd class="m-0 min-w-0 text-slate-950">
+                    {formatPublicApiAccessMode(publicApiRuntime.readAccess)}
+                  </dd>
+                  <dt class="font-bold text-slate-500">Public write access</dt>
+                  <dd class="m-0 min-w-0 text-slate-950">
+                    {formatPublicApiAccessMode(publicApiRuntime.writeAccess)}
+                  </dd>
+                </dl>
+              ) : null
+            }
+          </div>
+
+          <p class="form-success" data-settings-api-keys-message hidden></p>
+          <p
+            class="form-error"
+            data-settings-api-keys-error-message
+            hidden={!apiKeysLoadError}
+          >
+            {apiKeysLoadError}
+          </p>
+
+          <div class="type-specific-box mb-4" data-settings-api-key-secret-box hidden>
+            <p class="section-title">Copy this secret now</p>
+            <p class="section-copy">This raw API key will not be shown again.</p>
+            <code class="record-json-preview" data-settings-api-key-secret></code>
+            <p class="helper-text" data-settings-api-key-secret-message hidden></p>
+            <div class="actions">
+              <button
+                class={buttonVariants({ size: "sm", variant: "outline" })}
+                data-settings-api-key-secret-copy
+                type="button"
+              >
+                <Copy className="size-4" />
+                Copy secret
+              </button>
+            </div>
+          </div>
+
+          {
+            permissions.canUpdateSettings ? (
+              <form class="auth-form mb-4" data-settings-api-key-create-form>
+                <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end">
+                  <label class="field">
+                    <span>Key label</span>
+                    <input
+                      data-settings-api-key-draft-label
+                      placeholder="Production website"
+                      type="text"
+                      value=""
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Access level</span>
+                    <select data-settings-api-key-draft-access>
+                      {datamixApiKeyAccessLevels.map((accessLevel) => (
+                        <option selected={accessLevel === "read"} value={accessLevel}>
+                          {formatApiKeyAccessLevel(accessLevel)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    class={primaryButtonClass}
+                    data-settings-api-key-create-button
+                    type="submit"
+                  >
+                    <KeyRound className="size-4" />
+                    <span data-settings-api-key-create-label>Create key</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <AdminStateBox
+                body={`Your ${role.label} role can inspect API keys, but it cannot create or revoke them.`}
+                compact
+                title="API key writes are restricted"
+                tone="warning"
+              />
+            )
+          }
+
+          <div data-settings-api-keys-loading hidden={!shouldShowApiKeyLoading}>
+            <div class="min-h-[190px]" aria-hidden="true"></div>
+          </div>
+
+          <div data-settings-api-keys-empty hidden={!shouldShowApiKeysEmpty}>
+            <AdminStateBox
+              body="No managed API keys have been created yet."
+              compact
+              title="No managed keys"
+            />
+          </div>
+
+          <div
+            class="mini-list"
+            data-settings-api-key-list
+            hidden={!shouldShowApiKeyList}
+          >
+            {
+              apiKeys.map((apiKey) => {
+                const isRevoked = Boolean(apiKey.revokedAt);
+
+                return (
+                  <div
+                    class="mini-list-item mini-list-item-stacked"
+                    data-settings-api-key-id={apiKey.id}
+                    data-settings-api-key-item
+                  >
+                    <div class="mini-list-content">
+                      <strong>{apiKey.label}</strong>
+                      <small>{apiKey.secretPreview}</small>
+                    </div>
+
+                    <div class="status-row status-row-compact">
+                      <span class={badgeOutlineClass}>
+                        {formatApiKeyAccessLevel(apiKey.accessLevel)}
+                      </span>
+                      <span class={isRevoked ? badgeDestructiveClass : badgeSecondaryClass}>
+                        {isRevoked ? "Revoked" : "Active"}
+                      </span>
+                      <span class={badgeOutlineClass}>
+                        {apiKey.lastUsedAt
+                          ? `Last used ${formatRecordTimestamp(apiKey.lastUsedAt)}`
+                          : "Never used"}
+                      </span>
+                    </div>
+
+                    <p class="helper-text">
+                      Created {formatRecordTimestamp(apiKey.createdAt)}
+                      {apiKey.revokedAt
+                        ? ` / Revoked ${formatRecordTimestamp(apiKey.revokedAt)}`
+                        : ""}
+                    </p>
+
+                    {permissions.canUpdateSettings ? (
+                      <div class="permission-toolbar">
+                        <label class="field field-inline">
+                          <span>Label</span>
+                          <input
+                            data-settings-api-key-id={apiKey.id}
+                            data-settings-api-key-label
+                            disabled={isRevoked}
+                            type="text"
+                            value={apiKey.label}
+                          />
+                        </label>
+                        <label class="field field-inline">
+                          <span>Access</span>
+                          <select
+                            data-settings-api-key-access
+                            data-settings-api-key-id={apiKey.id}
+                            disabled={isRevoked}
+                          >
+                            {datamixApiKeyAccessLevels.map((accessLevel) => (
+                              <option
+                                selected={accessLevel === apiKey.accessLevel}
+                                value={accessLevel}
+                              >
+                                {formatApiKeyAccessLevel(accessLevel)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          class={smallButtonClass}
+                          data-settings-api-key-id={apiKey.id}
+                          data-settings-api-key-save-button
+                          disabled
+                          type="button"
+                        >
+                          <Save className="size-4" />
+                          Save
+                        </button>
+                        <button
+                          class={smallDestructiveButtonClass}
+                          data-settings-api-key-id={apiKey.id}
+                          data-settings-api-key-revoke-button
+                          disabled={isRevoked}
+                          type="button"
+                        >
+                          <Trash2 className="size-4" />
+                          Revoke
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            }
+          </div>
+        </AdminSectionCard>
+
+        <AdminSectionCard
+          description="Select a role to inspect it, or create a custom role for this instance."
+          title="Roles"
+        >
+          {
+            permissions.canUpdateSettings ? (
+              <Fragment slot="action">
+                <button class={smallButtonClass} data-settings-create-role-button type="button">
+                  <Plus className="size-4" />
+                  New custom role
+                </button>
+              </Fragment>
+            ) : null
+          }
+
+          <div class="record-browser">
+            <div class="record-browser-list">
+              <div data-settings-roles-loading hidden={!shouldShowRoleLoading}>
+                <div class="min-h-[252px]" aria-hidden="true"></div>
+              </div>
+
+              <div data-settings-roles-error hidden={!shouldShowRoleError}>
+                <AdminStateBox
+                  body={rolesLoadError ?? ""}
+                  compact
+                  title="Role list is unavailable"
+                  tone="error"
+                />
+              </div>
+
+              <div class="mini-list" data-settings-role-list hidden={!shouldShowRoleList}>
+                {
+                  rolePreviewItems.map((availableRole) => (
+                    <button
+                      class:list={[
+                        "mini-list-item mini-list-item-stacked",
+                        selectedRole?.id === availableRole.id && "is-selected",
+                      ]}
+                      data-settings-role-button
+                      data-settings-role-id={availableRole.id}
+                      type="button"
+                    >
+                      <div class="mini-list-content">
+                        <span>{availableRole.label}</span>
+                        <small>{availableRole.description}</small>
+                      </div>
+                      <span class={badgeOutlineClass}>
+                        {availableRole.system ? "Built-in" : "Custom"}
+                      </span>
+                    </button>
+                  ))
+                }
+              </div>
+
+              <div
+                class="mt-4"
+                data-settings-roles-stale-error
+                hidden={!shouldShowRoleStaleError}
+              >
+                <AdminStateBox
+                  body={rolesLoadError ?? ""}
+                  compact
+                  title="Role list may be out of date"
+                  tone="warning"
+                />
+              </div>
+            </div>
+
+            <aside class="generated-record-preview" data-settings-role-editor>
+              <p class="card-eyebrow">Role editor</p>
+              {
+                selectedRole ? (
+                  <>
+                    <h4 class="section-title">{selectedRole.label}</h4>
+                    <p class="section-copy">{selectedRole.description}</p>
+                  </>
+                ) : (
+                  <>
+                    <h4 class="section-title">Select a role</h4>
+                    <p class="section-copy">
+                      Choose a role from the list to inspect or edit it.
+                    </p>
+                  </>
+                )
+              }
+
+              {
+                selectedRole?.system ? (
+                  <div class="section-stack">
+                    <AdminStateBox
+                      body="Built-in roles are locked. Create a custom role to change permissions."
+                      compact
+                      title="Built-in role"
+                    />
+                    {permissions.canUpdateSettings ? (
+                      <div class="actions">
+                        <button
+                          class={primaryButtonClass}
+                          data-settings-role-copy-button
+                          data-settings-role-id={selectedRole.id}
+                          type="button"
+                        >
+                          <Shield className="size-4" />
+                          Create custom copy
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : permissions.canUpdateSettings || (selectedRole && !selectedRole.system) ? (
+                  <form class="generated-record-form" data-settings-role-form>
+                    <fieldset
+                      class="form-fieldset-reset"
+                      disabled={!permissions.canUpdateSettings}
+                    >
+                      <label class="field">
+                        <span>Role label</span>
+                        <input
+                          data-settings-role-label
+                          placeholder="Content manager"
+                          type="text"
+                          value={selectedRoleDraft.label}
+                        />
+                      </label>
+                      <label class="field">
+                        <span>Role id</span>
+                        <input
+                          data-settings-role-id
+                          placeholder="content_manager"
+                          type="text"
+                          value={selectedRoleDraft.id}
+                        />
+                      </label>
+                      <label class="field">
+                        <span>Description</span>
+                        <textarea
+                          data-settings-role-description
+                          placeholder="Manages content and media without user administration."
+                          rows={3}
+                        >{selectedRoleDraft.description}</textarea>
+                      </label>
+
+                      <div class="permission-section-list">
+                        {rolePermissionSections.map((section) => (
+                          <div class="type-specific-box">
+                            <p class="section-title">{section.resource.label}</p>
+                            <p class="section-copy">{section.resource.description}</p>
+                            <div class="permission-grid">
+                              {section.permissions.map((permission) => (
+                                <label class="permission-row">
+                                  <input
+                                    checked={selectedRoleDraft.permissions.includes(
+                                      permission.key,
+                                    )}
+                                    data-settings-role-permission
+                                    type="checkbox"
+                                    value={permission.key}
+                                  />
+                                  <span>
+                                    <strong>{permission.label}</strong>
+                                    <small>{permission.description}</small>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    <div class="actions">
+                      <button
+                        class={primaryButtonClass}
+                        disabled={!permissions.canUpdateSettings}
+                        type="submit"
+                      >
+                        <Save className="size-4" />
+                        Save role
+                      </button>
+                      <button
+                        class={outlineButtonClass}
+                        data-settings-role-reset-button
+                        disabled={!permissions.canUpdateSettings}
+                        type="button"
+                      >
+                        Reset draft
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <AdminStateBox
+                    body="Select a role to inspect its permissions."
+                    compact
+                    title="No role selected"
+                  />
+                )
+              }
+            </aside>
+          </div>
+        </AdminSectionCard>
+
+        <SettingsInteractionsIsland
+          client:only="react"
+          apiKeys={apiKeys}
+          apiKeysLoadError={apiKeysLoadError}
+          apiKeysLoaded={apiKeysLoaded}
+          publicApiRuntime={publicApiRuntime}
+          roles={roles}
+          rolesLoadError={rolesLoadError}
+          rolesLoaded={rolesLoaded}
+          rootId={rootId}
+          routeAccess={routeAccess}
+          workspace={workspace}
+        />
+      </>
+    )
+  }
 </div>

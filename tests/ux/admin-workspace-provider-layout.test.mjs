@@ -28,6 +28,10 @@ const teamRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/TeamRouteBody.astro",
 );
+const settingsRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/SettingsRouteBody.astro",
+);
 const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
@@ -303,6 +307,7 @@ const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
 const mediaLibraryRouteBodySource = readFileSync(mediaLibraryRouteBody, "utf8");
 const teamRouteBodySource = readFileSync(teamRouteBody, "utf8");
+const settingsRouteBodySource = readFileSync(settingsRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const adminDashboardRouteBodySource = readFileSync(adminDashboardRouteBody, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
@@ -388,17 +393,6 @@ for (const skeletonExport of [
   );
 }
 
-for (const [screenFile, expectedSkeleton] of [
-  ["settings-api-keys.tsx", "AdminMiniListSkeleton"],
-]) {
-  const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
-
-  assert(
-    source.includes(expectedSkeleton),
-    `${screenFile} should render ${expectedSkeleton} during initial data loads.`,
-  );
-}
-
 assert(
   schemaOverviewRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
     schemaOverviewRouteBodySource.includes('client:only="react"') &&
@@ -467,6 +461,34 @@ assert(
     !teamAndRolesScreenSource.includes("AdminPageHeader") &&
     !teamAndRolesScreenSource.includes("AdminSectionCard"),
   "The team client screen should expose only the targeted interaction island after the Astro body owns the static page.",
+);
+
+assert(
+  settingsRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    settingsRouteBodySource.includes('client:only="react"') &&
+    settingsRouteBodySource.includes("SettingsInteractionsIsland") &&
+    settingsRouteBodySource.includes("<AdminPageHeader title=\"Settings\"") &&
+    settingsRouteBodySource.includes("Settings are restricted") &&
+    settingsRouteBodySource.includes("Optional OAuth sign-in") &&
+    settingsRouteBodySource.includes("Public API keys") &&
+    settingsRouteBodySource.includes("apiKeys.map") &&
+    settingsRouteBodySource.includes("rolePreviewItems.map") &&
+    settingsRouteBodySource.includes("No managed keys") &&
+    settingsRouteBodySource.includes("Role list is unavailable") &&
+    !settingsRouteBodySource.includes("SettingsApiKeysRoute") &&
+    !settingsRouteBodySource.includes("SettingsApiKeysContent"),
+  "The Astro-native settings body should render server-loaded setup/API key/role states and hydrate only targeted settings interactions.",
+);
+
+const settingsApiKeysScreenSource = readFileSync(settingsApiKeysScreen, "utf8");
+
+assert(
+  settingsApiKeysScreenSource.includes("export function SettingsInteractionsIsland") &&
+    !settingsApiKeysScreenSource.includes("export function SettingsApiKeysRoute") &&
+    !settingsApiKeysScreenSource.includes("export function SettingsApiKeysContent") &&
+    !settingsApiKeysScreenSource.includes("AdminPageHeader") &&
+    !settingsApiKeysScreenSource.includes("AdminSectionCard"),
+  "The settings client screen should expose only the targeted interaction island after the Astro body owns the static page.",
 );
 
 for (const screenFile of manualRefreshFreeScreens) {
@@ -575,7 +597,7 @@ assert(
 
 assert(
   !settingsApiKeysSource.includes('"Refresh API keys"') &&
-    settingsApiKeysSource.includes('title="Public API keys"') &&
+    settingsRouteBodySource.includes('title="Public API keys"') &&
     !settingsApiKeysSource.includes('{isLoadingApiKeys ? "Refreshing" : "Refresh"}'),
   "Settings should not render manual refresh buttons for Public API keys.",
 );
@@ -627,11 +649,13 @@ assert(
 );
 
 assert(
-  settingsApiKeysSource.includes("setupStatus.isPending") &&
-    settingsApiKeysSource.includes("shouldShowOAuthSkeleton") &&
-    settingsApiKeysSource.includes("shouldShowApiKeySkeleton") &&
-    settingsApiKeysSource.includes("shouldShowRoleSkeleton"),
-  "Settings OAuth/API key/role panels should delay skeletons while setup/runtime details are pending.",
+  settingsRouteBodySource.includes("data-settings-oauth-loading") &&
+    settingsRouteBodySource.includes("data-settings-api-keys-loading") &&
+    settingsRouteBodySource.includes("data-settings-roles-loading") &&
+    settingsRouteBodySource.includes("min-h-[126px]") &&
+    settingsRouteBodySource.includes("min-h-[190px]") &&
+    settingsRouteBodySource.includes("min-h-[252px]"),
+  "The Astro-native settings body should reserve OAuth/API key/role layout while settings props are loading.",
 );
 
 assert(
