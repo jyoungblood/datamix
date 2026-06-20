@@ -9,7 +9,7 @@ type WorkspacePageExpectation = {
 };
 
 type WorkspaceBodyMigrationStage =
-  | "first-astro-native-candidate"
+  | "workspace-props-resolved"
   | "server-data-needed"
   | "server-data-resolved"
   | "client-only-deferred";
@@ -131,7 +131,7 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
     rendering: "astro-native-body",
     route: "account.astro",
     screen: "apps/web/src/components/admin/AccountRouteBody.astro",
-    stage: "first-astro-native-candidate",
+    stage: "workspace-props-resolved",
   },
 ];
 
@@ -291,8 +291,12 @@ test("Astro-native body migration inventory covers every protected workspace rou
   const duplicateRoutes = inventoryRoutes.filter(
     (route, index) => inventoryRoutes.indexOf(route) !== index,
   );
-  const candidateRoutes = workspaceBodyMigrationInventory
-    .filter(({ stage }) => stage === "first-astro-native-candidate")
+  const astroNativeRoutes = workspaceBodyMigrationInventory
+    .filter(({ rendering }) => rendering === "astro-native-body")
+    .map(({ route }) => route)
+    .sort();
+  const deferredRoutes = workspaceBodyMigrationInventory
+    .filter(({ stage }) => stage === "client-only-deferred")
     .map(({ route }) => route);
 
   assert.deepEqual(
@@ -306,9 +310,22 @@ test("Astro-native body migration inventory covers every protected workspace rou
     "Astro-native migration inventory should not classify a route more than once",
   );
   assert.deepEqual(
-    candidateRoutes,
-    ["account.astro"],
-    "Account should remain the first Astro-native body candidate until server data loaders exist for read-only collection routes",
+    astroNativeRoutes,
+    ["account.astro", "content/index.astro", "schema/index.astro"],
+    "Account, schema overview, and content index should be tracked as Astro-native workspace bodies",
+  );
+  assert.deepEqual(
+    deferredRoutes.sort(),
+    [
+      "content/[schemaId]/[recordId].astro",
+      "content/new.astro",
+      "media.astro",
+      "schema/[schemaId].astro",
+      "schema/new.astro",
+      "settings.astro",
+      "team.astro",
+    ],
+    "State-heavy editor, media, team, and settings routes should remain explicitly deferred",
   );
 });
 

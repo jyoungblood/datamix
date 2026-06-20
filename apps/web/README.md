@@ -27,23 +27,23 @@ routes still hydrate retained React route body islands. Retained route bodies
 receive explicit serialized `workspace` props and use route-scoped state hooks
 from `src/admin/_state/**`; there is no global admin workspace React provider.
 
-| Route | Screen |
-| --- | --- |
-| `/admin` | Workspace overview and primary route map |
-| `/admin/schema` | Schema overview |
-| `/admin/schema/new` | New schema builder |
-| `/admin/schema/[schemaId]` | Existing schema builder |
-| `/admin/content` | All content browser |
-| `/admin/content/new` | New generated record editor with schema selection |
-| `/admin/content/[schemaId]/[recordId]` | Existing generated record editor |
-| `/admin/media` | Media library |
-| `/admin/team` | Users, invites, and role assignment |
-| `/admin/settings` | API keys, OAuth posture, and role definitions |
-| `/admin/account` | Current profile and session actions |
-| `/admin/setup` | First-run setup |
-| `/admin/login` | Admin sign-in |
-| `/admin/forgot-password` | Password reset request |
-| `/admin/reset-password` | Password reset completion |
+| Route | Screen | Rendering mode |
+| --- | --- | --- |
+| `/admin` | Workspace overview and primary route map | Retained React body |
+| `/admin/schema` | Schema overview | Astro-native body |
+| `/admin/schema/new` | New schema builder | Retained React body |
+| `/admin/schema/[schemaId]` | Existing schema builder | Retained React body |
+| `/admin/content` | All content browser | Astro-native body |
+| `/admin/content/new` | New generated record editor with schema selection | Retained React body |
+| `/admin/content/[schemaId]/[recordId]` | Existing generated record editor | Retained React body |
+| `/admin/media` | Media library | Retained React body |
+| `/admin/team` | Users, invites, and role assignment | Retained React body |
+| `/admin/settings` | API keys, OAuth posture, and role definitions | Retained React body |
+| `/admin/account` | Current profile and session actions | Astro-native body with targeted React islands |
+| `/admin/setup` | First-run setup | Astro auth template |
+| `/admin/login` | Admin sign-in | Astro auth template |
+| `/admin/forgot-password` | Password reset request | Astro auth template |
+| `/admin/reset-password` | Password reset completion | Astro auth template |
 
 The command palette remains a targeted React island inside workspace route
 bodies. It provides routed navigation, dynamic schema/content jumps when data is
