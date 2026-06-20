@@ -30,8 +30,9 @@ const authCardSource = readSource("apps/web/src/components/auth/AuthCard.astro")
 const loaderInterstitialSource = readSource("apps/web/src/components/loader-interstitial.tsx");
 const loginSource = readSource("apps/web/src/pages/admin/login.astro");
 const setupSource = readSource("apps/web/src/pages/admin/setup.astro");
-const workspaceRoutesIslandSource = readSource(
-  "apps/web/src/admin/islands/workspace-routes.tsx",
+const adminIndexSource = readSource("apps/web/src/pages/admin/index.astro");
+const adminWorkspaceShellSource = readSource(
+  "apps/web/src/components/admin/AdminWorkspaceShell.astro",
 );
 const workspaceResolverSource = readSource(
   "apps/web/src/server/routes/astro-workspace-page.ts",
@@ -199,28 +200,44 @@ assert.ok(
     ) &&
     !existsSync(
       path.join(repoRoot, "apps/web/src/admin/_workspace/admin-workspace-hooks.ts"),
-    ),
+  ),
   "Protected admin route bodies should not depend on the deleted workspace provider wrapper.",
 );
+
+for (const relativePath of [
+  "apps/web/src/admin/islands/workspace-routes.tsx",
+  "apps/web/src/admin/islands/workspace-body-routes.tsx",
+]) {
+  assert.ok(
+    !existsSync(path.join(repoRoot, relativePath)),
+    `${relativePath} should stay removed after admin pages moved to Astro route bodies.`,
+  );
+}
+
 assert.doesNotMatch(
-  workspaceRoutesIslandSource,
-  /AdminWorkspaceProvider|AdminWorkspacePage|AdminWorkspaceContext|useAdminWorkspace/,
-  "Retained protected admin islands should render route bodies directly without provider context.",
+  adminIndexSource,
+  /AdminWorkspaceProvider|AdminWorkspacePage|AdminWorkspaceContext|useAdminWorkspace|client:only="react"/,
+  "Protected admin pages should render Astro route bodies directly without provider context or whole-route hydration.",
 );
 assert.match(
-  workspaceRoutesIslandSource,
-  /function AdminWorkspaceIslandFrame/,
-  "Retained protected admin islands should still share one explicit island frame.",
+  adminIndexSource,
+  /<AdminDashboardRouteBody\s+workspace=\{page\.workspace\}\s*\/>/,
+  "The dashboard page should render its Astro route body from serialized workspace props.",
+);
+assert.match(
+  adminWorkspaceShellSource,
+  /data-page-canvas="muted"/,
+  "Protected admin pages should share the Astro workspace shell instead of a retained island frame.",
 );
 assert.match(
   workspaceResolverSource,
   /location: setupPath/,
-  "Protected admin setup redirects should be resolved before mounting retained React route bodies.",
+  "Protected admin setup redirects should be resolved before rendering route bodies.",
 );
 assert.match(
   workspaceResolverSource,
   /location: createLoginRedirect\(request\)/,
-  "Protected admin login redirects should be resolved before mounting retained React route bodies.",
+  "Protected admin login redirects should be resolved before rendering route bodies.",
 );
 assert.match(
   workspaceResolverSource,
@@ -239,7 +256,7 @@ assert.doesNotMatch(
   "The setup pending interstitial should no longer render the card-style preparation screen.",
 );
 assert.doesNotMatch(
-  workspaceRoutesIslandSource,
+  adminIndexSource,
   /LoaderViewTransitionBoundary|isResolvingInitialAdmin|AdminWorkspaceResolutionCanvas/,
-  "Retained protected admin islands should not recreate the deleted provider-side loader gate.",
+  "Protected admin pages should not recreate the deleted provider-side loader gate.",
 );

@@ -24,6 +24,10 @@ const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
 );
+const adminDashboardRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/AdminDashboardRouteBody.astro",
+);
 const adminSkeleton = path.join(adminRoot, "_components/admin-skeleton.tsx");
 const commandPaletteDialog = path.join(
   adminRoot,
@@ -34,7 +38,6 @@ const adminCommandPalette = path.join(
   "_workspace/admin-command-palette.tsx",
 );
 const userAccountScreen = path.join(adminRoot, "_screens/user-account.tsx");
-const workspaceRoutesIsland = path.join(adminRoot, "islands/workspace-routes.tsx");
 const adminRoutesSourcePath = path.join(
   adminRoot,
   "_workspace/admin-routes.ts",
@@ -43,7 +46,6 @@ const settingsApiKeysScreen = path.join(
   adminRoot,
   "_screens/settings-api-keys.tsx",
 );
-const adminHomeSourcePath = path.join(adminRoot, "_screens/admin-home.tsx");
 const contentEditorSourcePath = path.join(
   adminRoot,
   "_screens/content-editor.tsx",
@@ -65,7 +67,6 @@ const teamAndRolesSourcePath = path.join(
   "_screens/team-and-roles.tsx",
 );
 const manualRefreshFreeScreens = [
-  "admin-home.tsx",
   "content-editor.tsx",
   "media-library.tsx",
   "schema-builder.tsx",
@@ -73,7 +74,6 @@ const manualRefreshFreeScreens = [
   "team-and-roles.tsx",
 ];
 const reactClientDirective = `client:only=${'"react"'}`;
-const nextLinkImport = `from "next${"/"}link"`;
 
 const protectedWorkspacePages = [
   ["index.astro", "AdminDashboardRouteBody", "resolveWorkspacePage"],
@@ -99,13 +99,19 @@ const standaloneAuthPages = [
 ];
 
 const screenFiles = [
-  "admin-home.tsx",
   "content-editor.tsx",
   "media-library.tsx",
   "schema-builder.tsx",
   "settings-api-keys.tsx",
   "team-and-roles.tsx",
   "user-account.tsx",
+];
+
+const deletedAdminRuntimePaths = [
+  "apps/web/src/admin/islands/workspace-routes.tsx",
+  "apps/web/src/admin/islands/workspace-body-routes.tsx",
+  "apps/web/src/admin/_screens/admin-home.tsx",
+  "apps/web/src/admin/_state/admin-dashboard-data.ts",
 ];
 
 function assert(condition, message) {
@@ -130,6 +136,13 @@ assert(
     !existsSync(path.join(adminRoot, "_workspace/admin-workspace-hooks.ts")),
   "Protected admin route islands should not depend on the old workspace provider wrapper or context hooks.",
 );
+
+for (const relativePath of deletedAdminRuntimePaths) {
+  assert(
+    !existsSync(path.join(repoRoot, relativePath)),
+    `${relativePath} should stay removed after protected admin pages moved to Astro route bodies.`,
+  );
+}
 
 for (const [pagePath, bodyName, resolverName] of protectedWorkspacePages) {
   const fullPath = path.join(adminPagesRoot, pagePath);
@@ -281,13 +294,12 @@ const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
 const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf8");
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
-const workspaceRoutesIslandSource = readFileSync(workspaceRoutesIsland, "utf8");
+const adminDashboardRouteBodySource = readFileSync(adminDashboardRouteBody, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
 const globalStylesSource = readFileSync(globalStyles, "utf8");
 const commandPaletteDialogSource = readFileSync(commandPaletteDialog, "utf8");
 const adminCommandPaletteSource = readFileSync(adminCommandPalette, "utf8");
 const settingsApiKeysSource = readFileSync(settingsApiKeysScreen, "utf8");
-const adminHomeSource = readFileSync(adminHomeSourcePath, "utf8");
 const contentEditorSource = readFileSync(contentEditorSourcePath, "utf8");
 const contentIndexSource = readFileSync(contentIndexSourcePath, "utf8");
 const mediaLibrarySource = readFileSync(mediaLibrarySourcePath, "utf8");
@@ -328,25 +340,23 @@ assert(
 );
 
 assert(
-  adminHomeSource.includes("useAdminDashboardData") &&
-    existsSync(
-      path.join(
-        repoRoot,
-        "apps/web/src/admin/_state/admin-dashboard-data.ts",
-      ),
-    ),
-  "The admin dashboard should use the route-scoped dashboard data hook for initial dashboard loads.",
+  adminDashboardRouteBodySource.includes("data-admin-dashboard-placeholder") &&
+    adminDashboardRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    adminDashboardRouteBodySource.includes('client:only="react"') &&
+    !adminDashboardRouteBodySource.includes("useAdminDashboardData") &&
+    !adminDashboardRouteBodySource.includes("AdminHomeRoute"),
+  "The admin dashboard should render as an Astro body with only the command palette hydrated.",
 );
 
 assert(
-  !adminHomeSource.includes(nextLinkImport) &&
-    adminHomeSource.includes("href={item.route.href}"),
+  !adminDashboardRouteBodySource.includes("next/link") &&
+    adminDashboardRouteBodySource.includes("href={item.href}"),
   "Dashboard navigation links should use normal anchors in the Astro app.",
 );
 
 assert(
-  !adminHomeSource.includes("Refresh overview") &&
-    !adminHomeSource.includes("handleRefreshOverview"),
+  !adminDashboardRouteBodySource.includes("Refresh overview") &&
+    !adminDashboardRouteBodySource.includes("handleRefreshOverview"),
   "The admin dashboard should not render a manual Refresh overview action or keep its local refresh handler.",
 );
 
@@ -469,22 +479,21 @@ assert(
 );
 
 assert(
-  workspaceRoutesIslandSource.includes("max-w-6xl") &&
-    workspaceRoutesIslandSource.includes("mx-auto") &&
-    workspaceRoutesIslandSource.includes("AdminWorkspaceCommandPalette") &&
-    workspaceRoutesIslandSource.includes("{children}") &&
-    !workspaceRoutesIslandSource.includes("AdminWorkspacePage") &&
-    !workspaceRoutesIslandSource.includes("AdminWorkspaceProvider"),
-  "The retained workspace island should own one centered max-w-6xl content rail for retained React admin screens.",
-);
-
-assert(
   accountRouteBodySource.includes("max-w-6xl") &&
     accountRouteBodySource.includes("mx-auto") &&
     accountRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
     accountRouteBodySource.includes("AccountProfileSettingsIsland") &&
     accountRouteBodySource.includes("AccountSignOutButton"),
   "The Astro-native account route body should preserve the centered admin rail and keep only targeted client islands.",
+);
+
+assert(
+  adminDashboardRouteBodySource.includes("max-w-6xl") &&
+    adminDashboardRouteBodySource.includes("mx-auto") &&
+    adminDashboardRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    !adminDashboardRouteBodySource.includes("AdminWorkspacePage") &&
+    !adminDashboardRouteBodySource.includes("AdminWorkspaceProvider"),
+  "The Astro-native dashboard route body should own the centered admin rail without a retained bridge frame.",
 );
 
 for (const screenFile of screenFiles) {
@@ -553,14 +562,12 @@ assert(
 );
 
 assert(
-  adminHomeSource.includes("AdminMiniListSkeleton") &&
-    /const shouldShowRecentSchemaSkeleton\s*=\s*useDelayedLoadingIndicator\(isInitialCollectionLoad\)/.test(adminHomeSource) &&
-    adminHomeSource.includes("shouldShowRecentSchemaSkeleton ?") &&
-    adminHomeSource.includes("const isInitialCollectionLoad =") &&
-    adminHomeSource.includes("permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError") &&
-    adminHomeSource.includes("if (!hasLoaded)") &&
-    !adminHomeSource.includes('label: "Queued"'),
-  "The dashboard should reserve loading UI on first paint instead of rendering queued or empty overview states.",
+  adminDashboardRouteBodySource.includes("Workspace pulse") &&
+    adminDashboardRouteBodySource.includes("Session") &&
+    !adminDashboardRouteBodySource.includes("AdminMiniListSkeleton") &&
+    !adminDashboardRouteBodySource.includes("useDelayedLoadingIndicator") &&
+    !adminDashboardRouteBodySource.includes('label: "Queued"'),
+  "The Astro dashboard should render stable server-side overview panels without the old client loading skeleton path.",
 );
 
 assert(
