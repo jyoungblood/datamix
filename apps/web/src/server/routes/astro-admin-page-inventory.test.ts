@@ -689,7 +689,7 @@ test("Slice 22 account island consumes serialized workspace route access", async
   );
 });
 
-test("Slice 6 schema overview island derives route access from server workspace props", async () => {
+test("Slice 6 schema overview island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -702,8 +702,8 @@ test("Slice 6 schema overview island derives route access from server workspace 
 
   assert.match(
     workspaceSource,
-    /export function SchemaOverviewIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "SchemaOverviewIsland should derive route access from the server workspace prop",
+    /<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "SchemaOverviewIsland should pass explicit route access into the retained schema overview body",
   );
   assert.doesNotMatch(
     workspaceSource,
@@ -734,6 +734,38 @@ test("Slice 6 schema overview island derives route access from server workspace 
     schemaOverviewSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SchemaOverviewContent should not derive schema overview route access from AdminWorkspaceProvider",
+  );
+  assert.match(
+    schemaOverviewSource,
+    /function SchemaOverviewRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<SchemaOverviewContent\s+routeAccess=\{providerAccess\}/,
+    "SchemaOverviewRoute should keep the provider fallback wrapper for direct production hook hits",
+  );
+});
+
+test("Slice 23 schema overview island consumes serialized workspace route access", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const schemaOverviewIslandSource =
+    workspaceSource.match(
+      /export function SchemaOverviewIsland\([\s\S]*?\n\}/,
+    )?.[0] ?? "";
+
+  assert.match(
+    schemaOverviewIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "SchemaOverviewIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    schemaOverviewIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "SchemaOverviewIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    schemaOverviewIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "SchemaOverviewIsland should not read route metadata or permissions to derive access",
   );
 });
 

@@ -48,9 +48,7 @@ export function AdminHomeIsland({ workspace }: AdminWorkspaceIslandProps) {
 }
 
 export function SchemaOverviewIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace
-    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
-    : undefined;
+  const routeAccess = workspace?.routeAccess;
 
   return (
     <AdminWorkspacePage>
