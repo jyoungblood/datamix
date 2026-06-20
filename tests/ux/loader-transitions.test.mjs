@@ -30,8 +30,11 @@ const authCardSource = readSource("apps/web/src/components/auth/AuthCard.astro")
 const loaderInterstitialSource = readSource("apps/web/src/components/loader-interstitial.tsx");
 const loginSource = readSource("apps/web/src/pages/admin/login.astro");
 const setupSource = readSource("apps/web/src/pages/admin/setup.astro");
-const providerSource = readSource(
-  "apps/web/src/admin/_workspace/admin-workspace-provider.tsx",
+const workspaceRoutesIslandSource = readSource(
+  "apps/web/src/admin/islands/workspace-routes.tsx",
+);
+const workspaceResolverSource = readSource(
+  "apps/web/src/server/routes/astro-workspace-page.ts",
 );
 
 assert.match(
@@ -187,70 +190,42 @@ for (const [label, source] of [
   );
 }
 
-assert.match(
-  providerSource,
-  /LoaderViewTransitionBoundary/,
-  "The protected admin workspace provider should render admin resolution through the loader transition boundary.",
-);
-assert.match(
-  providerSource,
-  /active=\{isResolvingInitialAdmin\}/,
-  "Protected admin session/access resolution should drive the loader boundary directly.",
-);
-assert.match(
-  providerSource,
-  /activePageCanvas="muted"/,
-  "Protected admin session/access resolution should keep the workspace canvas muted instead of flashing the dark auth canvas.",
-);
-assert.match(
-  providerSource,
-  /fallback=\{<AdminWorkspaceResolutionCanvas \/>\}/,
-  "Protected admin resolution should use the muted workspace canvas as its transition fallback.",
-);
-assert.match(
-  providerSource,
-  /isResolvingInitialAdmin \?\s*\(\s*<AdminWorkspaceResolutionCanvas \/>/,
-  "Protected admin children should not mount until the workspace has resolved, and should render the muted workspace canvas meanwhile.",
-);
-assert.match(
-  providerSource,
-  /<AdminWorkspaceContext\.Provider value=\{value\}>[\s\S]*<LoaderViewTransitionBoundary[\s\S]*active=\{isResolvingInitialAdmin\}[\s\S]*activePageCanvas="muted"[\s\S]*<\/LoaderViewTransitionBoundary>[\s\S]*<\/AdminWorkspaceContext\.Provider>/,
-  "The workspace context provider should stay mounted around the loader boundary so hydrated admin screens never see a null context.",
-);
-assert.match(
-  providerSource,
-  /return children;/,
-  "Ready admin screens should render as the resolved loader-boundary content.",
+assert.ok(
+  !existsSync(
+    path.join(repoRoot, "apps/web/src/admin/_workspace/admin-workspace-provider.tsx"),
+  ) &&
+    !existsSync(
+      path.join(repoRoot, "apps/web/src/admin/_workspace/admin-workspace-page.tsx"),
+    ) &&
+    !existsSync(
+      path.join(repoRoot, "apps/web/src/admin/_workspace/admin-workspace-hooks.ts"),
+    ),
+  "Protected admin route bodies should not depend on the deleted workspace provider wrapper.",
 );
 assert.doesNotMatch(
-  providerSource,
-  /Redirecting to sign in|Redirecting to setup|Datamix did not find an active admin session/,
-  "Protected admin routes should not flash an intermediate redirect gate before login/setup renders.",
+  workspaceRoutesIslandSource,
+  /AdminWorkspaceProvider|AdminWorkspacePage|AdminWorkspaceContext|useAdminWorkspace/,
+  "Retained protected admin islands should render route bodies directly without provider context.",
 );
 assert.match(
-  providerSource,
-  /function AdminRedirectCanvas\(\)[\s\S]*data-page-canvas="sidebar"[\s\S]*bg-\[var\(--sidebar\)\]/,
-  "Protected admin redirects should keep the sidebar canvas painted while the browser navigates.",
+  workspaceRoutesIslandSource,
+  /function AdminWorkspaceIslandFrame/,
+  "Retained protected admin islands should still share one explicit island frame.",
 );
 assert.match(
-  providerSource,
-  /function AdminWorkspaceResolutionCanvas\(\)[\s\S]*data-page-canvas="muted"[\s\S]*bg-\[var\(--muted\)\]/,
-  "Protected admin session/access resolution should render a muted workspace canvas instead of the sidebar canvas.",
+  workspaceResolverSource,
+  /location: setupPath/,
+  "Protected admin setup redirects should be resolved before mounting retained React route bodies.",
 );
 assert.match(
-  providerSource,
-  /if \(!session\.data\)\s*\{[\s\S]*return <AdminRedirectCanvas \/>;/,
-  "Protected admin redirects should render the silent dark canvas instead of null.",
+  workspaceResolverSource,
+  /location: createLoginRedirect\(request\)/,
+  "Protected admin login redirects should be resolved before mounting retained React route bodies.",
 );
-assert.doesNotMatch(
-  providerSource,
-  /return \(\s*<AdminWorkspaceContext\.Provider value=\{value\}>[\s\S]*\{children\}[\s\S]*<\/AdminWorkspaceContext\.Provider>\s*\);/,
-  "The workspace context provider should not be recreated inside the ready-only loader branch.",
-);
-assert.doesNotMatch(
-  providerSource,
-  /if \(isResolvingInitialAdmin\)\s*\{\s*return null;\s*\}/,
-  "Direct/cold admin loads should show the full-screen loader instead of returning nothing.",
+assert.match(
+  workspaceResolverSource,
+  /workspace: createAdminWorkspaceProps\(/,
+  "Successful protected admin resolution should serialize workspace props before hydration.",
 );
 
 assert.doesNotMatch(
@@ -264,7 +239,7 @@ assert.doesNotMatch(
   "The setup pending interstitial should no longer render the card-style preparation screen.",
 );
 assert.doesNotMatch(
-  providerSource,
-  /const shouldShowLoader = isResolvingInitialSession \|\| isResolvingInitialAuthorization;/,
-  "Protected admin session/access resolution should use the shared isResolvingInitialAdmin loader state.",
+  workspaceRoutesIslandSource,
+  /LoaderViewTransitionBoundary|isResolvingInitialAdmin|AdminWorkspaceResolutionCanvas/,
+  "Retained protected admin islands should not recreate the deleted provider-side loader gate.",
 );

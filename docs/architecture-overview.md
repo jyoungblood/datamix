@@ -87,7 +87,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 ## Code Shape Guidance
 
 - Auth pages are Astro templates under `apps/web/src/pages/admin/**` using the shared auth card template and small DOM scripts.
-- Authenticated admin pages render `apps/web/src/components/admin/AdminWorkspaceShell.astro`; retained React route bodies live under `apps/web/src/admin/**` and mount `apps/web/src/admin/_workspace/admin-workspace-provider.tsx` inside the workspace island.
+- Authenticated admin pages render `apps/web/src/components/admin/AdminWorkspaceShell.astro`; retained React route bodies live under `apps/web/src/admin/**`, receive explicit serialized workspace props from `apps/web/src/server/routes/astro-workspace-page.ts`, and use route-scoped state hooks under `apps/web/src/admin/_state/**` instead of a global admin React context.
 - `apps/web/src/server/routes/**` is the route assembly layer. Keep HTTP concerns there, and keep feature-specific data behavior in neighboring `apps/web/src/server/*.ts` modules.
 - `packages/core` should stay deliberately lean. Add shared code only when multiple surfaces genuinely benefit from the same contract.
 

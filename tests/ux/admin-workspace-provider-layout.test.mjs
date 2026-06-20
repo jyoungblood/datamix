@@ -12,7 +12,6 @@ const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
 );
-const workspacePage = path.join(adminRoot, "_workspace/admin-workspace-page.tsx");
 const adminSkeleton = path.join(adminRoot, "_components/admin-skeleton.tsx");
 const commandPaletteDialog = path.join(
   adminRoot,
@@ -67,10 +66,6 @@ const manualRefreshFreeScreens = [
   "settings-api-keys.tsx",
   "team-and-roles.tsx",
 ];
-const workspaceProvider = path.join(
-  adminRoot,
-  "_workspace/admin-workspace-provider.tsx",
-);
 const reactClientDirective = `client:only=${'"react"'}`;
 const nextLinkImport = `from "next${"/"}link"`;
 
@@ -114,11 +109,6 @@ function assert(condition, message) {
 }
 
 assert(
-  existsSync(workspacePage),
-  "Protected admin routes should share an explicit AdminWorkspacePage wrapper.",
-);
-
-assert(
   existsSync(adminShell),
   "Protected admin routes should share an Astro AdminWorkspaceShell template.",
 );
@@ -128,12 +118,11 @@ assert(
   "Protected admin routes should share an Astro AdminWorkspaceSidebar template.",
 );
 
-const workspacePageSource = readFileSync(workspacePage, "utf8");
-
 assert(
-  workspacePageSource.includes("AdminWorkspaceProvider") &&
-    workspacePageSource.includes("<AdminWorkspaceProvider>"),
-  "AdminWorkspacePage should mount the AdminWorkspaceProvider.",
+  !existsSync(path.join(adminRoot, "_workspace/admin-workspace-page.tsx")) &&
+    !existsSync(path.join(adminRoot, "_workspace/admin-workspace-provider.tsx")) &&
+    !existsSync(path.join(adminRoot, "_workspace/admin-workspace-hooks.ts")),
+  "Protected admin route islands should not depend on the old workspace provider wrapper or context hooks.",
 );
 
 for (const [pagePath, islandName] of protectedWorkspacePages) {
@@ -160,7 +149,7 @@ for (const [pagePath, islandName] of protectedWorkspacePages) {
   );
   assert(
     !source.includes("AdminWorkspaceProviderFallback"),
-    `Protected admin page should use the shared workspace provider instead of a fallback wrapper: ${pagePath}.`,
+    `Protected admin page should not use a workspace provider fallback wrapper: ${pagePath}.`,
   );
 }
 
@@ -189,7 +178,7 @@ for (const screenFile of screenFiles) {
 
   assert(
     !source.includes("AdminWorkspaceProvider"),
-    `${screenFile} should consume the shared provider instead of mounting its own.`,
+    `${screenFile} should not mount or import the old workspace provider.`,
   );
   assert(
     !source.includes("AdminWorkspaceRouteFrame") && !source.includes("AdminFrame"),
@@ -197,7 +186,6 @@ for (const screenFile of screenFiles) {
   );
 }
 
-const providerSource = readFileSync(workspaceProvider, "utf8");
 const shellSource = readFileSync(adminShell, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const workspaceRoutesIslandSource = readFileSync(workspaceRoutesIsland, "utf8");
@@ -215,13 +203,6 @@ const schemaOverviewSource = readFileSync(schemaOverviewSourcePath, "utf8");
 const teamAndRolesSource = readFileSync(teamAndRolesSourcePath, "utf8");
 const userAccountSource = readFileSync(userAccountScreen, "utf8");
 const adminRoutesSource = readFileSync(adminRoutesSourcePath, "utf8");
-
-for (const transientTitle of ["Checking your session", "Loading access profile"]) {
-  assert(
-    !providerSource.includes(transientTitle),
-    `Transient auth gate title should not be shown during admin navigation: ${transientTitle}.`,
-  );
-}
 
 assert(
   sidebarSource.includes("sticky top-0") &&
@@ -245,12 +226,6 @@ assert(
     sidebarSource.includes("data-admin-account-initials") &&
     sidebarSource.includes("data-admin-account-name"),
   "The Astro sidebar account link should expose hooks for live profile updates.",
-);
-
-assert(
-  providerSource.includes("prefetchAdminRoute") &&
-    providerSource.includes("prefetchedRouteSectionsRef"),
-  "The workspace provider should retain route-aware data prefetching for route bodies.",
 );
 
 assert(
@@ -334,20 +309,6 @@ for (const screenFile of manualRefreshFreeScreens) {
 }
 
 assert(
-  !providerSource.includes("isRefreshingCollections") &&
-    !providerSource.includes("isRefreshingMediaAssets") &&
-    !providerSource.includes("isRefreshingRecords") &&
-    !providerSource.includes("refreshAccess") &&
-    !providerSource.includes("refreshApiKeyData") &&
-    !providerSource.includes("refreshAvailableRoles") &&
-    !providerSource.includes("refreshCollections") &&
-    !providerSource.includes("refreshMediaAssets") &&
-    !providerSource.includes("refreshRecords") &&
-    !providerSource.includes("refreshUserList"),
-  "The admin workspace provider should not expose manual refresh state or refresh-specific context functions.",
-);
-
-assert(
   !adminCommandPaletteSource.includes("refreshCurrentRoute") &&
     !adminCommandPaletteSource.includes("Refresh ") &&
     !adminCommandPaletteSource.includes("group: \"refresh\"") &&
@@ -399,7 +360,9 @@ assert(
   workspaceRoutesIslandSource.includes("max-w-6xl") &&
     workspaceRoutesIslandSource.includes("mx-auto") &&
     workspaceRoutesIslandSource.includes("AdminWorkspaceCommandPalette") &&
-    workspaceRoutesIslandSource.includes("{children}"),
+    workspaceRoutesIslandSource.includes("{children}") &&
+    !workspaceRoutesIslandSource.includes("AdminWorkspacePage") &&
+    !workspaceRoutesIslandSource.includes("AdminWorkspaceProvider"),
   "The retained workspace island should own one centered max-w-6xl content rail for every admin screen.",
 );
 

@@ -10,10 +10,38 @@ import {
 import { signOutAdminSession } from "../_state/admin-account-state";
 import { createAdminCommandPaletteItems } from "../_state/admin-command-palette-data";
 import { useAdminCollectionsState } from "../_state/admin-collections-state";
+import { useAdminRecordsState } from "../_state/admin-records-state";
 import type { AdminWorkspaceProps } from "./admin-workspace-props";
 
 function navigateTo(href: string) {
   window.location.href = href;
+}
+
+function decodeRouteSegment(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function getContentSchemaIdFromRouteHref(href: string) {
+  const routeUrl =
+    typeof window === "undefined"
+      ? new URL(href, "http://localhost")
+      : new URL(href, window.location.origin);
+  const pathParts = routeUrl.pathname.split("/").filter(Boolean);
+  const adminIndex = pathParts.indexOf("admin");
+  const contentIndex =
+    adminIndex === -1 ? pathParts.indexOf("content") : adminIndex + 1;
+
+  if (pathParts[contentIndex] !== "content") {
+    return null;
+  }
+
+  const schemaId = pathParts[contentIndex + 1];
+
+  return schemaId && schemaId !== "new" ? decodeRouteSegment(schemaId) : null;
 }
 
 type AdminWorkspaceCommandPaletteProps = {
@@ -29,10 +57,32 @@ export function AdminWorkspaceCommandPalette({
     isLoadingCollections,
     loadCollections,
   } = useAdminCollectionsState();
+  const {
+    hasLoadedRecords,
+    isLoadingRecords,
+    loadRecords,
+    recordCollectionName,
+    records,
+  } = useAdminRecordsState();
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const deferredQuery = React.useDeferredValue(query);
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const activeContentSchemaId = React.useMemo(
+    () =>
+      workspace.activeRoute.section === "content"
+        ? getContentSchemaIdFromRouteHref(workspace.activeRoute.href)
+        : null,
+    [workspace.activeRoute.href, workspace.activeRoute.section],
+  );
+  const activeContentCollection = React.useMemo(
+    () =>
+      activeContentSchemaId
+        ? collections.find((collection) => collection.id === activeContentSchemaId) ??
+          null
+        : null,
+    [activeContentSchemaId, collections],
+  );
 
   const loadPaletteCollections = React.useCallback(() => {
     if (
@@ -63,6 +113,34 @@ export function AdminWorkspaceCommandPalette({
     setQuery("");
     setActiveIndex(0);
   }, []);
+
+  React.useEffect(() => {
+    if (
+      !isOpen ||
+      !workspace.permissions.canViewRecords ||
+      !activeContentCollection ||
+      isLoadingRecords
+    ) {
+      return;
+    }
+
+    if (
+      recordCollectionName === activeContentCollection.definition.name &&
+      hasLoadedRecords
+    ) {
+      return;
+    }
+
+    void loadRecords(activeContentCollection);
+  }, [
+    activeContentCollection,
+    hasLoadedRecords,
+    isLoadingRecords,
+    isOpen,
+    loadRecords,
+    recordCollectionName,
+    workspace.permissions.canViewRecords,
+  ]);
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -98,10 +176,10 @@ export function AdminWorkspaceCommandPalette({
       onNavigate: navigateTo,
       onSignOut: signOutAdminSession,
       permissions: workspace.permissions,
-      recordCollectionName: null,
-      records: [],
+      recordCollectionName,
+      records,
     });
-  }, [collections, workspace.permissions]);
+  }, [collections, recordCollectionName, records, workspace.permissions]);
   const filteredCommandPaletteItems = filterCommandPaletteItems(
     commandPaletteItems,
     deferredQuery,

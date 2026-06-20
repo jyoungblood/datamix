@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
@@ -67,9 +67,6 @@ const workspaceResolverPath = path.resolve(
 const workspacePropsSourcePath = path.resolve(
   "apps/web/src/admin/_workspace/admin-workspace-props.ts",
 );
-const adminWorkspaceProviderSourcePath = path.resolve(
-  "apps/web/src/admin/_workspace/admin-workspace-provider.tsx",
-);
 const adminCommandPaletteSourcePath = path.resolve(
   "apps/web/src/admin/_workspace/admin-command-palette.tsx",
 );
@@ -100,6 +97,35 @@ const settingsApiKeysSourcePath = path.resolve(
 const userAccountSourcePath = path.resolve(
   "apps/web/src/admin/_screens/user-account.tsx",
 );
+const noProviderSourceRoots = [
+  path.resolve("apps/web/src/admin"),
+  path.resolve("apps/web/src/components"),
+  path.resolve("apps/web/src/pages"),
+];
+const noProviderForbiddenSymbols = [
+  "AdminWorkspaceProvider",
+  "AdminWorkspacePage",
+  "useAdminWorkspace",
+  "useAdminWorkspaceRouteAccess",
+  "AdminWorkspaceContext",
+];
+
+async function collectSourceFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(directory, entry.name);
+
+      if (entry.isDirectory()) {
+        return collectSourceFiles(entryPath);
+      }
+
+      return /\.(?:astro|ts|tsx)$/.test(entry.name) ? [entryPath] : [];
+    }),
+  );
+
+  return files.flat();
+}
 
 test("Slice 3 Astro admin workspace pages render the Astro shell and retained React body islands", async () => {
   await Promise.all(
@@ -201,7 +227,6 @@ test("Slice 1 workspace resolver returns serializable workspace data on successf
 });
 
 test("Task 2 account and media state use route-scoped hooks", async () => {
-  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
   const accountSource = await readFile(userAccountSourcePath, "utf8");
   const mediaSource = await readFile(mediaLibrarySourcePath, "utf8");
 
@@ -225,30 +250,9 @@ test("Task 2 account and media state use route-scoped hooks", async () => {
     /useAdminMediaState/,
     "media-library.tsx should import the route-scoped media state hook",
   );
-  assert.match(
-    providerSource,
-    /useAdminAccountState/,
-    "AdminWorkspaceProvider should compose the route-scoped account state hook during migration",
-  );
-  assert.match(
-    providerSource,
-    /useAdminMediaState/,
-    "AdminWorkspaceProvider should compose the route-scoped media state hook during migration",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.accountState/,
-    "AdminWorkspaceProvider should spread account state into the compatibility context",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.mediaState/,
-    "AdminWorkspaceProvider should spread media state into the compatibility context",
-  );
 });
 
 test("Task 3 team and settings state use route-scoped hooks", async () => {
-  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
   const teamSource = await readFile(teamAndRolesSourcePath, "utf8");
   const settingsSource = await readFile(settingsApiKeysSourcePath, "utf8");
 
@@ -282,40 +286,9 @@ test("Task 3 team and settings state use route-scoped hooks", async () => {
     /useAdminRolesState/,
     "settings-api-keys.tsx should import the shared route-scoped role state hook",
   );
-  assert.match(
-    providerSource,
-    /useAdminRolesState/,
-    "AdminWorkspaceProvider should compose role state during migration",
-  );
-  assert.match(
-    providerSource,
-    /useAdminTeamState/,
-    "AdminWorkspaceProvider should compose team state during migration",
-  );
-  assert.match(
-    providerSource,
-    /useAdminApiKeysState/,
-    "AdminWorkspaceProvider should compose API key state during migration",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.rolesState/,
-    "AdminWorkspaceProvider should spread role state into the compatibility context",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.teamState/,
-    "AdminWorkspaceProvider should spread team state into the compatibility context",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.apiKeysState/,
-    "AdminWorkspaceProvider should spread API key state into the compatibility context",
-  );
 });
 
 test("Task 4 schema overview and content index use route-scoped collection state", async () => {
-  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
   const schemaOverviewSource = await readFile(schemaOverviewSourcePath, "utf8");
   const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
 
@@ -339,20 +312,9 @@ test("Task 4 schema overview and content index use route-scoped collection state
     /useAdminCollectionsState/,
     "content-index.tsx should import the route-scoped collection state hook",
   );
-  assert.match(
-    providerSource,
-    /useAdminCollectionsState/,
-    "AdminWorkspaceProvider should compose collection state during migration",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.collectionsState/,
-    "AdminWorkspaceProvider should spread collection state into the compatibility context",
-  );
 });
 
 test("Task 5 editor dashboard and command palette use route-scoped state", async () => {
-  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
   const schemaBuilderSource = await readFile(schemaBuilderSourcePath, "utf8");
   const contentEditorSource = await readFile(contentEditorSourcePath, "utf8");
   const adminHomeSource = await readFile(adminHomeSourcePath, "utf8");
@@ -399,15 +361,27 @@ test("Task 5 editor dashboard and command palette use route-scoped state", async
     /createAdminCommandPaletteItems/,
     "admin-command-palette.tsx should assemble items from explicit command-palette data",
   );
-  assert.match(
-    providerSource,
-    /useAdminRecordsState/,
-    "AdminWorkspaceProvider should compose record state during migration",
-  );
-  assert.match(
-    providerSource,
-    /\.\.\.recordsState/,
-    "AdminWorkspaceProvider should spread record state into the compatibility context",
+});
+
+test("Task 6 admin source tree has no workspace provider context", async () => {
+  const sourceFiles = (
+    await Promise.all(noProviderSourceRoots.map(collectSourceFiles))
+  ).flat();
+
+  assert.ok(sourceFiles.length > 0, "admin provider source scan should find files");
+
+  await Promise.all(
+    sourceFiles.map(async (sourceFile) => {
+      const source = await readFile(sourceFile, "utf8");
+
+      for (const forbiddenSymbol of noProviderForbiddenSymbols) {
+        assert.doesNotMatch(
+          source,
+          new RegExp(`\\b${forbiddenSymbol}\\b`),
+          `${path.relative(process.cwd(), sourceFile)} should not reference ${forbiddenSymbol}`,
+        );
+      }
+    }),
   );
 });
 

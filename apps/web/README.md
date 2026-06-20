@@ -17,9 +17,12 @@ Use the root `db:*` scripts to generate and apply checked-in migrations under
 
 ## Admin Routes
 
-The authenticated admin workspace is routed through the shared
-Astro workspace shell, with `AdminWorkspaceProvider` mounted inside the retained
-React route body island:
+The authenticated admin workspace is routed through the shared Astro workspace
+shell. Astro resolves setup, session, authorization, permissions, and active
+route access before hydrating a retained React route body island. Those route
+bodies receive explicit serialized `workspace` props and use route-scoped state
+hooks from `src/admin/_state/**`; there is no global admin workspace React
+provider.
 
 | Route | Screen |
 | --- | --- |
