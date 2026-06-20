@@ -1,13 +1,11 @@
 ---
-import { adminRoutes } from "@/admin/_workspace/admin-routes";
-import { SchemaOverviewIsland } from "@/admin/islands/workspace-routes";
+import SchemaOverviewRouteBody from "@/components/admin/SchemaOverviewRouteBody.astro";
 import AdminWorkspaceShell from "@/components/admin/AdminWorkspaceShell.astro";
-import { resolveWorkspacePage } from "@/server/routes/astro-workspace-page";
+import { resolveSchemaOverviewPage } from "@/server/routes/astro-admin-schema-overview-page";
 
 import DatamixRootLayout from "../../../layouts/DatamixRootLayout.astro";
 
-const route = adminRoutes.schema.index();
-const page = await resolveWorkspacePage(Astro.request, route);
+const page = await resolveSchemaOverviewPage(Astro.request);
 
 if (page.kind === "redirect") {
   return Astro.redirect(page.location);
@@ -16,6 +14,15 @@ if (page.kind === "redirect") {
 
 <DatamixRootLayout>
   <AdminWorkspaceShell {...page.shell}>
-    <SchemaOverviewIsland client:only="react" workspace={page.workspace} />
+    {
+      page.workspace ? (
+        <SchemaOverviewRouteBody
+          collections={page.schemaOverview.collections}
+          collectionLoadError={page.schemaOverview.collectionLoadError}
+          routeAccess={page.workspace.routeAccess}
+          workspace={page.workspace}
+        />
+      ) : null
+    }
   </AdminWorkspaceShell>
 </DatamixRootLayout>

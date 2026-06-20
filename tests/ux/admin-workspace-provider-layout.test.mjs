@@ -12,6 +12,10 @@ const accountRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/AccountRouteBody.astro",
 );
+const schemaOverviewRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/SchemaOverviewRouteBody.astro",
+);
 const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
@@ -52,10 +56,6 @@ const schemaBuilderSourcePath = path.join(
   adminRoot,
   "_screens/schema-builder.tsx",
 );
-const schemaOverviewSourcePath = path.join(
-  adminRoot,
-  "_screens/schema-overview.tsx",
-);
 const teamAndRolesSourcePath = path.join(
   adminRoot,
   "_screens/team-and-roles.tsx",
@@ -66,7 +66,6 @@ const manualRefreshFreeScreens = [
   "content-index.tsx",
   "media-library.tsx",
   "schema-builder.tsx",
-  "schema-overview.tsx",
   "settings-api-keys.tsx",
   "team-and-roles.tsx",
 ];
@@ -79,7 +78,6 @@ const protectedWorkspacePages = [
   ["content/new.astro", "NewContentIsland"],
   ["content/[schemaId]/[recordId].astro", "ContentRecordIsland"],
   ["media.astro", "MediaIsland"],
-  ["schema/index.astro", "SchemaOverviewIsland"],
   ["schema/new.astro", "NewSchemaIsland"],
   ["schema/[schemaId].astro", "SchemaDetailIsland"],
   ["settings.astro", "SettingsIsland"],
@@ -100,7 +98,6 @@ const screenFiles = [
   "content-index.tsx",
   "media-library.tsx",
   "schema-builder.tsx",
-  "schema-overview.tsx",
   "settings-api-keys.tsx",
   "team-and-roles.tsx",
   "user-account.tsx",
@@ -188,6 +185,30 @@ for (const pagePath of astroNativeWorkspacePages) {
   );
 }
 
+const schemaOverviewPageSource = readFileSync(
+  path.join(adminPagesRoot, "schema/index.astro"),
+  "utf8",
+);
+
+assert(
+  schemaOverviewPageSource.includes("AdminWorkspaceShell") &&
+    schemaOverviewPageSource.includes("SchemaOverviewRouteBody") &&
+    schemaOverviewPageSource.includes("resolveSchemaOverviewPage") &&
+    schemaOverviewPageSource.includes("collections={page.schemaOverview.collections}") &&
+    schemaOverviewPageSource.includes(
+      "collectionLoadError={page.schemaOverview.collectionLoadError}",
+    ) &&
+    schemaOverviewPageSource.includes("routeAccess={page.workspace.routeAccess}") &&
+    schemaOverviewPageSource.includes("workspace={page.workspace}"),
+  "schema/index.astro should render the Astro-native schema overview body with server-loaded collection data.",
+);
+
+assert(
+  !schemaOverviewPageSource.includes("SchemaOverviewIsland") &&
+    !schemaOverviewPageSource.includes(reactClientDirective),
+  "schema/index.astro should not mount the retained whole-route schema overview island.",
+);
+
 for (const pagePath of standaloneAuthPages) {
   const fullPath = path.join(adminPagesRoot, pagePath);
 
@@ -223,6 +244,7 @@ for (const screenFile of screenFiles) {
 
 const shellSource = readFileSync(adminShell, "utf8");
 const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
+const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const workspaceRoutesIslandSource = readFileSync(workspaceRoutesIsland, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
@@ -235,7 +257,6 @@ const contentEditorSource = readFileSync(contentEditorSourcePath, "utf8");
 const contentIndexSource = readFileSync(contentIndexSourcePath, "utf8");
 const mediaLibrarySource = readFileSync(mediaLibrarySourcePath, "utf8");
 const schemaBuilderSource = readFileSync(schemaBuilderSourcePath, "utf8");
-const schemaOverviewSource = readFileSync(schemaOverviewSourcePath, "utf8");
 const teamAndRolesSource = readFileSync(teamAndRolesSourcePath, "utf8");
 const userAccountSource = readFileSync(userAccountScreen, "utf8");
 const adminRoutesSource = readFileSync(adminRoutesSourcePath, "utf8");
@@ -315,7 +336,6 @@ for (const skeletonExport of [
 for (const [screenFile, expectedSkeleton] of [
   ["content-index.tsx", "AdminTableSkeleton"],
   ["media-library.tsx", "AdminMiniListSkeleton"],
-  ["schema-overview.tsx", "AdminTableSkeleton"],
   ["settings-api-keys.tsx", "AdminMiniListSkeleton"],
   ["team-and-roles.tsx", "AdminMiniListSkeleton"],
 ]) {
@@ -326,6 +346,16 @@ for (const [screenFile, expectedSkeleton] of [
     `${screenFile} should render ${expectedSkeleton} during initial data loads.`,
   );
 }
+
+assert(
+  schemaOverviewRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    schemaOverviewRouteBodySource.includes('client:only="react"') &&
+    schemaOverviewRouteBodySource.includes("collections.map") &&
+    schemaOverviewRouteBodySource.includes("collectionLoadError") &&
+    !schemaOverviewRouteBodySource.includes("useAdminCollectionsState") &&
+    !schemaOverviewRouteBodySource.includes("AdminTableSkeleton"),
+  "The Astro-native schema overview body should render server-loaded collections and keep only the command palette hydrated.",
+);
 
 for (const screenFile of manualRefreshFreeScreens) {
   const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
@@ -499,7 +529,6 @@ assert(
 );
 
 for (const [screenLabel, source] of [
-  ["schema overview", schemaOverviewSource],
   ["media library", mediaLibrarySource],
   ["team and roles", teamAndRolesSource],
 ]) {

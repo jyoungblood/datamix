@@ -17,6 +17,7 @@ const {
   tone = "neutral",
 } = Astro.props;
 const role = tone === "error" ? "alert" : "status";
+const hasAction = Astro.slots.has("action");
 ---
 
 <div
@@ -30,4 +31,11 @@ const role = tone === "error" ? "alert" : "status";
 >
   <p class="list-title">{title}</p>
   <p class="list-copy">{body}</p>
+  {
+    hasAction ? (
+      <div class="state-box-actions">
+        <slot name="action" />
+      </div>
+    ) : null
+  }
 </div>

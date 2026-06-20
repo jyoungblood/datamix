@@ -5,7 +5,9 @@ Unified Astro Cloudflare Worker for Datamix.
 This workspace serves the browser-first admin UI and every JSON/auth/media route from
 one Cloudflare Worker app. Astro API endpoints live under `src/pages/api/**`, shared
 server helpers live under `src/server/**`, Astro admin route templates live under
-`src/pages/admin/**`, and retained React workspace bodies live under `src/admin/**`.
+`src/pages/admin/**`, Astro-native admin body templates live under
+`src/components/admin/**`, and retained React workspace bodies live under
+`src/admin/**`.
 
 Use `npm run dev` from the repository root for local development on
 `http://127.0.0.1:3000`. The root command delegates to this workspace's Astro dev
@@ -19,10 +21,11 @@ Use the root `db:*` scripts to generate and apply checked-in migrations under
 
 The authenticated admin workspace is routed through the shared Astro workspace
 shell. Astro resolves setup, session, authorization, permissions, and active
-route access before hydrating a retained React route body island. Those route
-bodies receive explicit serialized `workspace` props and use route-scoped state
-hooks from `src/admin/_state/**`; there is no global admin workspace React
-provider.
+route access before rendering the route body. Routes that can render from
+server props or server-loaded data use Astro-native bodies; interaction-heavy
+routes still hydrate retained React route body islands. Retained route bodies
+receive explicit serialized `workspace` props and use route-scoped state hooks
+from `src/admin/_state/**`; there is no global admin workspace React provider.
 
 | Route | Screen |
 | --- | --- |
@@ -42,9 +45,9 @@ provider.
 | `/admin/forgot-password` | Password reset request |
 | `/admin/reset-password` | Password reset completion |
 
-The command palette is mounted by the shared workspace island. It provides routed
-navigation, dynamic schema/content jumps when data is loaded, account access,
-and sign-out.
+The command palette remains a targeted React island inside workspace route
+bodies. It provides routed navigation, dynamic schema/content jumps when data is
+loaded, account access, and sign-out.
 
 ## Verification
 

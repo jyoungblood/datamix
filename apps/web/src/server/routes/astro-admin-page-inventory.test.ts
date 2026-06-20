@@ -11,6 +11,7 @@ type WorkspacePageExpectation = {
 type WorkspaceBodyMigrationStage =
   | "first-astro-native-candidate"
   | "server-data-needed"
+  | "server-data-resolved"
   | "client-only-deferred";
 
 type WorkspaceBodyRenderingMode = "retained-react-body" | "astro-native-body";
@@ -24,7 +25,6 @@ type WorkspaceBodyMigrationInventoryItem = WorkspacePageExpectation & {
 
 const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "AdminHomeIsland", route: "index.astro" },
-  { island: "SchemaOverviewIsland", route: "schema/index.astro" },
   { island: "NewSchemaIsland", route: "schema/new.astro" },
   { island: "SchemaDetailIsland", route: "schema/[schemaId].astro" },
   { island: "ContentIndexIsland", route: "content/index.astro" },
@@ -41,6 +41,7 @@ const workspacePageExpectations: WorkspacePageExpectation[] = [
 const protectedWorkspaceRoutes = [
   ...workspacePageExpectations.map(({ route }) => route),
   "account.astro",
+  "schema/index.astro",
 ];
 
 const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
@@ -53,12 +54,12 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
     stage: "server-data-needed",
   },
   {
-    clientOnlySignals: ["useAdminCollectionsState", "loadCollections"],
-    island: "SchemaOverviewIsland",
-    rendering: "retained-react-body",
+    clientOnlySignals: ["AdminWorkspaceCommandPalette"],
+    island: "SchemaOverviewRouteBody",
+    rendering: "astro-native-body",
     route: "schema/index.astro",
-    screen: "apps/web/src/admin/_screens/schema-overview.tsx",
-    stage: "server-data-needed",
+    screen: "apps/web/src/components/admin/SchemaOverviewRouteBody.astro",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["SchemaBuilderRoute", "handleSaveSchema"],
@@ -136,7 +137,6 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
 
 const workspaceIslands = [
   "AdminHomeIsland",
-  "SchemaOverviewIsland",
   "NewSchemaIsland",
   "SchemaDetailIsland",
   "ContentIndexIsland",
@@ -157,7 +157,6 @@ const reactClientDirective = `client:only=${'"react"'}`;
 
 const workspaceScreenPaths = [
   "apps/web/src/admin/_screens/admin-home.tsx",
-  "apps/web/src/admin/_screens/schema-overview.tsx",
   "apps/web/src/admin/_screens/schema-builder.tsx",
   "apps/web/src/admin/_screens/content-index.tsx",
   "apps/web/src/admin/_screens/content-editor.tsx",
@@ -184,9 +183,6 @@ const mediaLibrarySourcePath = path.resolve(
 const adminHomeSourcePath = path.resolve(
   "apps/web/src/admin/_screens/admin-home.tsx",
 );
-const schemaOverviewSourcePath = path.resolve(
-  "apps/web/src/admin/_screens/schema-overview.tsx",
-);
 const schemaBuilderSourcePath = path.resolve(
   "apps/web/src/admin/_screens/schema-builder.tsx",
 );
@@ -207,6 +203,12 @@ const userAccountSourcePath = path.resolve(
 );
 const accountRouteBodySourcePath = path.resolve(
   "apps/web/src/components/admin/AccountRouteBody.astro",
+);
+const schemaOverviewRouteBodySourcePath = path.resolve(
+  "apps/web/src/components/admin/SchemaOverviewRouteBody.astro",
+);
+const schemaOverviewPageResolverPath = path.resolve(
+  "apps/web/src/server/routes/astro-admin-schema-overview-page.ts",
 );
 const noProviderSourceRoots = [
   path.resolve("apps/web/src/admin"),
@@ -473,20 +475,9 @@ test("Task 3 team and settings state use route-scoped hooks", async () => {
   );
 });
 
-test("Task 4 schema overview and content index use route-scoped collection state", async () => {
-  const schemaOverviewSource = await readFile(schemaOverviewSourcePath, "utf8");
+test("Task 4 content index uses route-scoped collection state", async () => {
   const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
 
-  assert.doesNotMatch(
-    schemaOverviewSource,
-    /useAdminWorkspace(?:RouteAccess)?/,
-    "schema-overview.tsx should not import the old admin workspace context hooks",
-  );
-  assert.match(
-    schemaOverviewSource,
-    /useAdminCollectionsState/,
-    "schema-overview.tsx should import the route-scoped collection state hook",
-  );
   assert.doesNotMatch(
     contentIndexSource,
     /useAdminWorkspace(?:RouteAccess)?/,
@@ -1148,7 +1139,12 @@ test("Slice 22 account Astro body consumes serialized workspace route access", a
   );
 });
 
-test("Slice 6 schema overview island forwards explicit route access to the retained body", async () => {
+test("Slice 6 schema overview renders as an Astro-native body with server data", async () => {
+  const schemaPageSource = await readFile(
+    path.join(pagesAdminDirectory, "schema/index.astro"),
+    "utf8",
+  );
+  const schemaBodySource = await readFile(schemaOverviewRouteBodySourcePath, "utf8");
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -1157,74 +1153,81 @@ test("Slice 6 schema overview island forwards explicit route access to the retai
     path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
     "utf8",
   );
-  const schemaOverviewSource = await readFile(schemaOverviewSourcePath, "utf8");
 
   assert.match(
+    schemaPageSource,
+    /import SchemaOverviewRouteBody from "@\/components\/admin\/SchemaOverviewRouteBody\.astro"/,
+    "schema/index.astro should render through the Astro-native schema overview body",
+  );
+  assert.match(
+    schemaPageSource,
+    /resolveSchemaOverviewPage\(Astro\.request\)/,
+    "schema/index.astro should use the route-specific schema overview resolver",
+  );
+  assert.match(
+    schemaPageSource,
+    /<SchemaOverviewRouteBody\s+collections=\{page\.schemaOverview\.collections\}\s+collectionLoadError=\{page\.schemaOverview\.collectionLoadError\}\s+routeAccess=\{page\.workspace\.routeAccess\}\s+workspace=\{page\.workspace\}\s*\/>/,
+    "schema/index.astro should pass server-loaded schema data and serialized route access into the Astro body",
+  );
+  assert.match(
+    schemaBodySource,
+    /type Props = \{\s*collectionLoadError: string \| null;\s*collections: StoredCollectionDefinition\[\];\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}/,
+    "SchemaOverviewRouteBody should require explicit server data, workspace, and route access",
+  );
+  assert.match(
+    schemaBodySource,
+    /AdminWorkspaceCommandPalette[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
+    "SchemaOverviewRouteBody should keep the command palette as a targeted client island",
+  );
+  assert.match(
+    schemaBodySource,
+    /routeAccess\.isAllowed/,
+    "SchemaOverviewRouteBody should branch on the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    schemaBodySource,
+    /useAdminCollectionsState|loadCollections|useDelayedLoadingIndicator/,
+    "SchemaOverviewRouteBody should not keep client collection loading state",
+  );
+  assert.doesNotMatch(
     workspaceSource,
-    /<SchemaOverviewBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
-    "SchemaOverviewIsland should pass explicit workspace and route access into the retained schema overview body",
-  );
-  assert.doesNotMatch(
-    workspaceSource,
-    /<SchemaOverviewBody\s*\/>/,
-    "SchemaOverviewIsland should not render SchemaOverviewBody without server-derived route access",
-  );
-  assert.match(
-    bodySource,
-    /export function SchemaOverviewBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
-    "SchemaOverviewBody should require explicit workspace and route access",
-  );
-  assert.match(
-    bodySource,
-    /<SchemaOverviewRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
-    "SchemaOverviewBody should forward workspace and route access into the retained schema overview route",
+    /SchemaOverviewIsland|SchemaOverviewBody/,
+    "Retained workspace islands should no longer include the Astro-native schema overview route body",
   );
   assert.doesNotMatch(
     bodySource,
-    /<SchemaOverviewRoute\s*\/>/,
-    "SchemaOverviewBody should not rely on the schema overview route provider fallback",
-  );
-  assert.match(
-    schemaOverviewSource,
-    /routeAccess: AdminWorkspaceRouteAccessState/,
-    "SchemaOverviewContent should receive route access as explicit route-scoped state",
-  );
-  assert.doesNotMatch(
-    schemaOverviewSource,
-    /const access = useAdminWorkspaceRouteAccess\(route\);/,
-    "SchemaOverviewContent should not derive schema overview route access from AdminWorkspaceProvider",
-  );
-  assert.doesNotMatch(
-    schemaOverviewSource,
-    /SchemaOverviewRouteWithProviderAccess/,
-    "SchemaOverviewRoute should not keep a provider fallback after route-scoped collection migration",
+    /SchemaOverviewBody|SchemaOverviewRoute/,
+    "Retained workspace body routes should no longer include the Astro-native schema overview route body",
   );
 });
 
-test("Slice 23 schema overview island consumes serialized workspace route access", async () => {
-  const workspaceSource = await readFile(
-    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
-    "utf8",
-  );
-  const schemaOverviewIslandSource =
-    workspaceSource.match(
-      /export function SchemaOverviewIsland\([\s\S]*?\n\}/,
-    )?.[0] ?? "";
+test("Slice 23 schema overview resolver mirrors collection read permission before server loading", async () => {
+  const resolverSource = await readFile(schemaOverviewPageResolverPath, "utf8");
 
   assert.match(
-    schemaOverviewIslandSource,
-    /const routeAccess = workspace\?\.routeAccess;/,
-    "SchemaOverviewIsland should consume the serialized route access decision",
+    resolverSource,
+    /resolveWorkspacePage\(request,\s*route\)/,
+    "Schema overview resolver should reuse the shared workspace page resolver",
+  );
+  assert.match(
+    resolverSource,
+    /workspace\.permissions\.canViewCollections/,
+    "Schema overview resolver should check serialized collection read permission before loading data",
+  );
+  assert.match(
+    resolverSource,
+    /listCollectionDefinitions\(env\)/,
+    "Schema overview resolver should load collection definitions server-side",
+  );
+  assert.match(
+    resolverSource,
+    /CollectionSchemaError/,
+    "Schema overview resolver should preserve collection schema errors as route data",
   );
   assert.doesNotMatch(
-    schemaOverviewIslandSource,
-    /resolveAdminWorkspaceRouteAccess\(/,
-    "SchemaOverviewIsland should not re-derive route access inside the retained client island",
-  );
-  assert.doesNotMatch(
-    schemaOverviewIslandSource,
-    /workspace\.(activeRoute|permissions)/,
-    "SchemaOverviewIsland should not read route metadata or permissions to derive access",
+    resolverSource,
+    /\bfetch\(/,
+    "Schema overview resolver should use server services rather than calling the admin API over fetch",
   );
 });
 

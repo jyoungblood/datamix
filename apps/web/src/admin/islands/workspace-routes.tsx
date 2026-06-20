@@ -10,7 +10,6 @@ import {
   NewContentBody,
   NewSchemaBody,
   SchemaDetailBody,
-  SchemaOverviewBody,
   SettingsBody,
   TeamBody,
 } from "./workspace-body-routes";
@@ -43,18 +42,6 @@ export function AdminHomeIsland({ workspace }: AdminWorkspaceIslandProps) {
     <AdminWorkspaceIslandFrame workspace={workspace}>
       {routeAccess && workspace ? (
         <AdminHomeBody routeAccess={routeAccess} workspace={workspace} />
-      ) : null}
-    </AdminWorkspaceIslandFrame>
-  );
-}
-
-export function SchemaOverviewIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace?.routeAccess;
-
-  return (
-    <AdminWorkspaceIslandFrame workspace={workspace}>
-      {routeAccess && workspace ? (
-        <SchemaOverviewBody routeAccess={routeAccess} workspace={workspace} />
       ) : null}
     </AdminWorkspaceIslandFrame>
   );

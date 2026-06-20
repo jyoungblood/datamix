@@ -3,7 +3,6 @@ import { ContentEditorRoute } from "@/admin/_screens/content-editor";
 import { ContentIndexRoute } from "@/admin/_screens/content-index";
 import { MediaLibraryRoute } from "@/admin/_screens/media-library";
 import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
-import { SchemaOverviewRoute } from "@/admin/_screens/schema-overview";
 import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
 import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
@@ -17,16 +16,6 @@ export function AdminHomeBody({
   workspace: AdminWorkspaceProps;
 }) {
   return <AdminHomeRoute routeAccess={routeAccess} workspace={workspace} />;
-}
-
-export function SchemaOverviewBody({
-  routeAccess,
-  workspace,
-}: {
-  routeAccess: AdminWorkspaceRouteAccessState;
-  workspace: AdminWorkspaceProps;
-}) {
-  return <SchemaOverviewRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function NewSchemaBody({

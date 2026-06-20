@@ -43,7 +43,7 @@ export type WorkspaceShellProps = {
   title: string;
 };
 
-type WorkspacePageResult =
+export type WorkspacePageResult =
   | {
       kind: "redirect";
       location: string;

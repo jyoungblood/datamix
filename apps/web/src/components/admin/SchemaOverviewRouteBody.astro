@@ -1,0 +1,191 @@
+---
+import { Plus } from "lucide-react";
+
+import { formatCollectionSummary } from "@/admin/_lib/schema-drafts";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import { buttonVariants } from "@/components/ui/button";
+import type { StoredCollectionDefinition } from "@/server/collections";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminStateBox from "./AdminStateBox.astro";
+
+type Props = {
+  collectionLoadError: string | null;
+  collections: StoredCollectionDefinition[];
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
+};
+
+const { collectionLoadError, collections, routeAccess, workspace } = Astro.props;
+const { permissions } = workspace;
+const newSchemaHref = adminRoutes.schema.new().href;
+const buttonClass = buttonVariants();
+
+function formatSchemaTimestamp(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatSchemaLanguage(value: string) {
+  return value
+    .replaceAll("Collection definitions", "Schemas")
+    .replaceAll("collection definitions", "schemas")
+    .replaceAll("Collection definition", "Schema")
+    .replaceAll("collection definition", "schema")
+    .replaceAll("Collection", "Schema")
+    .replaceAll("collection", "schema");
+}
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+
+  <AdminPageHeader title="Schema">
+    <Fragment slot="action">
+      {
+        permissions.canCreateCollections ? (
+          <a class={buttonClass} href={newSchemaHref}>
+            <Plus className="size-4" />
+            New schema
+          </a>
+        ) : (
+          <button class={buttonClass} disabled type="button">
+            <Plus className="size-4" />
+            New schema
+          </button>
+        )
+      }
+    </Fragment>
+  </AdminPageHeader>
+
+  {
+    !routeAccess.isAllowed ? (
+      <AdminStateBox body={routeAccess.body} title={routeAccess.title} tone="warning" />
+    ) : !permissions.canViewCollections && permissions.canCreateCollections ? (
+      <AdminStateBox
+        body="Your current role can create schemas, but it cannot browse saved schema definitions."
+        title="Schema list is restricted"
+        tone="warning"
+      >
+        <Fragment slot="action">
+          <a class={buttonClass} href={newSchemaHref}>
+            Create new schema
+          </a>
+        </Fragment>
+      </AdminStateBox>
+    ) : !permissions.canViewCollections ? (
+      <AdminStateBox
+        body="Your current role cannot browse saved schema definitions."
+        title="Schema list is restricted"
+        tone="warning"
+      />
+    ) : (
+      <div class="overflow-hidden rounded-lg border border-border bg-white">
+        <div class="grid grid-cols-[minmax(0,1.5fr)_0.8fr_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-[11px] font-bold text-slate-500">
+          <span>Schema</span>
+          <span>Fields</span>
+          <span>Content</span>
+          <span>Status</span>
+          <span>Updated</span>
+        </div>
+
+        {
+          collectionLoadError && collections.length === 0 ? (
+            <div class="p-4">
+              <AdminStateBox
+                body={formatSchemaLanguage(collectionLoadError)}
+                compact
+                title="Schema list is unavailable"
+                tone="error"
+              />
+            </div>
+          ) : collections.length === 0 && permissions.canCreateCollections ? (
+            <div class="p-4">
+              <AdminStateBox
+                body="Create the first content model, then add fields in the schema builder."
+                compact
+                title="No schemas yet"
+              >
+                <Fragment slot="action">
+                  <a class={buttonClass} href={newSchemaHref}>
+                    Create first schema
+                  </a>
+                </Fragment>
+              </AdminStateBox>
+            </div>
+          ) : collections.length === 0 ? (
+            <div class="p-4">
+              <AdminStateBox
+                body="No saved schema definitions are available yet."
+                compact
+                title="No schemas yet"
+              />
+            </div>
+          ) : (
+            <>
+              {
+                collections.map((collection) => {
+                  const definition = collection.definition;
+
+                  return (
+                    <a
+                      class="grid grid-cols-[minmax(0,1.5fr)_0.8fr_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-xs transition last:border-b-0 hover:bg-muted/60"
+                      href={adminRoutes.schema.detail(collection.id).href}
+                    >
+                      <span class="min-w-0">
+                        <span class="block truncate font-medium text-slate-950">
+                          {definition.label}
+                        </span>
+                        <span class="block truncate font-data text-[10px] text-slate-500">
+                          {definition.name}
+                        </span>
+                      </span>
+                      <span class="text-slate-500">
+                        {formatCollectionSummary(collection)}
+                      </span>
+                      <span class="text-slate-500">Available in Content</span>
+                      <span>
+                        <span class="inline-flex items-center rounded-md border border-border px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                          Live
+                        </span>
+                      </span>
+                      <span class="text-slate-500">
+                        {formatSchemaTimestamp(collection.updatedAt)}
+                      </span>
+                    </a>
+                  );
+                })
+              }
+              {
+                collectionLoadError ? (
+                  <div class="border-t p-4">
+                    <AdminStateBox
+                      body={`${formatSchemaLanguage(collectionLoadError)} Showing the last schema list that loaded successfully.`}
+                      compact
+                      title="Schema list may be out of date"
+                      tone="error"
+                    />
+                  </div>
+                ) : null
+              }
+            </>
+          )
+        }
+      </div>
+    )
+  }
+</div>
