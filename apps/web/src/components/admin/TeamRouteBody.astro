@@ -1,11 +1,24 @@
 ---
-import type { DatamixRoleDefinition } from "@datamix/core";
+import {
+  datamixDefaultRoleAssignments,
+  getDatamixPermissionActionDefinition,
+  listDatamixPermissionGrantsForRole,
+  type DatamixRoleDefinition,
+} from "@datamix/core";
+import { Save, UserPlus } from "lucide-react";
 
-import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
+import { resolveRoleLabel } from "@/admin/_lib/role-drafts";
+import { TeamAndRolesInteractionsIsland } from "@/admin/_screens/team-and-roles";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import type { DatamixUserSummary } from "@/lib/users";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
+import AdminStateBox from "./AdminStateBox.astro";
 
 type Props = {
   roles: DatamixRoleDefinition[];
@@ -18,6 +31,24 @@ type Props = {
   workspace: AdminWorkspaceProps;
 };
 
+function createRolePermissionSummary(role: DatamixRoleDefinition) {
+  const grants = listDatamixPermissionGrantsForRole(role);
+
+  if (grants.length === 0) {
+    return "No permissions";
+  }
+
+  return grants
+    .map((grant) => {
+      const actions = grant.actions
+        .map((action) => getDatamixPermissionActionDefinition(action).label)
+        .join(", ");
+
+      return `${grant.resource.label}: ${actions}`;
+    })
+    .join(" / ");
+}
+
 const {
   roles,
   rolesLoadError,
@@ -28,21 +59,316 @@ const {
   usersLoaded,
   workspace,
 } = Astro.props;
+const { permissions, role } = workspace;
+const rootId = "admin-team";
+const badgeOutlineClass = badgeVariants({ variant: "outline" });
+const badgeSecondaryClass = badgeVariants({ variant: "secondary" });
+const primaryButtonClass = buttonVariants();
+const smallButtonClass = buttonVariants({ size: "sm" });
+const canShowUserList = routeAccess.isAllowed && permissions.canViewUsers;
+const shouldShowUsersLoading =
+  canShowUserList && !usersLoaded && !usersLoadError;
+const shouldShowUsersError =
+  canShowUserList &&
+  !shouldShowUsersLoading &&
+  Boolean(usersLoadError) &&
+  users.length === 0;
+const shouldShowUsersEmpty =
+  canShowUserList &&
+  !shouldShowUsersLoading &&
+  !usersLoadError &&
+  users.length === 0;
+const shouldShowUsersList =
+  canShowUserList && !shouldShowUsersLoading && users.length > 0;
+const shouldShowUsersStaleError =
+  canShowUserList &&
+  !shouldShowUsersLoading &&
+  Boolean(usersLoadError) &&
+  users.length > 0;
+const shouldShowRolesLoading =
+  permissions.canAccessTeamAccess &&
+  !rolesLoaded &&
+  !rolesLoadError &&
+  roles.length === 0;
+const shouldShowRolesError =
+  !shouldShowRolesLoading && Boolean(rolesLoadError) && roles.length === 0;
+const shouldShowRolesList = !shouldShowRolesLoading && !shouldShowRolesError;
+const shouldShowRolesStaleError =
+  !shouldShowRolesLoading && Boolean(rolesLoadError) && roles.length > 0;
+const defaultInviteRoleId = roles.some(
+  (availableRole) => availableRole.id === datamixDefaultRoleAssignments.invitedUser,
+)
+  ? datamixDefaultRoleAssignments.invitedUser
+  : roles[0]?.id ?? datamixDefaultRoleAssignments.invitedUser;
 ---
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4" data-team-root id={rootId}>
   <div class="flex justify-end">
     <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
   </div>
-  <TeamAndRolesRoute
-    client:only="react"
-    roles={roles}
-    rolesLoadError={rolesLoadError}
-    rolesLoaded={rolesLoaded}
-    routeAccess={routeAccess}
-    users={users}
-    usersLoadError={usersLoadError}
-    usersLoaded={usersLoaded}
-    workspace={workspace}
-  />
+
+  <AdminPageHeader title="Team" />
+
+  {
+    !routeAccess.isAllowed ? (
+      <AdminStateBox
+        body={`Your ${role.label} role cannot access user administration yet.`}
+        title="Team access is restricted"
+        tone="warning"
+      />
+    ) : (
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+        <AdminSectionCard
+          description="Manage who can sign in and which role they receive."
+          title="Current users"
+        >
+          <p class="form-success" data-team-users-message hidden></p>
+
+          <div data-team-users-restricted hidden={permissions.canViewUsers}>
+            <AdminStateBox
+              body={
+                permissions.canUpdateUsers
+                  ? "This role can update users, but it cannot browse the current user list."
+                  : "This role cannot browse the current user list yet."
+              }
+              compact
+              title="User list is restricted"
+              tone="warning"
+            />
+          </div>
+
+          <div data-team-users-loading hidden={!shouldShowUsersLoading}>
+            <div class="min-h-[190px]" aria-hidden="true"></div>
+          </div>
+
+          <div data-team-users-error hidden={!shouldShowUsersError}>
+            <AdminStateBox
+              body={usersLoadError ?? ""}
+              compact
+              title="User list is unavailable"
+              tone="error"
+            />
+          </div>
+
+          <div data-team-users-empty hidden={!shouldShowUsersEmpty}>
+            <AdminStateBox
+              body="No users are available yet beyond the current session."
+              compact
+              title="No users found"
+            />
+          </div>
+
+          <div class="mini-list" data-team-users-items hidden={!shouldShowUsersList}>
+            {
+              users.map((user) => {
+                const draftRoleId = user.roleId ?? "";
+
+                return (
+                  <div
+                    class="mini-list-item mini-list-item-stacked"
+                    data-team-user-item
+                    data-team-user-id={user.id}
+                  >
+                    <div class="mini-list-content">
+                      <strong>{user.name || user.email}</strong>
+                      <small>{user.email}</small>
+                    </div>
+
+                    <div class="status-row status-row-compact">
+                      <span class={badgeOutlineClass}>
+                        {resolveRoleLabel(roles, user.roleId)}
+                      </span>
+                      {workspace.account.id === user.id ? (
+                        <span class={badgeSecondaryClass}>Current session</span>
+                      ) : null}
+                      <span class={badgeOutlineClass}>
+                        {user.emailVerified ? "Joined" : "Invite pending"}
+                      </span>
+                    </div>
+
+                    {permissions.canUpdateUsers ? (
+                      <div class="permission-toolbar">
+                        <label class="field field-inline">
+                          <span>Assigned role</span>
+                          <select
+                            data-team-user-id={user.id}
+                            data-team-user-role-select
+                          >
+                            <option disabled selected={draftRoleId === ""} value="">
+                              Select role
+                            </option>
+                            {roles.map((availableRole) => (
+                              <option
+                                selected={availableRole.id === draftRoleId}
+                                value={availableRole.id}
+                              >
+                                {availableRole.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          class={smallButtonClass}
+                          data-team-user-id={user.id}
+                          data-team-user-save-button
+                          disabled={!draftRoleId || draftRoleId === user.roleId}
+                          type="button"
+                        >
+                          <Save className="size-4" />
+                          <span data-team-user-save-label>Save role</span>
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            }
+          </div>
+
+          <div class="mt-4" data-team-users-stale-error hidden={!shouldShowUsersStaleError}>
+            <AdminStateBox
+              body={usersLoadError ?? ""}
+              compact
+              title="User list may be out of date"
+              tone="warning"
+            />
+          </div>
+        </AdminSectionCard>
+
+        <AdminSectionCard
+          description="Send an invite and choose the starting role."
+          title="Invite a teammate"
+        >
+          <form class="auth-form" data-team-invite-form>
+            <label class="field">
+              <span>Name</span>
+              <input
+                data-team-invite-name
+                disabled={!permissions.canInviteUsers}
+                placeholder="Optional display name"
+                type="text"
+                value=""
+              />
+            </label>
+            <label class="field">
+              <span>Email</span>
+              <input
+                data-team-invite-email
+                disabled={!permissions.canInviteUsers}
+                required
+                type="email"
+                value=""
+              />
+            </label>
+            <label class="field">
+              <span>Starting role</span>
+              <select
+                data-team-invite-role
+                disabled={!permissions.canInviteUsers || roles.length === 0}
+              >
+                {roles.map((availableRole) => (
+                  <option
+                    selected={availableRole.id === defaultInviteRoleId}
+                    value={availableRole.id}
+                  >
+                    {availableRole.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p class="form-error" data-team-invite-error hidden></p>
+            <p class="form-success" data-team-invite-message hidden></p>
+
+            <div data-team-invites-restricted hidden={permissions.canInviteUsers}>
+              <AdminStateBox
+                body={`Your ${role.label} role can sign in, but it cannot send team invites.`}
+                compact
+                title="Invites are restricted"
+                tone="warning"
+              />
+            </div>
+
+            <div class="actions">
+              <button
+                class={primaryButtonClass}
+                data-team-invite-button
+                disabled={!permissions.canInviteUsers}
+                type="submit"
+              >
+                <UserPlus className="size-4" />
+                <span data-team-invite-button-label>Send invite</span>
+              </button>
+            </div>
+          </form>
+        </AdminSectionCard>
+      </div>
+    )
+  }
+
+  <AdminSectionCard
+    description="Review built-in and custom roles available to users and invites."
+    title="Available roles"
+  >
+    <div data-team-roles-loading hidden={!shouldShowRolesLoading}>
+      <div class="min-h-[252px]" aria-hidden="true"></div>
+    </div>
+
+    <div data-team-roles-error hidden={!shouldShowRolesError}>
+      <AdminStateBox
+        body={rolesLoadError ?? ""}
+        compact
+        title="Role list is unavailable"
+        tone="error"
+      />
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2" data-team-roles-items hidden={!shouldShowRolesList}>
+      {
+        roles.map((availableRole) => (
+          <div class="type-specific-box" data-team-role-item data-team-role-id={availableRole.id}>
+            <div class="mini-list-content">
+              <strong>{availableRole.label}</strong>
+              <small>{availableRole.description}</small>
+            </div>
+            <div class="status-row status-row-compact">
+              <span class={badgeOutlineClass}>
+                {availableRole.permissions.length} permissions
+              </span>
+              <span class={badgeSecondaryClass}>
+                {availableRole.system ? "Built-in" : "Custom"}
+              </span>
+            </div>
+            <p class="helper-text">{createRolePermissionSummary(availableRole)}</p>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="mt-4" data-team-roles-stale-error hidden={!shouldShowRolesStaleError}>
+      <AdminStateBox
+        body={rolesLoadError ?? ""}
+        compact
+        title="Role list may be out of date"
+        tone="warning"
+      />
+    </div>
+  </AdminSectionCard>
+
+  {
+    routeAccess.isAllowed ? (
+      <TeamAndRolesInteractionsIsland
+        client:only="react"
+        roles={roles}
+        rolesLoadError={rolesLoadError}
+        rolesLoaded={rolesLoaded}
+        rootId={rootId}
+        routeAccess={routeAccess}
+        users={users}
+        usersLoadError={usersLoadError}
+        usersLoaded={usersLoaded}
+        workspace={workspace}
+      />
+    ) : null
+  }
 </div>

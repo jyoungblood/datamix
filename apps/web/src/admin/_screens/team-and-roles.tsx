@@ -5,29 +5,68 @@ import {
   listDatamixPermissionGrantsForRole,
   type DatamixRoleDefinition,
 } from "@datamix/core";
-import { Save, UserPlus } from "lucide-react";
-import type { SubmitEvent } from "react";
 import * as React from "react";
 
-import {
-  AdminPageHeader,
-  AdminSectionCard,
-} from "../_components/admin-design";
-import {
-  AdminLoadingReserve,
-  AdminMiniListSkeleton,
-  useDelayedLoadingIndicator,
-} from "../_components/admin-skeleton";
-import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
 import { useAdminRolesState } from "../_state/admin-roles-state";
 import { useAdminTeamState } from "../_state/admin-team-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { badgeVariants } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import type { DatamixUserSummary } from "@/lib/users";
+
+type TeamAndRolesInteractionsIslandProps = {
+  roles?: DatamixRoleDefinition[];
+  rolesLoadError?: string | null;
+  rolesLoaded?: boolean;
+  rootId: string;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  users?: DatamixUserSummary[];
+  usersLoadError?: string | null;
+  usersLoaded?: boolean;
+  workspace: AdminWorkspaceProps;
+};
+
+type QueryRoot = Document | HTMLElement;
+
+const outlineBadgeClass = badgeVariants({ variant: "outline" });
+const secondaryBadgeClass = badgeVariants({ variant: "secondary" });
+const smallButtonClass = buttonVariants({ size: "sm" });
+
+function queryElement<T>(root: QueryRoot, selector: string) {
+  return root.querySelector(selector) as T | null;
+}
+
+function queryElements<T>(root: QueryRoot, selector: string) {
+  return Array.from(root.querySelectorAll(selector)) as T[];
+}
+
+function setHidden(element: HTMLElement | null, isHidden: boolean) {
+  if (element) {
+    element.hidden = isHidden;
+  }
+}
+
+function setText(element: HTMLElement | null, value: string) {
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function setInputValue(
+  element: HTMLInputElement | HTMLSelectElement | null,
+  value: string,
+) {
+  if (element && element.value !== value) {
+    element.value = value;
+  }
+}
+
+function setStateBoxBody(container: QueryRoot, selector: string, value: string) {
+  setText(queryElement<HTMLElement>(container, `${selector} .list-copy`), value);
+}
 
 function createRolePermissionSummary(role: DatamixRoleDefinition) {
   const grants = listDatamixPermissionGrantsForRole(role);
@@ -47,40 +86,207 @@ function createRolePermissionSummary(role: DatamixRoleDefinition) {
     .join(" / ");
 }
 
-type TeamAndRolesContentProps = {
-  roles?: DatamixRoleDefinition[];
-  rolesLoadError?: string | null;
-  rolesLoaded?: boolean;
-  routeAccess: AdminWorkspaceRouteAccessState;
-  users?: DatamixUserSummary[];
-  usersLoadError?: string | null;
-  usersLoaded?: boolean;
-  workspace: AdminWorkspaceProps;
-};
+function createBadge(document: Document, className: string, text: string) {
+  const badge = document.createElement("span");
+  badge.className = className;
+  badge.textContent = text;
+  return badge;
+}
 
-type TeamAndRolesRouteProps = {
-  roles?: DatamixRoleDefinition[];
-  rolesLoadError?: string | null;
-  rolesLoaded?: boolean;
-  routeAccess: AdminWorkspaceRouteAccessState;
-  users?: DatamixUserSummary[];
-  usersLoadError?: string | null;
-  usersLoaded?: boolean;
-  workspace: AdminWorkspaceProps;
-};
+function createSaveIcon(document: Document) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "size-4");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
 
-export function TeamAndRolesContent({
+  for (const pathData of [
+    "M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+    "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7",
+    "M7 3v4a1 1 0 0 0 1 1h7",
+  ]) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathData);
+    svg.appendChild(path);
+  }
+
+  return svg;
+}
+
+function populateRoleOptions(
+  select: HTMLSelectElement,
+  roles: DatamixRoleDefinition[],
+  selectedRoleId: string,
+  options?: { includePlaceholder?: boolean },
+) {
+  while (select.firstChild) {
+    select.removeChild(select.firstChild);
+  }
+
+  if (options?.includePlaceholder) {
+    const placeholder = document.createElement("option");
+    placeholder.disabled = true;
+    placeholder.value = "";
+    placeholder.textContent = "Select role";
+    placeholder.selected = selectedRoleId === "";
+    select.appendChild(placeholder);
+  }
+
+  for (const role of roles) {
+    const option = document.createElement("option");
+    option.value = role.id;
+    option.textContent = role.label;
+    option.selected = role.id === selectedRoleId;
+    select.appendChild(option);
+  }
+}
+
+function createUserItem(
+  document: Document,
+  user: DatamixUserSummary,
+  options: {
+    availableRoles: DatamixRoleDefinition[];
+    canUpdateUsers: boolean;
+    currentUserId: string | null;
+    draftRoleId: string;
+    isSavingUser: boolean;
+  },
+) {
+  const item = document.createElement("div");
+  item.className = "mini-list-item mini-list-item-stacked";
+  item.dataset.teamUserItem = "";
+  item.dataset.teamUserId = user.id;
+
+  const content = document.createElement("div");
+  content.className = "mini-list-content";
+
+  const name = document.createElement("strong");
+  name.textContent = user.name || user.email;
+  content.appendChild(name);
+
+  const email = document.createElement("small");
+  email.textContent = user.email;
+  content.appendChild(email);
+  item.appendChild(content);
+
+  const statusRow = document.createElement("div");
+  statusRow.className = "status-row status-row-compact";
+  statusRow.appendChild(
+    createBadge(
+      document,
+      outlineBadgeClass,
+      resolveRoleLabel(options.availableRoles, user.roleId),
+    ),
+  );
+
+  if (options.currentUserId === user.id) {
+    statusRow.appendChild(
+      createBadge(document, secondaryBadgeClass, "Current session"),
+    );
+  }
+
+  statusRow.appendChild(
+    createBadge(
+      document,
+      outlineBadgeClass,
+      user.emailVerified ? "Joined" : "Invite pending",
+    ),
+  );
+  item.appendChild(statusRow);
+
+  if (options.canUpdateUsers) {
+    const toolbar = document.createElement("div");
+    toolbar.className = "permission-toolbar";
+
+    const label = document.createElement("label");
+    label.className = "field field-inline";
+
+    const labelText = document.createElement("span");
+    labelText.textContent = "Assigned role";
+    label.appendChild(labelText);
+
+    const select = document.createElement("select");
+    select.dataset.teamUserId = user.id;
+    select.dataset.teamUserRoleSelect = "";
+    populateRoleOptions(select, options.availableRoles, options.draftRoleId, {
+      includePlaceholder: true,
+    });
+    label.appendChild(select);
+    toolbar.appendChild(label);
+
+    const button = document.createElement("button");
+    button.className = smallButtonClass;
+    button.dataset.teamUserId = user.id;
+    button.dataset.teamUserSaveButton = "";
+    button.disabled =
+      options.isSavingUser ||
+      !options.draftRoleId ||
+      options.draftRoleId === user.roleId;
+    button.type = "button";
+    button.appendChild(createSaveIcon(document));
+
+    const buttonLabel = document.createElement("span");
+    buttonLabel.dataset.teamUserSaveLabel = "";
+    buttonLabel.textContent = options.isSavingUser ? "Saving" : "Save role";
+    button.appendChild(buttonLabel);
+    toolbar.appendChild(button);
+    item.appendChild(toolbar);
+  }
+
+  return item;
+}
+
+function createRoleItem(document: Document, role: DatamixRoleDefinition) {
+  const item = document.createElement("div");
+  item.className = "type-specific-box";
+  item.dataset.teamRoleItem = "";
+  item.dataset.teamRoleId = role.id;
+
+  const content = document.createElement("div");
+  content.className = "mini-list-content";
+
+  const label = document.createElement("strong");
+  label.textContent = role.label;
+  content.appendChild(label);
+
+  const description = document.createElement("small");
+  description.textContent = role.description;
+  content.appendChild(description);
+  item.appendChild(content);
+
+  const statusRow = document.createElement("div");
+  statusRow.className = "status-row status-row-compact";
+  statusRow.appendChild(
+    createBadge(document, outlineBadgeClass, `${role.permissions.length} permissions`),
+  );
+  statusRow.appendChild(
+    createBadge(document, secondaryBadgeClass, role.system ? "Built-in" : "Custom"),
+  );
+  item.appendChild(statusRow);
+
+  const summary = document.createElement("p");
+  summary.className = "helper-text";
+  summary.textContent = createRolePermissionSummary(role);
+  item.appendChild(summary);
+
+  return item;
+}
+
+export function TeamAndRolesInteractionsIsland({
   roles: initialRoles,
   rolesLoadError: initialRolesLoadError,
   rolesLoaded: initialRolesLoaded,
+  rootId,
   routeAccess,
   users: initialUsers,
   usersLoadError: initialUsersLoadError,
   usersLoaded: initialUsersLoaded,
   workspace,
-}: TeamAndRolesContentProps) {
-  const access = routeAccess;
-  const { permissions, role } = workspace;
+}: TeamAndRolesInteractionsIslandProps) {
+  const { permissions } = workspace;
   const reloadWorkspace = React.useCallback(async () => {
     window.location.reload();
   }, []);
@@ -134,16 +340,13 @@ export function TeamAndRolesContent({
     permissions.canViewUsers && !hasLoadedUsers && !usersLoadError;
   const isInitialRoleLoad =
     permissions.canAccessTeamAccess && !hasLoadedRoles && !rolesLoadError;
-  const shouldShowUserSkeleton =
+  const shouldShowUserLoading =
     isInitialUserLoad || (isLoadingUsers && !hasLoadedUsers);
-  const shouldShowRoleSkeleton = isInitialRoleLoad;
-  const shouldShowDelayedUserSkeleton =
-    useDelayedLoadingIndicator(shouldShowUserSkeleton);
-  const shouldShowDelayedRoleSkeleton =
-    useDelayedLoadingIndicator(shouldShowRoleSkeleton);
+  const shouldShowRoleLoading = isInitialRoleLoad && availableRoles.length === 0;
 
   React.useEffect(() => {
     if (
+      !routeAccess.isAllowed ||
       !permissions.canAccessTeamAccess ||
       hasLoadedRoles ||
       isLoadingRoles
@@ -157,269 +360,345 @@ export function TeamAndRolesContent({
     isLoadingRoles,
     loadAvailableRoles,
     permissions.canAccessTeamAccess,
+    routeAccess.isAllowed,
   ]);
 
   React.useEffect(() => {
-    if (!permissions.canViewUsers || hasLoadedUsers || isLoadingUsers) {
+    if (
+      !routeAccess.isAllowed ||
+      !permissions.canViewUsers ||
+      hasLoadedUsers ||
+      isLoadingUsers
+    ) {
       return;
     }
 
     void loadUserList();
-  }, [hasLoadedUsers, isLoadingUsers, loadUserList, permissions.canViewUsers]);
+  }, [
+    hasLoadedUsers,
+    isLoadingUsers,
+    loadUserList,
+    permissions.canViewUsers,
+    routeAccess.isAllowed,
+  ]);
 
-  const handleInviteSubmit = (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void sendInvite();
-  };
+  React.useEffect(() => {
+    const root = document.getElementById(rootId);
 
-  return (
-    <>
-      <AdminPageHeader title="Team" />
+    if (!root) {
+      return;
+    }
 
-        {!access.isAllowed ? (
-          <AdminStateBox
-            body={`Your ${role.label} role cannot access user administration yet.`}
-            title="Team access is restricted"
-            tone="warning"
-          />
-        ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
-            <AdminSectionCard
-              description="Manage who can sign in and which role they receive."
-              title="Current users"
-            >
-              {usersMessage ? <p className="form-success">{usersMessage}</p> : null}
+    const handleInput = (event: Event) => {
+      const target = event.target as HTMLInputElement | null;
 
-              {!permissions.canViewUsers ? (
-                <AdminStateBox
-                  body={
-                    permissions.canUpdateUsers
-                      ? "This role can update users, but it cannot browse the current user list."
-                      : "This role cannot browse the current user list yet."
-                  }
-                  compact
-                  title="User list is restricted"
-                  tone="warning"
-                />
-              ) : shouldShowUserSkeleton ? (
-                shouldShowDelayedUserSkeleton ? (
-                  <AdminMiniListSkeleton rows={3} />
-                ) : (
-                  <AdminLoadingReserve className="min-h-[190px]" />
-                )
-              ) : usersLoadError && users.length === 0 ? (
-                <AdminStateBox
-                  body={usersLoadError}
-                  compact
-                  title="User list is unavailable"
-                  tone="error"
-                />
-              ) : users.length === 0 ? (
-                <AdminStateBox
-                  body="No users are available yet beyond the current session."
-                  compact
-                  title="No users found"
-                />
-              ) : (
-                <div className="mini-list">
-                  {users.map((user) => {
-                    const draftRoleId = userRoleDrafts[user.id] ?? user.roleId ?? "";
-                    const isSavingUser = updatingUserRoleId === user.id;
+      if (!target) {
+        return;
+      }
 
-                    return (
-                      <div className="mini-list-item mini-list-item-stacked" key={user.id}>
-                        <div className="mini-list-content">
-                          <strong>{user.name || user.email}</strong>
-                          <small>{user.email}</small>
-                        </div>
+      if (target.matches("[data-team-invite-name]")) {
+        setInviteName(target.value);
+      }
 
-                        <div className="status-row status-row-compact">
-                          <Badge variant="outline">
-                            {resolveRoleLabel(availableRoles, user.roleId)}
-                          </Badge>
-                          {workspace.account.id === user.id ? (
-                            <Badge variant="secondary">Current session</Badge>
-                          ) : null}
-                          <Badge variant="outline">
-                            {user.emailVerified ? "Joined" : "Invite pending"}
-                          </Badge>
-                        </div>
+      if (target.matches("[data-team-invite-email]")) {
+        setInviteEmail(target.value);
+      }
+    };
 
-                        {permissions.canUpdateUsers ? (
-                          <div className="permission-toolbar">
-                            <label className="field field-inline">
-                              <span>Assigned role</span>
-                              <select
-                                onChange={(event) =>
-                                  updateUserRoleDraft(user.id, event.target.value)
-                                }
-                                value={draftRoleId}
-                              >
-                                <option disabled value="">
-                                  Select role
-                                </option>
-                                {availableRoles.map((availableRole) => (
-                                  <option key={availableRole.id} value={availableRole.id}>
-                                    {availableRole.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <Button
-                              disabled={
-                                isSavingUser || !draftRoleId || draftRoleId === user.roleId
-                              }
-                              onClick={() => void updateUserRole(user)}
-                              size="sm"
-                              type="button"
-                            >
-                              <Save />
-                              {isSavingUser ? "Saving" : "Save role"}
-                            </Button>
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+    const handleChange = (event: Event) => {
+      const target = event.target as HTMLSelectElement | null;
 
-              {usersLoadError && users.length > 0 ? (
-                <div className="mt-4">
-                  <AdminStateBox
-                    body={usersLoadError}
-                    compact
-                    title="User list may be out of date"
-                    tone="warning"
-                  />
-                </div>
-              ) : null}
-            </AdminSectionCard>
+      if (!target) {
+        return;
+      }
 
-            <AdminSectionCard
-              description="Send an invite and choose the starting role."
-              title="Invite a teammate"
-            >
-              <form className="auth-form" onSubmit={handleInviteSubmit}>
-                <label className="field">
-                  <span>Name</span>
-                  <input
-                    disabled={!permissions.canInviteUsers || isInviting}
-                    onChange={(event) => setInviteName(event.target.value)}
-                    placeholder="Optional display name"
-                    type="text"
-                    value={inviteName}
-                  />
-                </label>
-                <label className="field">
-                  <span>Email</span>
-                  <input
-                    disabled={!permissions.canInviteUsers || isInviting}
-                    onChange={(event) => setInviteEmail(event.target.value)}
-                    required
-                    type="email"
-                    value={inviteEmail}
-                  />
-                </label>
-                <label className="field">
-                  <span>Starting role</span>
-                  <select
-                    disabled={
-                      !permissions.canInviteUsers || isInviting || availableRoles.length === 0
-                    }
-                    onChange={(event) => setInviteRoleId(event.target.value)}
-                    value={inviteRoleId}
-                  >
-                    {availableRoles.map((availableRole) => (
-                      <option key={availableRole.id} value={availableRole.id}>
-                        {availableRole.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+      if (target.matches("[data-team-invite-role]")) {
+        setInviteRoleId(target.value);
+        return;
+      }
 
-                {inviteError ? <p className="form-error">{inviteError}</p> : null}
-                {inviteMessage ? <p className="form-success">{inviteMessage}</p> : null}
+      if (target.matches("[data-team-user-role-select]")) {
+        const userId = target.dataset.teamUserId;
 
-                {!permissions.canInviteUsers ? (
-                  <AdminStateBox
-                    body={`Your ${role.label} role can sign in, but it cannot send team invites.`}
-                    compact
-                    title="Invites are restricted"
-                    tone="warning"
-                  />
-                ) : null}
+        if (userId) {
+          updateUserRoleDraft(userId, target.value);
+        }
+      }
+    };
 
-                <div className="actions">
-                  <Button
-                    disabled={isInviting || !permissions.canInviteUsers}
-                    type="submit"
-                  >
-                    <UserPlus />
-                    {isInviting ? "Sending invite" : "Send invite"}
-                  </Button>
-                </div>
-              </form>
-            </AdminSectionCard>
-          </div>
-        )}
+    const handleSubmit = (event: SubmitEvent) => {
+      const target = event.target as HTMLFormElement | null;
 
-        <AdminSectionCard
-          description="Review built-in and custom roles available to users and invites."
-          title="Available roles"
-        >
-          {shouldShowRoleSkeleton && availableRoles.length === 0 ? (
-            shouldShowDelayedRoleSkeleton ? (
-              <AdminMiniListSkeleton rows={4} />
-            ) : (
-              <AdminLoadingReserve className="min-h-[252px]" />
-            )
-          ) : rolesLoadError && availableRoles.length === 0 ? (
-            <AdminStateBox
-              body={rolesLoadError}
-              compact
-              title="Role list is unavailable"
-              tone="error"
-            />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {availableRoles.map((availableRole) => (
-                <div className="type-specific-box" key={availableRole.id}>
-                  <div className="mini-list-content">
-                    <strong>{availableRole.label}</strong>
-                    <small>{availableRole.description}</small>
-                  </div>
-                  <div className="status-row status-row-compact">
-                    <Badge variant="outline">
-                      {availableRole.permissions.length} permissions
-                    </Badge>
-                    <Badge variant="secondary">
-                      {availableRole.system ? "Built-in" : "Custom"}
-                    </Badge>
-                  </div>
-                  <p className="helper-text">{createRolePermissionSummary(availableRole)}</p>
-                </div>
-              ))}
-            </div>
-          )}
-          {rolesLoadError && availableRoles.length > 0 ? (
-            <div className="mt-4">
-              <AdminStateBox
-                body={rolesLoadError}
-                compact
-                title="Role list may be out of date"
-                tone="warning"
-              />
-            </div>
-          ) : null}
-        </AdminSectionCard>
-    </>
-  );
-}
+      if (!target?.matches("[data-team-invite-form]")) {
+        return;
+      }
 
-export function TeamAndRolesRoute({
-  routeAccess,
-  ...props
-}: TeamAndRolesRouteProps) {
-  return <TeamAndRolesContent routeAccess={routeAccess} {...props} />;
+      event.preventDefault();
+      void sendInvite();
+    };
+
+    root.addEventListener("input", handleInput);
+    root.addEventListener("change", handleChange);
+    root.addEventListener("submit", handleSubmit);
+
+    return () => {
+      root.removeEventListener("input", handleInput);
+      root.removeEventListener("change", handleChange);
+      root.removeEventListener("submit", handleSubmit);
+    };
+  }, [
+    rootId,
+    sendInvite,
+    setInviteEmail,
+    setInviteName,
+    setInviteRoleId,
+    updateUserRoleDraft,
+  ]);
+
+  React.useEffect(() => {
+    const root = document.getElementById(rootId);
+
+    if (!root) {
+      return;
+    }
+
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as
+        | {
+            closest?: (selector: string) => HTMLElement | null;
+          }
+        | null;
+
+      if (!target?.closest) {
+        return;
+      }
+
+      const saveButton = target.closest("[data-team-user-save-button]");
+      const userId = saveButton?.dataset.teamUserId;
+
+      if (!userId) {
+        return;
+      }
+
+      const user = users.find((currentUser) => currentUser.id === userId);
+
+      if (!user) {
+        return;
+      }
+
+      event.preventDefault();
+      void updateUserRole(user);
+    };
+
+    root.addEventListener("click", handleClick);
+
+    return () => {
+      root.removeEventListener("click", handleClick);
+    };
+  }, [rootId, updateUserRole, users]);
+
+  React.useEffect(() => {
+    const root = document.getElementById(rootId);
+
+    if (!root) {
+      return;
+    }
+
+    root.dataset.teamHydrated = "true";
+    const canShowUserList = routeAccess.isAllowed && permissions.canViewUsers;
+
+    setText(
+      queryElement<HTMLElement>(root, "[data-team-users-message]"),
+      usersMessage ?? "",
+    );
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-users-message]"),
+      !usersMessage,
+    );
+
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-users-loading]"),
+      !canShowUserList || !shouldShowUserLoading,
+    );
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-users-error]"),
+      !canShowUserList ||
+        shouldShowUserLoading ||
+        !usersLoadError ||
+        users.length > 0,
+    );
+    setStateBoxBody(root, "[data-team-users-error]", usersLoadError ?? "");
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-users-empty]"),
+      !canShowUserList ||
+        shouldShowUserLoading ||
+        Boolean(usersLoadError) ||
+        users.length > 0,
+    );
+
+    const usersItems = queryElement<HTMLElement>(root, "[data-team-users-items]");
+    const shouldShowUsersList =
+      canShowUserList && !shouldShowUserLoading && users.length > 0;
+
+    setHidden(usersItems, !shouldShowUsersList);
+
+    if (usersItems) {
+      while (usersItems.firstChild) {
+        usersItems.removeChild(usersItems.firstChild);
+      }
+
+      for (const user of users) {
+        usersItems.appendChild(
+          createUserItem(document, user, {
+            availableRoles,
+            canUpdateUsers: permissions.canUpdateUsers,
+            currentUserId: workspace.account.id,
+            draftRoleId: userRoleDrafts[user.id] ?? user.roleId ?? "",
+            isSavingUser: updatingUserRoleId === user.id,
+          }),
+        );
+      }
+    }
+
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-users-stale-error]"),
+      !canShowUserList ||
+        shouldShowUserLoading ||
+        !usersLoadError ||
+        users.length === 0,
+    );
+    setStateBoxBody(root, "[data-team-users-stale-error]", usersLoadError ?? "");
+
+    const inviteNameInput = queryElement<HTMLInputElement>(
+      root,
+      "[data-team-invite-name]",
+    );
+    const inviteEmailInput = queryElement<HTMLInputElement>(
+      root,
+      "[data-team-invite-email]",
+    );
+    const inviteRoleSelect = queryElement<HTMLSelectElement>(
+      root,
+      "[data-team-invite-role]",
+    );
+    const inviteButton = queryElement<HTMLButtonElement>(
+      root,
+      "[data-team-invite-button]",
+    );
+
+    setInputValue(inviteNameInput, inviteName);
+    setInputValue(inviteEmailInput, inviteEmail);
+
+    if (inviteNameInput) {
+      inviteNameInput.disabled = !permissions.canInviteUsers || isInviting;
+    }
+
+    if (inviteEmailInput) {
+      inviteEmailInput.disabled = !permissions.canInviteUsers || isInviting;
+    }
+
+    if (inviteRoleSelect) {
+      populateRoleOptions(inviteRoleSelect, availableRoles, inviteRoleId);
+      inviteRoleSelect.disabled =
+        !permissions.canInviteUsers || isInviting || availableRoles.length === 0;
+    }
+
+    if (inviteButton) {
+      inviteButton.disabled = isInviting || !permissions.canInviteUsers;
+    }
+
+    setText(
+      queryElement<HTMLElement>(root, "[data-team-invite-button-label]"),
+      isInviting ? "Sending invite" : "Send invite",
+    );
+    setText(
+      queryElement<HTMLElement>(root, "[data-team-invite-error]"),
+      inviteError ?? "",
+    );
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-invite-error]"),
+      !inviteError,
+    );
+    setText(
+      queryElement<HTMLElement>(root, "[data-team-invite-message]"),
+      inviteMessage ?? "",
+    );
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-invite-message]"),
+      !inviteMessage,
+    );
+
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-roles-loading]"),
+      !shouldShowRoleLoading,
+    );
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-roles-error]"),
+      shouldShowRoleLoading || !rolesLoadError || availableRoles.length > 0,
+    );
+    setStateBoxBody(root, "[data-team-roles-error]", rolesLoadError ?? "");
+
+    const rolesItems = queryElement<HTMLElement>(root, "[data-team-roles-items]");
+    const shouldShowRolesList =
+      !shouldShowRoleLoading &&
+      (!rolesLoadError || availableRoles.length > 0);
+
+    setHidden(rolesItems, !shouldShowRolesList);
+
+    if (rolesItems) {
+      while (rolesItems.firstChild) {
+        rolesItems.removeChild(rolesItems.firstChild);
+      }
+
+      for (const role of availableRoles) {
+        rolesItems.appendChild(createRoleItem(document, role));
+      }
+    }
+
+    setHidden(
+      queryElement<HTMLElement>(root, "[data-team-roles-stale-error]"),
+      shouldShowRoleLoading || !rolesLoadError || availableRoles.length === 0,
+    );
+    setStateBoxBody(root, "[data-team-roles-stale-error]", rolesLoadError ?? "");
+
+    for (const select of queryElements<HTMLSelectElement>(
+      root,
+      "[data-team-user-role-select]",
+    )) {
+      const userId = select.dataset.teamUserId;
+      const user = userId
+        ? users.find((currentUser) => currentUser.id === userId)
+        : null;
+
+      if (!user) {
+        continue;
+      }
+
+      setInputValue(select, userRoleDrafts[user.id] ?? user.roleId ?? "");
+    }
+  }, [
+    availableRoles,
+    inviteEmail,
+    inviteError,
+    inviteMessage,
+    inviteName,
+    inviteRoleId,
+    isInviting,
+    permissions.canInviteUsers,
+    permissions.canUpdateUsers,
+    permissions.canViewUsers,
+    rolesLoadError,
+    routeAccess.isAllowed,
+    rootId,
+    shouldShowRoleLoading,
+    shouldShowUserLoading,
+    updatingUserRoleId,
+    userRoleDrafts,
+    users,
+    usersLoadError,
+    usersMessage,
+    workspace.account.id,
+  ]);
+
+  return null;
 }

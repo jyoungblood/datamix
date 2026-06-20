@@ -24,6 +24,10 @@ const mediaLibraryRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/MediaLibraryRouteBody.astro",
 );
+const teamRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/TeamRouteBody.astro",
+);
 const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
@@ -298,6 +302,7 @@ const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
 const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf8");
 const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
 const mediaLibraryRouteBodySource = readFileSync(mediaLibraryRouteBody, "utf8");
+const teamRouteBodySource = readFileSync(teamRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const adminDashboardRouteBodySource = readFileSync(adminDashboardRouteBody, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
@@ -385,7 +390,6 @@ for (const skeletonExport of [
 
 for (const [screenFile, expectedSkeleton] of [
   ["settings-api-keys.tsx", "AdminMiniListSkeleton"],
-  ["team-and-roles.tsx", "AdminMiniListSkeleton"],
 ]) {
   const source = readFileSync(path.join(adminRoot, "_screens", screenFile), "utf8");
 
@@ -438,6 +442,31 @@ assert(
     !mediaLibraryScreenSource.includes("export function MediaLibraryContent") &&
     !mediaLibraryScreenSource.includes("AdminPageHeader"),
   "The media client screen should expose only the targeted interaction island after the Astro body owns the static page.",
+);
+
+assert(
+  teamRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    teamRouteBodySource.includes('client:only="react"') &&
+    teamRouteBodySource.includes("TeamAndRolesInteractionsIsland") &&
+    teamRouteBodySource.includes("users.map") &&
+    teamRouteBodySource.includes("roles.map") &&
+    teamRouteBodySource.includes("Team access is restricted") &&
+    teamRouteBodySource.includes("No users found") &&
+    teamRouteBodySource.includes("User list is unavailable") &&
+    !teamRouteBodySource.includes("TeamAndRolesRoute") &&
+    !teamRouteBodySource.includes("TeamAndRolesContent"),
+  "The Astro-native team body should render server-loaded team states and hydrate only targeted team interactions.",
+);
+
+const teamAndRolesScreenSource = readFileSync(teamAndRolesSourcePath, "utf8");
+
+assert(
+  teamAndRolesScreenSource.includes("export function TeamAndRolesInteractionsIsland") &&
+    !teamAndRolesScreenSource.includes("export function TeamAndRolesRoute") &&
+    !teamAndRolesScreenSource.includes("export function TeamAndRolesContent") &&
+    !teamAndRolesScreenSource.includes("AdminPageHeader") &&
+    !teamAndRolesScreenSource.includes("AdminSectionCard"),
+  "The team client screen should expose only the targeted interaction island after the Astro body owns the static page.",
 );
 
 for (const screenFile of manualRefreshFreeScreens) {
@@ -613,10 +642,10 @@ assert(
   "The Astro-native media body should reserve list and detail layout while media props are loading.",
 );
 
-for (const [screenLabel, source] of [["team and roles", teamAndRolesSource]]) {
-  assert(
-    source.includes("useDelayedLoadingIndicator") &&
-      source.includes("AdminLoadingReserve"),
-    `${screenLabel} should delay skeleton display and reserve layout during fast initial loads.`,
-  );
-}
+assert(
+  teamRouteBodySource.includes("data-team-users-loading") &&
+    teamRouteBodySource.includes("data-team-roles-loading") &&
+    teamRouteBodySource.includes("min-h-[190px]") &&
+    teamRouteBodySource.includes("min-h-[252px]"),
+  "The Astro-native team body should reserve user and role layout while team props are loading.",
+);

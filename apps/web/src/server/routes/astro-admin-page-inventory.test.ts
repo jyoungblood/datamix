@@ -280,12 +280,17 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
   },
   {
     bodyFile: "TeamRouteBody.astro",
+    forbiddenSignals: [/\bTeamAndRolesRoute\b/, /\bTeamAndRolesContent\b/],
     requiredSignals: [
       /rolesLoaded: boolean;/,
       /usersLoaded: boolean;/,
       /routeAccess: AdminWorkspaceRouteAccessState;/,
+      /<AdminPageHeader\s+title="Team"/,
+      /!routeAccess\.isAllowed/,
+      /users\.map/,
+      /roles\.map/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
-      /<TeamAndRolesRoute\b[\s\S]*client:only="react"[\s\S]*routeAccess=\{routeAccess\}[\s\S]*workspace=\{workspace\}/,
+      /<TeamAndRolesInteractionsIsland\b[\s\S]*client:only="react"[\s\S]*roles=\{roles\}[\s\S]*routeAccess=\{routeAccess\}[\s\S]*users=\{users\}[\s\S]*workspace=\{workspace\}/,
     ],
   },
   {
@@ -331,7 +336,7 @@ const statefulClientRoutes = [
     path: "apps/web/src/admin/_screens/media-library.tsx",
   },
   {
-    exportName: "TeamAndRolesRoute",
+    exportName: "TeamAndRolesInteractionsIsland",
     path: "apps/web/src/admin/_screens/team-and-roles.tsx",
   },
   {
@@ -571,6 +576,17 @@ test("retained client screens are route-body islands without provider fallbacks"
     mediaLibrarySource,
     /export function MediaLibraryRoute\b|export function MediaLibraryContent\b|AdminPageHeader/,
     "media-library.tsx should not keep the deleted whole-route media body",
+  );
+
+  const teamAndRolesSource = await readFile(
+    path.resolve("apps/web/src/admin/_screens/team-and-roles.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    teamAndRolesSource,
+    /export function TeamAndRolesRoute\b|export function TeamAndRolesContent\b|AdminPageHeader|AdminSectionCard/,
+    "team-and-roles.tsx should not keep the deleted whole-route team body",
   );
 
   const accountSource = await readFile(

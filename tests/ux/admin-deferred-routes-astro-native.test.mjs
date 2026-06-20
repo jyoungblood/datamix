@@ -104,6 +104,10 @@ const mediaLibraryBodySource = readFileSync(
   path.join(adminComponentsRoot, "MediaLibraryRouteBody.astro"),
   "utf8",
 );
+const teamBodySource = readFileSync(
+  path.join(adminComponentsRoot, "TeamRouteBody.astro"),
+  "utf8",
+);
 
 assert.match(
   dashboardBodySource,
@@ -135,4 +139,30 @@ assert.doesNotMatch(
   mediaLibraryBodySource,
   /<MediaLibraryRoute\b[\s\S]*client:only="react"|import \{ MediaLibraryRoute \}/,
   "MediaLibraryRouteBody should not hydrate the whole media route body.",
+);
+
+assert.match(
+  teamBodySource,
+  /<AdminPageHeader\s+title="Team"/,
+  "TeamRouteBody should render the team page header in Astro.",
+);
+assert.match(
+  teamBodySource,
+  /users\.map/,
+  "TeamRouteBody should render the server-loaded user list in Astro.",
+);
+assert.match(
+  teamBodySource,
+  /roles\.map/,
+  "TeamRouteBody should render the server-loaded role list in Astro.",
+);
+assert.match(
+  teamBodySource,
+  /<TeamAndRolesInteractionsIsland\b[\s\S]*client:only="react"/,
+  "TeamRouteBody should keep only targeted team interactions hydrated.",
+);
+assert.doesNotMatch(
+  teamBodySource,
+  /<TeamAndRolesRoute\b[\s\S]*client:only="react"|import \{ TeamAndRolesRoute \}/,
+  "TeamRouteBody should not hydrate the whole team route body.",
 );
