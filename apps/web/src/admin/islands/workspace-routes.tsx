@@ -186,9 +186,7 @@ export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
 }
 
 export function AccountIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace
-    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
-    : undefined;
+  const routeAccess = workspace?.routeAccess;
 
   return (
     <AdminWorkspacePage>

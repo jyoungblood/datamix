@@ -625,7 +625,7 @@ test("Slice 21 settings island consumes serialized workspace route access", asyn
   );
 });
 
-test("Slice 5 account island derives route access from server workspace props", async () => {
+test("Slice 5 account island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -638,8 +638,8 @@ test("Slice 5 account island derives route access from server workspace props", 
 
   assert.match(
     workspaceSource,
-    /export function AccountIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<AccountBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "AccountIsland should derive route access from the server workspace prop",
+    /<AccountBody\s+routeAccess=\{routeAccess\}\s*\/>/,
+    "AccountIsland should pass explicit route access into the retained account body",
   );
   assert.match(
     bodySource,
@@ -655,6 +655,37 @@ test("Slice 5 account island derives route access from server workspace props", 
     accountSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "AccountContent should not derive account route access from AdminWorkspaceProvider",
+  );
+  assert.match(
+    accountSource,
+    /function UserAccountRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<AccountContent\s+routeAccess=\{providerAccess\}/,
+    "UserAccountRoute should keep the provider fallback wrapper for direct production hook hits",
+  );
+});
+
+test("Slice 22 account island consumes serialized workspace route access", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+  const accountIslandSource =
+    workspaceSource.match(/export function AccountIsland\([\s\S]*?\n\}/)?.[0] ??
+    "";
+
+  assert.match(
+    accountIslandSource,
+    /const routeAccess = workspace\?\.routeAccess;/,
+    "AccountIsland should consume the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    accountIslandSource,
+    /resolveAdminWorkspaceRouteAccess\(/,
+    "AccountIsland should not re-derive route access inside the retained client island",
+  );
+  assert.doesNotMatch(
+    accountIslandSource,
+    /workspace\.(activeRoute|permissions)/,
+    "AccountIsland should not read route metadata or permissions to derive access",
   );
 });
 
