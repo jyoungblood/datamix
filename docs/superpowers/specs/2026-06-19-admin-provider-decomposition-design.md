@@ -2,6 +2,12 @@
 
 Date: 2026-06-19
 
+Status update, 2026-06-20: the provider decomposition described here has been
+completed. `/admin/account`, `/admin/schema`, and `/admin/content` now render
+Astro-native route bodies; dashboard, schema builder, content editor, media,
+team, and settings remain retained React bodies because they still own
+state-heavy client interactions.
+
 ## Context
 
 The current Astro migration renders authenticated admin pages through Astro page

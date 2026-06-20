@@ -10,6 +10,14 @@
 
 ---
 
+## Status Note
+
+As of commit `d24a537`, this plan is historical execution context. The
+provider-removal work is complete, and `/admin/account`, `/admin/schema`, and
+`/admin/content` now render Astro-native route bodies. The remaining retained
+React route bodies are the state-heavy dashboard, schema builder, content
+editor, media, team, and settings routes.
+
 ## Design Reference
 
 Read this first:
@@ -35,24 +43,22 @@ git diff --check
 
 ## Current State
 
-The Astro shell migration is already in place:
+The provider-free admin architecture is in place:
 
 - Protected pages live under `apps/web/src/pages/admin/**`.
 - `resolveWorkspacePage` returns `page.shell` and serializable `page.workspace`.
 - `AdminWorkspaceShell.astro` renders the workspace shell/sidebar.
-- Retained route bodies mount through `apps/web/src/admin/islands/workspace-routes.tsx`.
-
-The provider migration is only partly complete:
-
-- `apps/web/src/admin/_workspace/admin-workspace-provider.tsx` still owns session stabilization, data loading, mutations, drafts, media upload/copy state, role/user/API key state, account update state, prefetching, and the context value.
-- `apps/web/src/admin/_workspace/admin-workspace-page.tsx` still mounts the provider.
-- `apps/web/src/admin/_workspace/admin-workspace-hooks.ts` still exports `useAdminWorkspace()` and `useAdminWorkspaceRouteAccess()`.
-- Route bodies still import the old hooks.
-- There is no `apps/web/src/admin/_state/**` directory yet.
+- Retained React route bodies mount through
+  `apps/web/src/admin/islands/workspace-routes.tsx` with explicit serialized
+  `workspace` props.
+- `AdminWorkspaceProvider`, `AdminWorkspacePage`, and the old global workspace
+  hooks have been deleted.
+- `/admin/account`, `/admin/schema`, and `/admin/content` now render
+  Astro-native route bodies with targeted React islands only where needed.
 
 ## File Structure Map
 
-Create these state modules as slices need them:
+State modules created by the completed provider decomposition:
 
 - `apps/web/src/admin/_state/admin-account-state.ts`: account profile form state, profile update, sidebar event dispatch, sign out.
 - `apps/web/src/admin/_state/admin-media-state.ts`: media asset loading, upload, selection, search query, storage-key clipboard feedback.
@@ -64,19 +70,21 @@ Create these state modules as slices need them:
 - `apps/web/src/admin/_state/admin-dashboard-data.ts`: dashboard data assembly from the smaller hooks.
 - `apps/web/src/admin/_state/admin-command-palette-data.ts`: command item assembly without global context.
 
-Modify these integration files:
+Current integration files that enforce the provider-free shape:
 
-- `apps/web/src/admin/_workspace/admin-workspace-provider.tsx`: shrink into a temporary composer, then delete.
-- `apps/web/src/admin/_workspace/admin-workspace-page.tsx`: keep until deletion slice, then delete.
-- `apps/web/src/admin/_workspace/admin-workspace-hooks.ts`: keep until deletion slice, then delete.
-- `apps/web/src/admin/_workspace/admin-command-palette.tsx`: move off context in the editor/dashboard slice.
-- `apps/web/src/admin/islands/workspace-routes.tsx`: pass explicit workspace/route props and remove provider wrapper in the deletion slice.
+- `apps/web/src/admin/_workspace/admin-command-palette.tsx`: targeted command
+  palette island fed by explicit workspace props.
+- `apps/web/src/admin/_workspace/admin-workspace-props.ts`: serializable
+  workspace prop contract resolved by Astro.
+- `apps/web/src/admin/islands/workspace-routes.tsx`: retained route island
+  wrappers that pass explicit workspace and route access props.
 - `apps/web/src/admin/islands/workspace-body-routes.tsx`: forward explicit props to retained route bodies.
-- `apps/web/src/admin/_screens/*.tsx`: migrate grouped screens off `useAdminWorkspace()`.
+- `apps/web/src/components/admin/*.astro`: Astro-native shell, sidebar, and
+  route bodies for the completed account/schema/content pages.
 - `apps/web/src/server/routes/astro-admin-page-inventory.test.ts`: enforce migration invariants.
-- `tests/ux/admin-workspace-provider-layout.test.mjs`: replace provider-presence assertions during deletion.
-- `tests/ux/loader-transitions.test.mjs`: replace provider-specific loader assertions when provider is deleted.
-- `apps/web/README.md`, `docs/architecture-overview.md`, `docs/local-development.md`: update docs in the final slice.
+- `tests/ux/admin-workspace-provider-layout.test.mjs`: static UX assertions for
+  provider-free layout and targeted islands.
+- `tests/ux/loader-transitions.test.mjs`: static loader assertions.
 
 ## Slice Size Rules
 
@@ -423,24 +431,24 @@ git commit -m "refactor admin workspace without provider"
 Use this prompt to start the next implementation session:
 
 ```text
-We are on branch `astro` in `/Users/jy/Desktop/projects/datamix`. Continue the AdminWorkspaceProvider decomposition using `docs/superpowers/plans/2026-06-20-admin-provider-decomposition.md` and `docs/superpowers/specs/2026-06-19-admin-provider-decomposition-design.md`.
+We are on branch `astro` in `/Users/jy/Desktop/projects/datamix`.
 
 Important user instruction from AGENTS.md: do not use the Browser skill for preview/debugging unless explicitly asked. Use terminal/static tests and ask the user to manually verify UI flows.
 
 Current state:
-- The Astro shell migration is done.
-- `resolveWorkspacePage` returns serializable `page.workspace`.
-- `AdminWorkspaceProvider` still exists and is still mounted through `AdminWorkspacePage`.
-- Route bodies still import `useAdminWorkspace`.
-- The focused inventory test recently had one known failure: `ContentIndexIsland` still re-derived route access instead of consuming `workspace.routeAccess`.
+- `AdminWorkspaceProvider`, `AdminWorkspacePage`, and the global admin workspace hooks have been removed.
+- Workspace routes receive explicit serialized `workspace` props and use server-derived `workspace.routeAccess`.
+- `/admin/account`, `/admin/schema`, and `/admin/content` render Astro-native route bodies.
+- The remaining retained React route bodies are dashboard, schema builder, content editor, media, team, and settings.
 
-Do the larger responsible slices, not one route per commit:
-1. Finish the route-access invariant globally.
-2. Extract account + media state behind the provider, then migrate account/media screens off context.
-3. Extract team + roles + API key state, then migrate team/settings screens.
-4. Extract collection read state, then migrate schema overview/content index.
-5. Extract editor/dashboard/command-palette state, then migrate remaining routes and toolbar.
-6. Delete `AdminWorkspaceProvider`, `AdminWorkspacePage`, old hooks, provider-specific tests, and update docs.
+Recommended next slice:
+1. Do not convert the deferred state-heavy routes unless explicitly directed.
+2. Run the focused static inventory and inspect for obsolete whole-route React body references.
+3. Prefer small cleanup around completed Astro-native bodies, docs, and inventory tests.
+4. Preserve explicit serialized workspace props, server-derived route access, targeted React islands only, and no global admin provider/context.
 
-Start with Task 1 in the plan. Use failing inventory tests first. Run targeted tests plus `git diff --check` before commits. Run full `npm run typecheck --workspace @datamix/web`, `npm run build --workspace @datamix/web`, and `npm run smoke` before claiming final completion.
+Verification expectation for narrow cleanup:
+- `node --import tsx --test apps/web/src/server/routes/astro-admin-page-inventory.test.ts tests/ux/admin-workspace-provider-layout.test.mjs tests/ux/admin-content-routing.test.mjs`
+- `git diff --check`
+- Broader `typecheck/build/smoke` only if behavior or runtime code changes.
 ```
