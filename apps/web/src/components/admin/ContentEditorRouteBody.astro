@@ -1,7 +1,11 @@
 ---
-import type { DatamixMediaAsset } from "@datamix/core";
+import {
+  isRecordCrudFieldDefinition,
+  type DatamixMediaAsset,
+} from "@datamix/core";
 
 import { ContentEditorFormIsland } from "@/admin/_screens/content-editor";
+import { formatRecordTimestamp } from "@/admin/_lib/media-formatting";
 import { summarizeRecord } from "@/admin/_lib/record-drafts";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
@@ -78,6 +82,9 @@ const activeRouteRecord =
   isEditMode && recordId
     ? records.find((record) => record.id === recordId) ?? null
     : null;
+const persistedRecordFields = activeCollection
+  ? activeCollection.definition.fields.filter(isRecordCrudFieldDefinition)
+  : [];
 const canSaveCurrentContent = isEditMode
   ? permissions.canUpdateRecords
   : permissions.canCreateRecords;
@@ -100,6 +107,13 @@ const editorCardTitle =
   isEditMode && activeCollection && activeRouteRecord
     ? summarizeRecord(activeCollection.definition, activeRouteRecord)
     : "Create content";
+const schemaDetailHref = activeCollection
+  ? adminRoutes.schema.detail(activeCollection.id).href
+  : schemaNewHref;
+const staleRecordListBody =
+  recordLoadError && records.length > 0
+    ? `${recordLoadError} You can keep editing the current form with the last content list that loaded.`
+    : null;
 const shouldRenderContentEditorForm =
   routeAccess.isAllowed &&
   activeCollection !== null &&
@@ -229,19 +243,81 @@ const shouldRenderContentEditorForm =
           </div>
         ) : null}
 
+        <div class="generated-record-layout">
+          <form
+            class="generated-record-form"
+            id="content-editor-form"
+            onsubmit="return false"
+          >
+            <div data-content-editor-region="media-status"></div>
+
+            {activeCollection.definition.fields.length === 0 ? (
+              <AdminStateBox
+                body="Add fields to this schema before creating content."
+                title="This schema has no fields yet"
+                tone="warning"
+              >
+                <Fragment slot="action">
+                  <a class="mini-button" href={schemaDetailHref}>Open schema</a>
+                </Fragment>
+              </AdminStateBox>
+            ) : (
+              <div data-content-editor-region="fields"></div>
+            )}
+
+            {staleRecordListBody ? (
+              <AdminStateBox
+                body={staleRecordListBody}
+                title="Saved content may be out of date"
+                tone="warning"
+              />
+            ) : null}
+
+            <div data-content-editor-region="record-status"></div>
+            <div data-content-editor-region="record-actions"></div>
+          </form>
+
+          <aside class="generated-record-preview">
+            <p class="card-eyebrow">Payload preview</p>
+            <h4 class="section-title">Save payload</h4>
+            <p class="section-copy">
+              Preview the data that will be saved for this content.
+            </p>
+            {activeRouteRecord ? (
+              <p class="section-copy">
+                Record id: <strong>{activeRouteRecord.id}</strong>
+                <br />
+                Updated:{" "}
+                <strong>{formatRecordTimestamp(activeRouteRecord.updatedAt)}</strong>
+              </p>
+            ) : null}
+            <p class="section-copy">
+              Stored fields: <strong>{recordSupportedFieldNames}</strong>
+            </p>
+            {persistedRecordFields.length === 0 ? (
+              <AdminStateBox
+                body="Add a persisted field before creating content."
+                compact
+                title="No persisted fields yet"
+                tone="warning"
+              />
+            ) : null}
+            <div data-content-editor-region="payload-preview"></div>
+          </aside>
+        </div>
+
         <ContentEditorFormIsland
           client:only="react"
-          collections={collections}
+          activeCollection={activeCollection}
+          canSave={canSaveCurrentContent}
           mediaAssets={mediaAssets}
           mediaAssetsLoaded={mediaAssetsLoaded}
           mediaLoadError={mediaLoadError}
           mode={mode}
           recordId={recordId ?? ""}
           recordLoadError={recordLoadError}
-          recordSupportedFieldNames={recordSupportedFieldNames}
           records={records}
           recordsLoaded={recordsLoaded}
-          schemaId={schemaId ?? ""}
           workspace={workspace}
         />
       </AdminSectionCard>

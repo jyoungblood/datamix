@@ -24,7 +24,6 @@ import {
 type AdminRecordsStateOptions = {
   initialCollection?: StoredCollectionDefinition | null | undefined;
   initialRecordLoadError?: string | null | undefined;
-  initialRecordSupportedFieldNames?: string | undefined;
   initialRecords?: StoredCollectionRecord[] | undefined;
   initialRecordsLoaded?: boolean | undefined;
   initialSelectedRecordId?: string | null | undefined;
@@ -64,8 +63,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
     () => options?.initialRecordLoadError ?? null,
   );
   const [recordMessage, setRecordMessage] = React.useState<string | null>(null);
-  const [recordSupportedFieldNames, setRecordSupportedFieldNames] =
-    React.useState(() => options?.initialRecordSupportedFieldNames ?? "none");
   const [hasLoadedRecords, setHasLoadedRecords] = React.useState(
     () => options?.initialRecordsLoaded ?? false,
   );
@@ -81,7 +78,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
     setRecordIssues([]);
     setRecordLoadError(null);
     setRecordMessage(null);
-    setRecordSupportedFieldNames("none");
     setHasLoadedRecords(false);
     setIsLoadingRecords(false);
     setIsSavingRecord(false);
@@ -106,7 +102,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
       setRecords([]);
       setSelectedRecordId(options?.selectedRecordId ?? null);
       setRecordDraft(createGeneratedRecordFormState(collection.definition));
-      setRecordSupportedFieldNames("none");
 
       try {
         const result = await listCollectionRecords(nextCollectionName);
@@ -129,7 +124,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
           : null;
 
         setRecords(result.records);
-        setRecordSupportedFieldNames(result.supportedFieldNames);
         setHasLoadedRecords(true);
         setSelectedRecordId(nextSelectedRecordId);
         setRecordDraft(
@@ -146,7 +140,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
         }
 
         setRecords([]);
-        setRecordSupportedFieldNames("none");
         setRecordLoadError(
           error instanceof Error ? error.message : "Unable to load collection records.",
         );
@@ -221,7 +214,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
         setRecordCollectionName(collection.definition.name);
         setRecords((currentRecords) => upsertRecord(currentRecords, result.record));
         setSelectedRecordId(result.record.id);
-        setRecordSupportedFieldNames(result.supportedFieldNames);
         setRecordDraft(
           createGeneratedRecordFormStateFromRecord(collection.definition, result.record),
         );
@@ -261,7 +253,6 @@ export function useAdminRecordsState(options?: AdminRecordsStateOptions) {
     recordLoadError,
     recordMessage,
     records,
-    recordSupportedFieldNames,
     resetRecordWorkspace,
     saveRecord,
     selectedRecord,

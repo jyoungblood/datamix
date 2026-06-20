@@ -280,11 +280,13 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
     bodyFile: "ContentEditorRouteBody.astro",
     forbiddenSignals: [/\bContentEditorRoute\b/, /\bContentEditorContent\b/],
     requiredSignals: [
+      /isRecordCrudFieldDefinition/,
       /collectionsLoaded: boolean;/,
       /mediaAssetsLoaded: boolean;/,
       /recordsLoaded: boolean;/,
       /routeAccess: AdminWorkspaceRouteAccessState;/,
       /const activeCollection =/,
+      /const persistedRecordFields =/,
       /routeAccess\.isAllowed/,
       /collections\.find/,
       /collections\.map/,
@@ -297,8 +299,21 @@ const routeBodyExpectations: RouteBodyExpectation[] = [
       /Content save is restricted/,
       /Content is unavailable/,
       /Content not found/,
+      /Content list is hidden for this role/,
+      /Saved content may be out of date/,
+      /This schema has no fields yet/,
+      /No persisted fields yet/,
+      /Payload preview/,
+      /Stored fields/,
+      /generated-record-layout/,
+      /id="content-editor-form"/,
+      /data-content-editor-region="media-status"/,
+      /data-content-editor-region="fields"/,
+      /data-content-editor-region="record-status"/,
+      /data-content-editor-region="record-actions"/,
+      /data-content-editor-region="payload-preview"/,
       /<AdminWorkspaceCommandPalette\b[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
-      /<ContentEditorFormIsland\b[\s\S]*client:only="react"[\s\S]*collections=\{collections\}[\s\S]*workspace=\{workspace\}/,
+      /<ContentEditorFormIsland\b[\s\S]*client:only="react"[\s\S]*activeCollection=\{activeCollection\}[\s\S]*canSave=\{canSaveCurrentContent\}/,
     ],
   },
   {
@@ -688,8 +703,8 @@ test("retained client screens are route-body islands without provider fallbacks"
   );
   assert.doesNotMatch(
     contentEditorSource,
-    /export function ContentEditorRoute\b|export function ContentEditorContent\b|AdminPageHeader|AdminSectionCard|useDelayedLoadingIndicator|AdminLoadingReserve/,
-    "content-editor.tsx should not keep the deleted whole-route content editor body",
+    /export function ContentEditorRoute\b|export function ContentEditorContent\b|AdminPageHeader|AdminSectionCard|useDelayedLoadingIndicator|AdminLoadingReserve|decodeSchemaId|collections\.find|generated-record-layout|generated-record-form|generated-record-preview|Payload preview|Save payload|Stored fields|This schema has no fields yet|No persisted fields yet|formatRecordTimestamp/,
+    "content-editor.tsx should not keep the deleted whole-route content editor body, static card shells, route schema resolution, or server-derived summaries",
   );
 
   const teamAndRolesSource = await readFile(

@@ -88,9 +88,9 @@ assert.match(
 );
 
 assert.match(
-  contentEditorSource,
-  /schemaId/,
-  "The content editor should receive a schema id route parameter.",
+  contentEditorRouteBodySource,
+  /schemaId\?: string[\s\S]*collections\.find\(\(item\) => item\.id === activeSchemaId\)/,
+  "The Astro content editor body should receive the schema id route parameter and resolve the selected schema by stored id.",
 );
 
 assert.doesNotMatch(

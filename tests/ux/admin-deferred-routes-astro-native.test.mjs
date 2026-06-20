@@ -211,8 +211,23 @@ assert.match(
 );
 assert.match(
   contentEditorBodySource,
-  /<ContentEditorFormIsland\b[\s\S]*client:only="react"/,
-  "ContentEditorRouteBody should keep only the targeted content editor form hydrated.",
+  /generated-record-layout[\s\S]*id="content-editor-form"[\s\S]*generated-record-preview/,
+  "ContentEditorRouteBody should render the static content editor form and preview shells in Astro.",
+);
+assert.match(
+  contentEditorBodySource,
+  /data-content-editor-region="media-status"[\s\S]*data-content-editor-region="fields"[\s\S]*data-content-editor-region="record-status"[\s\S]*data-content-editor-region="record-actions"[\s\S]*data-content-editor-region="payload-preview"/,
+  "ContentEditorRouteBody should expose targeted mount regions for content draft controls.",
+);
+assert.match(
+  contentEditorBodySource,
+  /This schema has no fields yet|No persisted fields yet|Saved content may be out of date|Payload preview|Stored fields/,
+  "ContentEditorRouteBody should render static content editor notices and payload summary copy in Astro.",
+);
+assert.match(
+  contentEditorBodySource,
+  /<ContentEditorFormIsland\b[\s\S]*client:only="react"[\s\S]*activeCollection=\{activeCollection\}[\s\S]*canSave=\{canSaveCurrentContent\}/,
+  "ContentEditorRouteBody should keep only the targeted content draft controls hydrated.",
 );
 assert.doesNotMatch(
   contentEditorBodySource,

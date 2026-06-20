@@ -484,6 +484,20 @@ assert(
     contentEditorRouteBodySource.includes("Content save is restricted") &&
     contentEditorRouteBodySource.includes("Content is unavailable") &&
     contentEditorRouteBodySource.includes("Content not found") &&
+    contentEditorRouteBodySource.includes("Content list is hidden for this role") &&
+    contentEditorRouteBodySource.includes("Saved content may be out of date") &&
+    contentEditorRouteBodySource.includes("This schema has no fields yet") &&
+    contentEditorRouteBodySource.includes("No persisted fields yet") &&
+    contentEditorRouteBodySource.includes("Payload preview") &&
+    contentEditorRouteBodySource.includes("Stored fields") &&
+    contentEditorRouteBodySource.includes("generated-record-layout") &&
+    contentEditorRouteBodySource.includes('id="content-editor-form"') &&
+    contentEditorRouteBodySource.includes('data-content-editor-region="media-status"') &&
+    contentEditorRouteBodySource.includes('data-content-editor-region="fields"') &&
+    contentEditorRouteBodySource.includes('data-content-editor-region="record-status"') &&
+    contentEditorRouteBodySource.includes('data-content-editor-region="record-actions"') &&
+    contentEditorRouteBodySource.includes('data-content-editor-region="payload-preview"') &&
+    contentEditorRouteBodySource.includes("activeCollection={activeCollection}") &&
     !contentEditorRouteBodySource.includes("ContentEditorRoute"),
   "The Astro-native content editor body should render server-loaded content states and hydrate only targeted form interactions.",
 );
@@ -496,6 +510,15 @@ assert(
     !contentEditorScreenSource.includes("export function ContentEditorContent") &&
     !contentEditorScreenSource.includes("AdminPageHeader") &&
     !contentEditorScreenSource.includes("AdminSectionCard") &&
+    !contentEditorScreenSource.includes("decodeSchemaId") &&
+    !contentEditorScreenSource.includes("collections.find") &&
+    !contentEditorScreenSource.includes("generated-record-layout") &&
+    !contentEditorScreenSource.includes("generated-record-form") &&
+    !contentEditorScreenSource.includes("generated-record-preview") &&
+    !contentEditorScreenSource.includes("Payload preview") &&
+    !contentEditorScreenSource.includes("Stored fields") &&
+    !contentEditorScreenSource.includes("This schema has no fields yet") &&
+    !contentEditorScreenSource.includes("No persisted fields yet") &&
     !contentEditorScreenSource.includes("useDelayedLoadingIndicator") &&
     !contentEditorScreenSource.includes("AdminLoadingReserve"),
   "The content editor client screen should expose only the targeted form island after the Astro body owns the static page.",
