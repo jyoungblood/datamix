@@ -249,62 +249,71 @@ ask the user to manually verify the admin flows in the running app.
 
 ## Implementation Slices
 
-### Slice 1: Workspace Props And Pure Helpers
+The remaining work should use larger, invariant-based slices instead of one
+route per commit. A slice may touch many screens when the change is mechanical,
+but it should change only one risky behavior axis at a time.
 
-Extract permission mapping and route access helpers from the provider into pure
-modules. Extend the server workspace resolver to return serializable
-authorization and permissions in addition to shell props. Pass those props into
-workspace islands while the existing provider still owns behavior.
+### Slice 1: Finish The Route-Access Invariant
 
-Expected result: no behavior change, but the island has the server-resolved
-workspace contract available.
+Complete the route-access sweep everywhere:
 
-### Slice 2: Domain State Extraction Behind The Provider
+- every protected Astro page passes `page.workspace` to its island,
+- every workspace island consumes serialized `workspace.routeAccess`,
+- no workspace island re-derives route access in React,
+- every retained body requires explicit `routeAccess`,
+- inventory tests enforce the invariant globally instead of route by route.
 
-Move collections, records, media, team/roles, API keys, and account behavior
-into focused hooks or service modules. Keep `AdminWorkspaceProvider` as a thin
-composer that calls these hooks and exposes the old context value.
+Expected result: route access is a solved server-workspace-prop concern, and
+future provider work does not need to revisit it.
 
-Expected result: provider size and responsibility shrink substantially while
-existing screens keep working.
+### Slice 2: Extract Leaf State Behind The Provider
 
-### Slice 3: Route Screen Migration
+Extract account and media behavior into focused hooks or service modules. Keep
+`AdminWorkspaceProvider` as a compatibility composer while `UserAccountRoute`
+and `MediaLibraryRoute` move to direct route-scoped state imports.
 
-Move route bodies off `useAdminWorkspace()` in low-risk order:
+Expected result: two low-risk screens no longer import `useAdminWorkspace()`,
+and the provider shrinks without changing behavior for the remaining screens.
 
-1. account,
-2. media,
-3. schema overview,
-4. content index,
-5. team,
-6. settings,
-7. schema builder,
-8. content editor,
-9. dashboard,
-10. command palette.
+### Slice 3: Extract Team And Settings State
 
-The order starts with screens that have smaller state surfaces and delays the
-schema/content editors because they carry the richest draft and mutation logic.
+Extract roles, users, invites, API keys, and settings-role behavior into
+`team`, `roles`, and `api keys` state modules. Migrate `TeamAndRolesRoute` and
+`SettingsApiKeysRoute` together because they share role data and permission
+rules.
 
-Expected result: each screen imports only the hooks and props it needs.
+Expected result: team/settings state is explicit, shared role loading is not
+hidden in the provider, and both screens stop using the global workspace
+context.
 
-### Slice 4: Provider Deletion
+### Slice 4: Extract Collection Read State
 
-When no route body imports the compatibility context, remove
-`AdminWorkspaceProvider`, `AdminWorkspacePage`, the old context hook, and
-provider-specific tests. Update workspace islands to compose toolbar and route
-body directly from explicit props.
+Extract collection-definition loading and cache state. Migrate
+`SchemaOverviewRoute` and `ContentIndexRoute` together because they are mostly
+read/list surfaces over the same collection metadata.
 
-Expected result: provider removal is complete and enforced by tests.
+Expected result: collection listing/selection no longer depends on the provider,
+and the provider owns less shared schema/content state before the editors move.
 
-### Slice 5: Docs And Roadmap
+### Slice 5: Extract Editor And Dashboard State
 
-Update `apps/web/README.md`, `docs/architecture-overview.md`, and
-`docs/local-development.md` to describe the provider-free retained React route
-body architecture.
+Extract record loading/draft/save state, schema-builder draft state,
+dashboard-data assembly, and command-palette data. Migrate
+`SchemaBuilderRoute`, `ContentEditorRoute`, `AdminHomeRoute`, and
+`AdminWorkspaceCommandPalette` after the lower-risk state modules exist.
 
-Expected result: docs no longer describe provider-backed route bodies and the
-next Astro-native migration step is clear.
+Expected result: no route body and no toolbar imports the old context hook.
+
+### Slice 6: Delete The Provider And Update Docs
+
+Remove `AdminWorkspaceProvider`, `AdminWorkspacePage`, the old context hook, and
+provider-specific tests. Update workspace islands to compose the toolbar and
+route bodies directly from explicit props. Update `apps/web/README.md`,
+`docs/architecture-overview.md`, and `docs/local-development.md` to describe the
+provider-free retained React route body architecture.
+
+Expected result: provider removal is complete, enforced by a global no-import
+test, and documented for the next Astro-native route-body migration.
 
 ## Roadmap: Next Big Astro-Native Step
 
