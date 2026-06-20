@@ -6,7 +6,6 @@ import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
 import { SchemaOverviewRoute } from "@/admin/_screens/schema-overview";
 import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
 import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
-import { UserAccountRoute } from "@/admin/_screens/user-account";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 
@@ -141,14 +140,4 @@ export function SettingsBody({
   workspace: AdminWorkspaceProps;
 }) {
   return <SettingsApiKeysRoute routeAccess={routeAccess} workspace={workspace} />;
-}
-
-export function AccountBody({
-  routeAccess,
-  workspace,
-}: {
-  routeAccess: AdminWorkspaceRouteAccessState;
-  workspace: AdminWorkspaceProps;
-}) {
-  return <UserAccountRoute routeAccess={routeAccess} workspace={workspace} />;
 }

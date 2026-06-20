@@ -36,7 +36,11 @@ const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "MediaIsland", route: "media.astro" },
   { island: "TeamIsland", route: "team.astro" },
   { island: "SettingsIsland", route: "settings.astro" },
-  { island: "AccountIsland", route: "account.astro" },
+];
+
+const protectedWorkspaceRoutes = [
+  ...workspacePageExpectations.map(({ route }) => route),
+  "account.astro",
 ];
 
 const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
@@ -121,11 +125,11 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
     stage: "client-only-deferred",
   },
   {
-    clientOnlySignals: ["useAdminAccountState", "updateAccountProfile"],
-    island: "AccountIsland",
-    rendering: "retained-react-body",
+    clientOnlySignals: ["AccountProfileSettingsIsland", "AccountSignOutButton"],
+    island: "AccountRouteBody",
+    rendering: "astro-native-body",
     route: "account.astro",
-    screen: "apps/web/src/admin/_screens/user-account.tsx",
+    screen: "apps/web/src/components/admin/AccountRouteBody.astro",
     stage: "first-astro-native-candidate",
   },
 ];
@@ -141,7 +145,6 @@ const workspaceIslands = [
   "MediaIsland",
   "TeamIsland",
   "SettingsIsland",
-  "AccountIsland",
 ];
 
 const authPageRoutes = [
@@ -201,6 +204,9 @@ const settingsApiKeysSourcePath = path.resolve(
 );
 const userAccountSourcePath = path.resolve(
   "apps/web/src/admin/_screens/user-account.tsx",
+);
+const accountRouteBodySourcePath = path.resolve(
+  "apps/web/src/components/admin/AccountRouteBody.astro",
 );
 const noProviderSourceRoots = [
   path.resolve("apps/web/src/admin"),
@@ -275,7 +281,7 @@ test("Slice 1 protected admin pages pass server workspace props to retained isla
 });
 
 test("Astro-native body migration inventory covers every protected workspace route", () => {
-  const expectedRoutes = workspacePageExpectations.map(({ route }) => route).sort();
+  const expectedRoutes = [...protectedWorkspaceRoutes].sort();
   const inventoryRoutes = workspaceBodyMigrationInventory
     .map(({ route }) => route)
     .sort();
@@ -773,7 +779,12 @@ test("Slice 13 settings body requires explicit route access from the server work
   );
 });
 
-test("Slice 14 account body requires explicit route access from the server workspace prop", async () => {
+test("Slice 14 account Astro body requires explicit route access from the server workspace prop", async () => {
+  const accountPageSource = await readFile(
+    path.join(pagesAdminDirectory, "account.astro"),
+    "utf8",
+  );
+  const accountBodySource = await readFile(accountRouteBodySourcePath, "utf8");
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -783,20 +794,30 @@ test("Slice 14 account body requires explicit route access from the server works
     "utf8",
   );
 
-  assert.doesNotMatch(
-    workspaceSource,
-    /<AccountBody\s*\/>/,
-    "AccountIsland should not render AccountBody without server-derived route access",
+  assert.match(
+    accountPageSource,
+    /<AccountRouteBody\s+routeAccess=\{page\.workspace\.routeAccess\}\s+workspace=\{page\.workspace\}\s*\/>/,
+    "account.astro should pass explicit server-derived route access into the Astro account body",
   );
   assert.match(
-    bodySource,
-    /export function AccountBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
-    "AccountBody should require explicit workspace and route access",
+    accountBodySource,
+    /type Props = \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}/,
+    "AccountRouteBody should require explicit workspace and route access",
+  );
+  assert.match(
+    accountBodySource,
+    /routeAccess\.isAllowed/,
+    "AccountRouteBody should branch on the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    workspaceSource,
+    /AccountIsland|AccountBody/,
+    "Retained workspace islands should no longer include the Astro-native account route body",
   );
   assert.doesNotMatch(
     bodySource,
-    /<UserAccountRoute\s*\/>/,
-    "AccountBody should not rely on the account route provider fallback",
+    /AccountBody|UserAccountRoute/,
+    "Retained workspace body routes should no longer include the Astro-native account route body",
   );
 });
 
@@ -1033,7 +1054,7 @@ test("Slice 21 settings island consumes serialized workspace route access", asyn
   );
   const settingsIslandSource =
     workspaceSource.match(
-      /export function SettingsIsland\([\s\S]*?\nexport function AccountIsland/,
+      /export function SettingsIsland\([\s\S]*?\n\}/,
     )?.[0] ?? "";
 
   assert.match(
@@ -1053,67 +1074,77 @@ test("Slice 21 settings island consumes serialized workspace route access", asyn
   );
 });
 
-test("Slice 5 account island forwards explicit route access to the retained body", async () => {
-  const workspaceSource = await readFile(
-    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+test("Slice 5 account Astro body mounts targeted client islands only where needed", async () => {
+  const accountPageSource = await readFile(
+    path.join(pagesAdminDirectory, "account.astro"),
     "utf8",
   );
-  const bodySource = await readFile(
-    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
-    "utf8",
-  );
+  const accountBodySource = await readFile(accountRouteBodySourcePath, "utf8");
   const accountSource = await readFile(userAccountSourcePath, "utf8");
 
   assert.match(
-    workspaceSource,
-    /<AccountBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
-    "AccountIsland should pass explicit workspace and route access into the retained account body",
+    accountPageSource,
+    /import AccountRouteBody from "@\/components\/admin\/AccountRouteBody\.astro"/,
+    "account.astro should render through the Astro-native account body",
   );
   assert.match(
-    bodySource,
-    /<UserAccountRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
-    "AccountBody should forward workspace and route access into the retained account route",
+    accountBodySource,
+    /AdminWorkspaceCommandPalette[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
+    "AccountRouteBody should keep the command palette as a targeted client island",
+  );
+  assert.match(
+    accountBodySource,
+    /<AccountSignOutButton\s+client:only="react"\s*\/>/,
+    "AccountRouteBody should keep sign-out behavior in a small client island",
+  );
+  assert.match(
+    accountBodySource,
+    /<AccountProfileSettingsIsland\s+client:only="react"\s+workspace=\{workspace\}\s*\/>/,
+    "AccountRouteBody should keep profile form state in a targeted client island",
   );
   assert.match(
     accountSource,
-    /routeAccess: AdminWorkspaceRouteAccessState/,
-    "AccountContent should receive route access as explicit route-scoped state",
+    /export function AccountProfileSettingsIsland/,
+    "user-account.tsx should export the targeted account profile island",
+  );
+  assert.match(
+    accountSource,
+    /export function AccountSignOutButton/,
+    "user-account.tsx should export the targeted account sign-out island",
   );
   assert.doesNotMatch(
     accountSource,
-    /const access = useAdminWorkspaceRouteAccess\(route\);/,
-    "AccountContent should not derive account route access from AdminWorkspaceProvider",
+    /AdminPageHeader|routeAccess: AdminWorkspaceRouteAccessState/,
+    "user-account.tsx should no longer own the account route header or access branch",
   );
   assert.doesNotMatch(
     accountSource,
-    /UserAccountRouteWithProviderAccess/,
-    "UserAccountRoute should not keep an account provider fallback after route-scoped state migration",
+    /UserAccountRoute|AccountContent/,
+    "user-account.tsx should not keep the deleted whole-route account body",
   );
 });
 
-test("Slice 22 account island consumes serialized workspace route access", async () => {
-  const workspaceSource = await readFile(
-    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+test("Slice 22 account Astro body consumes serialized workspace route access", async () => {
+  const accountPageSource = await readFile(
+    path.join(pagesAdminDirectory, "account.astro"),
     "utf8",
   );
-  const accountIslandSource =
-    workspaceSource.match(/export function AccountIsland\([\s\S]*?\n\}/)?.[0] ??
-    "";
+  const accountBodySource = await readFile(accountRouteBodySourcePath, "utf8");
 
   assert.match(
-    accountIslandSource,
-    /const routeAccess = workspace\?\.routeAccess;/,
-    "AccountIsland should consume the serialized route access decision",
+    accountPageSource,
+    /page\.workspace\s*\?\s*\([\s\S]*<AccountRouteBody\s+routeAccess=\{page\.workspace\.routeAccess\}\s+workspace=\{page\.workspace\}\s*\/>[\s\S]*\)\s*:\s*null/,
+    "account.astro should read the serialized route access decision from page.workspace",
   );
   assert.doesNotMatch(
-    accountIslandSource,
+    accountBodySource,
     /resolveAdminWorkspaceRouteAccess\(/,
-    "AccountIsland should not re-derive route access inside the retained client island",
+    "AccountRouteBody should not re-derive route access inside the route body",
   );
   assert.doesNotMatch(
-    accountIslandSource,
+    accountBodySource,
     /workspace\.(activeRoute|permissions)/,
-    "AccountIsland should not read route metadata or permissions to derive access",
+    "AccountRouteBody should not read route metadata or permissions to derive access",
   );
 });
 

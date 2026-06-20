@@ -1,0 +1,24 @@
+---
+type Props = {
+  class?: string;
+  title: string;
+};
+
+const { class: className, title } = Astro.props;
+const hasAction = Astro.slots.has("action");
+---
+
+<header class:list={["mb-4 flex items-start justify-between gap-4", className]}>
+  <div class="min-w-0">
+    <h1 class="font-heading text-[28px] leading-tight font-extrabold text-slate-950">
+      {title}
+    </h1>
+  </div>
+  {
+    hasAction ? (
+      <div class="shrink-0">
+        <slot name="action" />
+      </div>
+    ) : null
+  }
+</header>

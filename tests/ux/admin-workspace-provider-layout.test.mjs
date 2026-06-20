@@ -8,6 +8,10 @@ const globalStyles = path.join(repoRoot, "apps/web/src/styles/globals.css");
 const adminRoot = path.join(repoRoot, "apps/web/src/admin");
 const adminPagesRoot = path.join(repoRoot, "apps/web/src/pages/admin");
 const adminShell = path.join(repoRoot, "apps/web/src/components/admin/AdminWorkspaceShell.astro");
+const accountRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/AccountRouteBody.astro",
+);
 const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
@@ -71,7 +75,6 @@ const nextLinkImport = `from "next${"/"}link"`;
 
 const protectedWorkspacePages = [
   ["index.astro", "AdminHomeIsland"],
-  ["account.astro", "AccountIsland"],
   ["content/index.astro", "ContentIndexIsland"],
   ["content/new.astro", "NewContentIsland"],
   ["content/[schemaId]/[recordId].astro", "ContentRecordIsland"],
@@ -82,6 +85,7 @@ const protectedWorkspacePages = [
   ["settings.astro", "SettingsIsland"],
   ["team.astro", "TeamIsland"],
 ];
+const astroNativeWorkspacePages = ["account.astro"];
 
 const standaloneAuthPages = [
   "forgot-password.astro",
@@ -153,6 +157,37 @@ for (const [pagePath, islandName] of protectedWorkspacePages) {
   );
 }
 
+for (const pagePath of astroNativeWorkspacePages) {
+  const fullPath = path.join(adminPagesRoot, pagePath);
+
+  assert(
+    existsSync(fullPath),
+    `Astro-native admin page should live under Astro admin pages: ${pagePath}.`,
+  );
+
+  const source = readFileSync(fullPath, "utf8");
+
+  assert(
+    source.includes("AdminWorkspaceShell"),
+    `Astro-native admin page should render the Astro workspace shell: ${pagePath}.`,
+  );
+  assert(
+    source.includes("AccountRouteBody") &&
+      source.includes("routeAccess={page.workspace.routeAccess}") &&
+      source.includes("workspace={page.workspace}"),
+    `Astro-native admin page should pass serialized workspace props into its route body: ${pagePath}.`,
+  );
+  assert(
+    source.includes("resolveWorkspacePage"),
+    `Astro-native admin page should resolve workspace access in Astro frontmatter: ${pagePath}.`,
+  );
+  assert(
+    !source.includes("AccountIsland") &&
+      !source.includes("AdminWorkspaceProviderFallback"),
+    `Astro-native admin page should not mount the retained whole-route account island: ${pagePath}.`,
+  );
+}
+
 for (const pagePath of standaloneAuthPages) {
   const fullPath = path.join(adminPagesRoot, pagePath);
 
@@ -187,6 +222,7 @@ for (const screenFile of screenFiles) {
 }
 
 const shellSource = readFileSync(adminShell, "utf8");
+const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const workspaceRoutesIslandSource = readFileSync(workspaceRoutesIsland, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
@@ -363,7 +399,16 @@ assert(
     workspaceRoutesIslandSource.includes("{children}") &&
     !workspaceRoutesIslandSource.includes("AdminWorkspacePage") &&
     !workspaceRoutesIslandSource.includes("AdminWorkspaceProvider"),
-  "The retained workspace island should own one centered max-w-6xl content rail for every admin screen.",
+  "The retained workspace island should own one centered max-w-6xl content rail for retained React admin screens.",
+);
+
+assert(
+  accountRouteBodySource.includes("max-w-6xl") &&
+    accountRouteBodySource.includes("mx-auto") &&
+    accountRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    accountRouteBodySource.includes("AccountProfileSettingsIsland") &&
+    accountRouteBodySource.includes("AccountSignOutButton"),
+  "The Astro-native account route body should preserve the centered admin rail and keep only targeted client islands.",
 );
 
 for (const screenFile of screenFiles) {

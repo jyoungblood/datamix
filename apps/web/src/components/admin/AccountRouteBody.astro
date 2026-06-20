@@ -1,0 +1,60 @@
+---
+import { UserRound } from "lucide-react";
+
+import {
+  AccountProfileSettingsIsland,
+  AccountSignOutButton,
+} from "@/admin/_screens/user-account";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import { buttonVariants } from "@/components/ui/button";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminSectionCard from "./AdminSectionCard.astro";
+import AdminStateBox from "./AdminStateBox.astro";
+
+type Props = {
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
+};
+
+const { routeAccess, workspace } = Astro.props;
+const settingsHref = adminRoutes.settings().href;
+const settingsButtonClass = buttonVariants({ size: "sm", variant: "outline" });
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+
+  <AdminPageHeader title="Account">
+    <Fragment slot="action">
+      <AccountSignOutButton client:only="react" />
+    </Fragment>
+  </AdminPageHeader>
+
+  {
+    !routeAccess.isAllowed ? (
+      <AdminStateBox body={routeAccess.body} title={routeAccess.title} tone="warning" />
+    ) : (
+      <AccountProfileSettingsIsland client:only="react" workspace={workspace} />
+    )
+  }
+
+  <AdminSectionCard title="Account scope">
+    <AdminStateBox
+      body="This route updates only the active session user's profile. Email remains read-only because changing email safely requires a verified email-change flow."
+      compact
+      title="Current user only"
+    />
+    <div class="mt-4">
+      <a class={settingsButtonClass} href={settingsHref}>
+        <UserRound className="size-4" />
+        Open settings
+      </a>
+    </div>
+  </AdminSectionCard>
+</div>

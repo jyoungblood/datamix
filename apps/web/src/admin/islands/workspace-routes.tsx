@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 import {
-  AccountBody,
   AdminHomeBody,
   ContentIndexBody,
   ContentRecordBody,
@@ -171,18 +170,6 @@ export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
     <AdminWorkspaceIslandFrame workspace={workspace}>
       {routeAccess && workspace ? (
         <SettingsBody routeAccess={routeAccess} workspace={workspace} />
-      ) : null}
-    </AdminWorkspaceIslandFrame>
-  );
-}
-
-export function AccountIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace?.routeAccess;
-
-  return (
-    <AdminWorkspaceIslandFrame workspace={workspace}>
-      {routeAccess && workspace ? (
-        <AccountBody routeAccess={routeAccess} workspace={workspace} />
       ) : null}
     </AdminWorkspaceIslandFrame>
   );

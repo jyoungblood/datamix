@@ -1,0 +1,33 @@
+---
+type AdminStateBoxTone = "error" | "neutral" | "success" | "warning";
+
+type Props = {
+  body: string;
+  class?: string;
+  compact?: boolean;
+  title: string;
+  tone?: AdminStateBoxTone;
+};
+
+const {
+  body,
+  class: className,
+  compact = false,
+  title,
+  tone = "neutral",
+} = Astro.props;
+const role = tone === "error" ? "alert" : "status";
+---
+
+<div
+  class:list={[
+    "empty-state-box state-box",
+    `state-box-${tone}`,
+    compact && "compact-box",
+    className,
+  ]}
+  role={role}
+>
+  <p class="list-title">{title}</p>
+  <p class="list-copy">{body}</p>
+</div>
