@@ -93,18 +93,22 @@ export function MediaBody({
 
 export function TeamBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <TeamAndRolesRoute routeAccess={routeAccess} />;
+  return <TeamAndRolesRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function SettingsBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <SettingsApiKeysRoute routeAccess={routeAccess} />;
+  return <SettingsApiKeysRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function AccountBody({

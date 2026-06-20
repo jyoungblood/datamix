@@ -244,6 +244,73 @@ test("Task 2 account and media state use route-scoped hooks", async () => {
   );
 });
 
+test("Task 3 team and settings state use route-scoped hooks", async () => {
+  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
+  const teamSource = await readFile(teamAndRolesSourcePath, "utf8");
+  const settingsSource = await readFile(settingsApiKeysSourcePath, "utf8");
+
+  assert.doesNotMatch(
+    teamSource,
+    /useAdminWorkspace(?:RouteAccess)?/,
+    "team-and-roles.tsx should not import the old admin workspace context hooks",
+  );
+  assert.match(
+    teamSource,
+    /useAdminRolesState/,
+    "team-and-roles.tsx should import the route-scoped role state hook",
+  );
+  assert.match(
+    teamSource,
+    /useAdminTeamState/,
+    "team-and-roles.tsx should import the route-scoped team state hook",
+  );
+  assert.doesNotMatch(
+    settingsSource,
+    /useAdminWorkspace(?:RouteAccess)?/,
+    "settings-api-keys.tsx should not import the old admin workspace context hooks",
+  );
+  assert.match(
+    settingsSource,
+    /useAdminApiKeysState/,
+    "settings-api-keys.tsx should import the route-scoped API key state hook",
+  );
+  assert.match(
+    settingsSource,
+    /useAdminRolesState/,
+    "settings-api-keys.tsx should import the shared route-scoped role state hook",
+  );
+  assert.match(
+    providerSource,
+    /useAdminRolesState/,
+    "AdminWorkspaceProvider should compose role state during migration",
+  );
+  assert.match(
+    providerSource,
+    /useAdminTeamState/,
+    "AdminWorkspaceProvider should compose team state during migration",
+  );
+  assert.match(
+    providerSource,
+    /useAdminApiKeysState/,
+    "AdminWorkspaceProvider should compose API key state during migration",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.rolesState/,
+    "AdminWorkspaceProvider should spread role state into the compatibility context",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.teamState/,
+    "AdminWorkspaceProvider should spread team state into the compatibility context",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.apiKeysState/,
+    "AdminWorkspaceProvider should spread API key state into the compatibility context",
+  );
+});
+
 test("Slice 2 media island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
@@ -386,8 +453,8 @@ test("Slice 12 team body requires explicit route access from the server workspac
   );
   assert.match(
     bodySource,
-    /export function TeamBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "TeamBody should require explicit route access",
+    /export function TeamBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "TeamBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -413,8 +480,8 @@ test("Slice 13 settings body requires explicit route access from the server work
   );
   assert.match(
     bodySource,
-    /export function SettingsBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "SettingsBody should require explicit route access",
+    /export function SettingsBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "SettingsBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -623,13 +690,13 @@ test("Slice 3 team island forwards explicit route access to the retained body", 
 
   assert.match(
     teamIslandSource,
-    /<TeamBody\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "TeamIsland should pass explicit route access into the retained team body",
+    /<TeamBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "TeamIsland should pass explicit workspace and route access into the retained team body",
   );
   assert.match(
     bodySource,
-    /<TeamAndRolesRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "TeamBody should forward route access into the retained team route",
+    /<TeamAndRolesRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "TeamBody should forward workspace and route access into the retained team route",
   );
   assert.match(
     teamSource,
@@ -656,13 +723,13 @@ test("Slice 4 settings island forwards explicit route access to the retained bod
 
   assert.match(
     workspaceSource,
-    /<SettingsBody\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "SettingsIsland should pass explicit route access into the retained settings body",
+    /<SettingsBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "SettingsIsland should pass explicit workspace and route access into the retained settings body",
   );
   assert.match(
     bodySource,
-    /<SettingsApiKeysRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "SettingsBody should forward route access into the retained settings route",
+    /<SettingsApiKeysRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "SettingsBody should forward workspace and route access into the retained settings route",
   );
   assert.match(
     settingsSource,

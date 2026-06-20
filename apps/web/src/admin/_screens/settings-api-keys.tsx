@@ -29,12 +29,11 @@ import {
 import { formatRecordTimestamp } from "../_lib/media-formatting";
 import { formatIssuePath } from "../_lib/schema-drafts";
 import { rolePermissionSections } from "../_lib/role-drafts";
+import { useAdminApiKeysState } from "../_state/admin-api-keys-state";
+import { createAdminAccountUserFromWorkspaceAccount } from "../_state/admin-account-state";
+import { useAdminRolesState } from "../_state/admin-roles-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,23 +42,33 @@ import { useSetupStatus } from "@/lib/setup";
 
 type SettingsApiKeysContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type SettingsApiKeysRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
-function SettingsApiKeyRow({ apiKey }: { apiKey: DatamixApiKeySummary }) {
-  const workspace = useAdminWorkspace();
+type SettingsApiKeysState = ReturnType<typeof useAdminApiKeysState>;
+
+function SettingsApiKeyRow({
+  apiKey,
+  apiKeysState,
+  permissions,
+}: {
+  apiKey: DatamixApiKeySummary;
+  apiKeysState: SettingsApiKeysState;
+  permissions: AdminWorkspaceProps["permissions"];
+}) {
   const {
     apiKeyDrafts,
-    permissions,
     revokingApiKeyId,
     saveApiKey,
     savingApiKeyId,
     setApiKeyField,
     revokeApiKey,
-  } = workspace;
+  } = apiKeysState;
   const draft = apiKeyDrafts[apiKey.id] ?? createApiKeyDraftFromApiKey(apiKey);
   const isSavingThisKey = savingApiKeyId === apiKey.id;
   const isRevokingThisKey = revokingApiKeyId === apiKey.id;
@@ -149,10 +158,30 @@ function SettingsApiKeyRow({ apiKey }: { apiKey: DatamixApiKeySummary }) {
 
 export function SettingsApiKeysContent({
   routeAccess,
+  workspace,
 }: SettingsApiKeysContentProps) {
-  const workspace = useAdminWorkspace();
   const setupStatus = useSetupStatus();
   const access = routeAccess;
+  const { permissions, role } = workspace;
+  const reloadWorkspace = React.useCallback(async () => {
+    window.location.reload();
+  }, []);
+  const user = React.useMemo(
+    () => createAdminAccountUserFromWorkspaceAccount(workspace.account),
+    [
+      workspace.account.email,
+      workspace.account.id,
+      workspace.account.image,
+      workspace.account.initials,
+      workspace.account.name,
+    ],
+  );
+  const apiKeysState = useAdminApiKeysState({ permissions });
+  const rolesState = useAdminRolesState({
+    currentRoleId: workspace.authorization.role.id,
+    onCurrentRoleChanged: reloadWorkspace,
+    permissions,
+  });
   const {
     apiKeyDraft,
     apiKeys,
@@ -173,10 +202,8 @@ export function SettingsApiKeysContent({
     isSavingRole,
     loadApiKeyData,
     loadAvailableRoles,
-    permissions,
     publicApiRuntime,
     resetRoleDraft,
-    role,
     roleDraft,
     roleIssues,
     rolesLoadError,
@@ -187,8 +214,10 @@ export function SettingsApiKeysContent({
     setApiKeyDraftField,
     toggleRolePermission,
     updateRoleDraftField,
-    user,
-  } = workspace;
+  } = {
+    ...apiKeysState,
+    ...rolesState,
+  };
   const rolePreviewItems = availableRoles.length > 0 ? availableRoles : datamixRolePresets;
   const selectedRole = isCreatingRole
     ? null
@@ -438,7 +467,12 @@ export function SettingsApiKeysContent({
               ) : (
                 <div className="mini-list">
                   {apiKeys.map((apiKey) => (
-                    <SettingsApiKeyRow apiKey={apiKey} key={apiKey.id} />
+                    <SettingsApiKeyRow
+                      apiKey={apiKey}
+                      apiKeysState={apiKeysState}
+                      key={apiKey.id}
+                      permissions={permissions}
+                    />
                   ))}
                 </div>
               )}
@@ -665,24 +699,9 @@ export function SettingsApiKeysContent({
   );
 }
 
-function SettingsApiKeysRouteWithProviderAccess({
-  route,
-}: {
-  route: AdminWorkspaceRoute;
-}) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <SettingsApiKeysContent routeAccess={providerAccess} />;
-}
-
 export function SettingsApiKeysRoute({
   routeAccess,
-}: SettingsApiKeysRouteProps = {}) {
-  const route = adminRoutes.settings();
-
-  return routeAccess ? (
-    <SettingsApiKeysContent routeAccess={routeAccess} />
-  ) : (
-    <SettingsApiKeysRouteWithProviderAccess route={route} />
-  );
+  workspace,
+}: SettingsApiKeysRouteProps) {
+  return <SettingsApiKeysContent routeAccess={routeAccess} workspace={workspace} />;
 }

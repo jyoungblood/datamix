@@ -154,7 +154,9 @@ export function TeamIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <TeamBody routeAccess={routeAccess} /> : null}
+        {routeAccess && workspace ? (
+          <TeamBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -166,7 +168,9 @@ export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
   return (
     <AdminWorkspacePage>
       <AdminWorkspaceIslandFrame>
-        {routeAccess ? <SettingsBody routeAccess={routeAccess} /> : null}
+        {routeAccess && workspace ? (
+          <SettingsBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );

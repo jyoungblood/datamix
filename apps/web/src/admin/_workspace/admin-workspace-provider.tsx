@@ -1,7 +1,6 @@
 "use client";
 
 import type {
-  DatamixApiKeyAccessLevel,
   DatamixApiKeySummary,
   DatamixAuthorizationSummary,
   DatamixMediaAsset,
@@ -9,28 +8,17 @@ import type {
   DatamixRoleDefinition,
   DatamixSchemaValidationIssue,
 } from "@datamix/core";
-import {
-  createDatamixAuthorizationSummary,
-  datamixDefaultRoleAssignments,
-  datamixRolePresets,
-} from "@datamix/core";
+import { createDatamixAuthorizationSummary } from "@datamix/core";
 import * as React from "react";
 
 import { LoaderViewTransitionBoundary } from "@/components/loader-view-transition";
 import { Button } from "@/components/ui/button";
-import {
-  createApiKey as createApiKeyRequest,
-  listApiKeys,
-  revokeApiKey as revokeApiKeyRequest,
-  updateApiKey as updateApiKeyRequest,
-  type PublicApiRuntimeSummary,
-} from "@/lib/api-keys";
+import type { PublicApiRuntimeSummary } from "@/lib/api-keys";
 import { authClient } from "@/lib/auth-client";
 import {
   listCollectionDefinitions,
   type StoredCollectionDefinition,
 } from "@/lib/collection-definitions";
-import { sendInvite as sendInviteRequest } from "@/lib/invite";
 import {
   CollectionRecordRequestError,
   createCollectionRecord,
@@ -38,24 +26,11 @@ import {
   updateCollectionRecord,
   type StoredCollectionRecord,
 } from "@/lib/records";
-import {
-  listRoles,
-  RoleRequestError,
-  saveRole as saveRoleRequest,
-} from "@/lib/roles";
 import { buildDatamixAdminPath } from "@/lib/runtime";
 import { loadSessionAccess, SessionAccessError } from "@/lib/session";
 import { useSetupStatus } from "@/lib/setup";
-import {
-  listUsers,
-  updateUserRole as updateUserRoleRequest,
-  type DatamixUserSummary,
-} from "@/lib/users";
-import {
-  createApiKeyDraftFromApiKey,
-  createEmptyApiKeyDraft,
-  type ApiKeyDraft,
-} from "../_lib/api-key-drafts";
+import type { DatamixUserSummary } from "@/lib/users";
+import type { ApiKeyDraft } from "../_lib/api-key-drafts";
 import {
   createGeneratedRecordFormState,
   createGeneratedRecordFormStateFromRecord,
@@ -64,18 +39,16 @@ import {
   type GeneratedRecordFormState,
   type GeneratedRecordFormValue,
 } from "../_lib/record-drafts";
-import {
-  createEmptyRoleDraft,
-  createRoleDraftFromRole,
-  createRoleIdSuggestion,
-  type RoleDraft,
-} from "../_lib/role-drafts";
+import type { RoleDraft } from "../_lib/role-drafts";
+import { useAdminApiKeysState } from "../_state/admin-api-keys-state";
 import {
   createAdminAccountUserFromSession,
   type AdminAccountUser,
   useAdminAccountState,
 } from "../_state/admin-account-state";
 import { useAdminMediaState } from "../_state/admin-media-state";
+import { useAdminRolesState } from "../_state/admin-roles-state";
+import { useAdminTeamState } from "../_state/admin-team-state";
 import type { AdminWorkspaceRouteSection } from "./admin-routes";
 import {
   createAdminWorkspacePermissions,
@@ -291,14 +264,11 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     resetMediaAssetList,
     resetMediaWorkspace,
   } = mediaState;
-  const apiKeysLoadRequestId = React.useRef(0);
   const collectionLoadRequestId = React.useRef(0);
   const prefetchedRouteSectionsRef = React.useRef(
     new Set<AdminWorkspaceRouteSection>(),
   );
   const recordLoadRequestId = React.useRef(0);
-  const rolesLoadRequestId = React.useRef(0);
-  const usersLoadRequestId = React.useRef(0);
   const [authorization, setAuthorization] =
     React.useState<DatamixAuthorizationSummary | null>(null);
   const [authorizationError, setAuthorizationError] = React.useState<string | null>(null);
@@ -325,55 +295,13 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [hasLoadedRecords, setHasLoadedRecords] = React.useState(false);
   const [isLoadingRecords, setIsLoadingRecords] = React.useState(false);
   const [isSavingRecord, setIsSavingRecord] = React.useState(false);
-  const [availableRoles, setAvailableRoles] = React.useState<DatamixRoleDefinition[]>([
-    ...datamixRolePresets,
-  ]);
-  const [rolesLoadError, setRolesLoadError] = React.useState<string | null>(null);
-  const [rolesMessage, setRolesMessage] = React.useState<string | null>(null);
-  const [roleIssues, setRoleIssues] = React.useState<DatamixSchemaValidationIssue[]>([]);
-  const [hasLoadedRoles, setHasLoadedRoles] = React.useState(false);
-  const [isLoadingRoles, setIsLoadingRoles] = React.useState(false);
-  const [isSavingRole, setIsSavingRole] = React.useState(false);
-  const [isCreatingRole, setIsCreatingRole] = React.useState(false);
-  const [selectedRoleId, setSelectedRoleId] = React.useState<string | null>(null);
-  const [roleDraft, setRoleDraft] = React.useState<RoleDraft>(createEmptyRoleDraft);
-  const [users, setUsers] = React.useState<DatamixUserSummary[]>([]);
-  const [usersLoadError, setUsersLoadError] = React.useState<string | null>(null);
-  const [usersMessage, setUsersMessage] = React.useState<string | null>(null);
-  const [hasLoadedUsers, setHasLoadedUsers] = React.useState(false);
-  const [isLoadingUsers, setIsLoadingUsers] = React.useState(false);
-  const [updatingUserRoleId, setUpdatingUserRoleId] = React.useState<string | null>(null);
-  const [userRoleDrafts, setUserRoleDrafts] = React.useState<Record<string, string>>({});
-  const [inviteEmail, setInviteEmail] = React.useState("");
-  const [inviteName, setInviteName] = React.useState("");
-  const [inviteRoleId, setInviteRoleId] = React.useState<string>(
-    datamixDefaultRoleAssignments.invitedUser,
-  );
-  const [inviteError, setInviteError] = React.useState<string | null>(null);
-  const [inviteMessage, setInviteMessage] = React.useState<string | null>(null);
-  const [isInviting, setIsInviting] = React.useState(false);
-  const [apiKeys, setApiKeys] = React.useState<DatamixApiKeySummary[]>([]);
-  const [apiKeyDraft, setApiKeyDraft] = React.useState<ApiKeyDraft>(
-    createEmptyApiKeyDraft,
-  );
-  const [apiKeyDrafts, setApiKeyDrafts] = React.useState<Record<string, ApiKeyDraft>>({});
-  const [apiKeysLoadError, setApiKeysLoadError] = React.useState<string | null>(null);
-  const [apiKeysMessage, setApiKeysMessage] = React.useState<string | null>(null);
-  const [apiKeySecret, setApiKeySecret] = React.useState<string | null>(null);
-  const [apiKeySecretMessage, setApiKeySecretMessage] = React.useState<string | null>(
-    null,
-  );
-  const [publicApiRuntime, setPublicApiRuntime] =
-    React.useState<PublicApiRuntimeSummary | null>(null);
-  const [hasLoadedApiKeys, setHasLoadedApiKeys] = React.useState(false);
-  const [isLoadingApiKeys, setIsLoadingApiKeys] = React.useState(false);
-  const [isCreatingApiKey, setIsCreatingApiKey] = React.useState(false);
-  const [savingApiKeyId, setSavingApiKeyId] = React.useState<string | null>(null);
-  const [revokingApiKeyId, setRevokingApiKeyId] = React.useState<string | null>(null);
   const permissions = React.useMemo(
     () => (authorization ? createAdminWorkspacePermissions(authorization) : null),
     [authorization],
   );
+  const currentAuthorization = authorization ?? createDatamixAuthorizationSummary(null);
+  const currentPermissions =
+    permissions ?? createAdminWorkspacePermissions(currentAuthorization);
 
   const setupStatusHeading =
     setupStatus.statusCode === 503
@@ -406,172 +334,37 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
   }, []);
 
-  const resetRoleWorkspace = React.useCallback(() => {
-    rolesLoadRequestId.current += 1;
-    setAvailableRoles([...datamixRolePresets]);
-    setRolesLoadError(null);
-    setRolesMessage(null);
-    setRoleIssues([]);
-    setHasLoadedRoles(false);
-    setIsLoadingRoles(false);
-    setIsSavingRole(false);
-    setIsCreatingRole(false);
-    setSelectedRoleId(null);
-    setRoleDraft(createEmptyRoleDraft());
-  }, []);
-
-  const resetUserWorkspace = React.useCallback(() => {
-    usersLoadRequestId.current += 1;
-    setUsers([]);
-    setUsersLoadError(null);
-    setUsersMessage(null);
-    setHasLoadedUsers(false);
-    setIsLoadingUsers(false);
-    setUpdatingUserRoleId(null);
-    setUserRoleDrafts({});
-    setInviteError(null);
-    setInviteMessage(null);
-    setIsInviting(false);
-  }, []);
-
-  const resetApiKeyWorkspace = React.useCallback(() => {
-    apiKeysLoadRequestId.current += 1;
-    setApiKeys([]);
-    setApiKeyDraft(createEmptyApiKeyDraft());
-    setApiKeyDrafts({});
-    setApiKeysLoadError(null);
-    setApiKeysMessage(null);
-    setApiKeySecret(null);
-    setApiKeySecretMessage(null);
-    setPublicApiRuntime(null);
-    setHasLoadedApiKeys(false);
-    setIsLoadingApiKeys(false);
-    setIsCreatingApiKey(false);
-    setSavingApiKeyId(null);
-    setRevokingApiKeyId(null);
-  }, []);
-
-  const loadAvailableRoles = React.useCallback(
-    async (options?: { preferredRoleId?: string }) => {
-      const requestId = rolesLoadRequestId.current + 1;
-
-      rolesLoadRequestId.current = requestId;
-      setRolesLoadError(null);
-      setIsLoadingRoles(true);
-
-      try {
-        const nextRoles = await listRoles();
-        const preferredRoleId = options?.preferredRoleId;
-
-        if (rolesLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setAvailableRoles(nextRoles);
-        setHasLoadedRoles(true);
-        setSelectedRoleId((currentSelectedRoleId) =>
-          preferredRoleId && nextRoles.some((role) => role.id === preferredRoleId)
-            ? preferredRoleId
-            : currentSelectedRoleId &&
-                nextRoles.some((role) => role.id === currentSelectedRoleId)
-              ? currentSelectedRoleId
-              : nextRoles[0]?.id ?? null,
-        );
-      } catch (error) {
-        if (rolesLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setRolesLoadError(error instanceof Error ? error.message : "Unable to load roles.");
-      } finally {
-        if (rolesLoadRequestId.current === requestId) {
-          setIsLoadingRoles(false);
-        }
-      }
-    },
-    [],
-  );
-
-  const loadApiKeyData = React.useCallback(async () => {
-    const requestId = apiKeysLoadRequestId.current + 1;
-
-    apiKeysLoadRequestId.current = requestId;
-    setApiKeysLoadError(null);
-    setIsLoadingApiKeys(true);
-
-    try {
-      const result = await listApiKeys();
-
-      if (apiKeysLoadRequestId.current !== requestId) {
-        return;
-      }
-
-      setApiKeys(result.apiKeys);
-      setPublicApiRuntime(result.runtime);
-      setHasLoadedApiKeys(true);
-      setApiKeyDrafts((currentDrafts) => {
-        const nextDrafts: Record<string, ApiKeyDraft> = {};
-
-        result.apiKeys.forEach((apiKey) => {
-          nextDrafts[apiKey.id] =
-            currentDrafts[apiKey.id] ?? createApiKeyDraftFromApiKey(apiKey);
-        });
-
-        return nextDrafts;
-      });
-    } catch (error) {
-      if (apiKeysLoadRequestId.current !== requestId) {
-        return;
-      }
-
-      setApiKeysLoadError(
-        error instanceof Error ? error.message : "Unable to load API keys.",
-      );
-      setPublicApiRuntime(null);
-    } finally {
-      if (apiKeysLoadRequestId.current === requestId) {
-        setIsLoadingApiKeys(false);
-      }
-    }
-  }, []);
-
-  const loadUserList = React.useCallback(async () => {
-    const requestId = usersLoadRequestId.current + 1;
-
-    usersLoadRequestId.current = requestId;
-    setUsersLoadError(null);
-    setIsLoadingUsers(true);
-
-    try {
-      const nextUsers = await listUsers();
-
-      if (usersLoadRequestId.current !== requestId) {
-        return;
-      }
-
-      setUsers(nextUsers);
-      setHasLoadedUsers(true);
-      setUserRoleDrafts((currentDrafts) => {
-        const nextDrafts: Record<string, string> = {};
-
-        nextUsers.forEach((user) => {
-          nextDrafts[user.id] = currentDrafts[user.id] ?? user.roleId ?? "";
-        });
-
-        return nextDrafts;
-      });
-    } catch (error) {
-      if (usersLoadRequestId.current !== requestId) {
-        return;
-      }
-
-      setUsersLoadError(error instanceof Error ? error.message : "Unable to load users.");
-    } finally {
-      if (usersLoadRequestId.current === requestId) {
-        setIsLoadingUsers(false);
-      }
-    }
-  }, []);
+  const rolesState = useAdminRolesState({
+    currentRoleId: currentAuthorization.role.id,
+    onCurrentRoleChanged: loadSessionAuthorizationData,
+    permissions: currentPermissions,
+  });
+  const teamState = useAdminTeamState({
+    availableRoles: rolesState.availableRoles,
+    currentUserId: accountState.user.id,
+    onCurrentUserRoleUpdated: loadSessionAuthorizationData,
+    permissions: currentPermissions,
+  });
+  const apiKeysState = useAdminApiKeysState({ permissions: currentPermissions });
+  const {
+    hasLoadedRoles,
+    isLoadingRoles,
+    loadAvailableRoles,
+    resetRoleWorkspace,
+  } = rolesState;
+  const {
+    hasLoadedUsers,
+    isLoadingUsers,
+    loadUserList,
+    resetUserList,
+    resetUserWorkspace,
+  } = teamState;
+  const {
+    hasLoadedApiKeys,
+    isLoadingApiKeys,
+    loadApiKeyData,
+    resetApiKeyWorkspace,
+  } = apiKeysState;
 
   const loadCollections = React.useCallback(
     async () => {
@@ -891,406 +684,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     [recordCollectionName, recordDraft, selectedRecordId],
   );
 
-  const sendInvite = React.useCallback(async () => {
-    if (!permissions?.canInviteUsers) {
-      return;
-    }
-
-    setInviteError(null);
-    setInviteMessage(null);
-    setIsInviting(true);
-
-    try {
-      const message = await sendInviteRequest({
-        email: inviteEmail,
-        ...(inviteName ? { name: inviteName } : {}),
-        roleId: inviteRoleId,
-      });
-
-      setInviteMessage(message);
-      setInviteEmail("");
-      setInviteName("");
-
-      if (permissions.canViewUsers) {
-        await loadUserList();
-      }
-    } catch (error) {
-      setInviteError(error instanceof Error ? error.message : "Unable to send invite.");
-    } finally {
-      setIsInviting(false);
-    }
-  }, [
-    inviteEmail,
-    inviteName,
-    inviteRoleId,
-    loadUserList,
-    permissions?.canInviteUsers,
-    permissions?.canViewUsers,
-  ]);
-
-  const updateUserRoleDraft = React.useCallback((userId: string, nextRoleId: string) => {
-    setUserRoleDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [userId]: nextRoleId,
-    }));
-    setUsersMessage(null);
-  }, []);
-
-  const updateUserRole = React.useCallback(
-    async (user: DatamixUserSummary) => {
-      const nextRoleId = userRoleDrafts[user.id];
-
-      if (!permissions?.canUpdateUsers || !nextRoleId || nextRoleId === user.roleId) {
-        return null;
-      }
-
-      setUpdatingUserRoleId(user.id);
-      setUsersMessage(null);
-      setUsersLoadError(null);
-
-      try {
-        const result = await updateUserRoleRequest(user.id, nextRoleId);
-
-        setUsers((currentUsers) =>
-          currentUsers.map((currentUser) =>
-            currentUser.id === result.user.id ? result.user : currentUser,
-          ),
-        );
-        setUserRoleDrafts((currentDrafts) => ({
-          ...currentDrafts,
-          [result.user.id]: result.user.roleId ?? "",
-        }));
-        setUsersMessage(
-          `Updated ${result.user.name || result.user.email} to ${
-            result.role?.label ?? result.user.roleId ?? "the selected role"
-          }.`,
-        );
-
-        if (session.data?.user.id === result.user.id) {
-          await loadSessionAuthorizationData();
-        }
-
-        return result.user;
-      } catch (error) {
-        setUsersLoadError(
-          error instanceof Error
-            ? error.message
-            : "Unable to update the selected user role.",
-        );
-        return null;
-      } finally {
-        setUpdatingUserRoleId(null);
-      }
-    },
-    [
-      loadSessionAuthorizationData,
-      permissions?.canUpdateUsers,
-      session.data,
-      userRoleDrafts,
-    ],
-  );
-
-  const selectRole = React.useCallback((role: DatamixRoleDefinition) => {
-    setIsCreatingRole(false);
-    setSelectedRoleId(role.id);
-    setRoleDraft(createRoleDraftFromRole(role));
-    setRoleIssues([]);
-    setRolesMessage(null);
-  }, []);
-
-  const createRole = React.useCallback(
-    (sourceRole?: DatamixRoleDefinition) => {
-      if (!permissions?.canUpdateSettings) {
-        return;
-      }
-
-      setIsCreatingRole(true);
-      setRoleDraft(createEmptyRoleDraft(sourceRole));
-      setRoleIssues([]);
-      setRolesMessage(null);
-    },
-    [permissions?.canUpdateSettings],
-  );
-
-  const updateRoleDraftField = React.useCallback(
-    (field: "description" | "id" | "label", value: string) => {
-      setRoleDraft((currentRoleDraft) => {
-        if (field !== "label") {
-          return {
-            ...currentRoleDraft,
-            [field]: value,
-          };
-        }
-
-        const currentSuggestion = createRoleIdSuggestion(currentRoleDraft.label);
-        const nextSuggestion = createRoleIdSuggestion(value);
-        const shouldUpdateRoleId =
-          currentRoleDraft.id.trim().length === 0 ||
-          currentRoleDraft.id === currentSuggestion;
-
-        return {
-          ...currentRoleDraft,
-          id: shouldUpdateRoleId ? nextSuggestion : currentRoleDraft.id,
-          label: value,
-        };
-      });
-      setRoleIssues([]);
-      setRolesMessage(null);
-    },
-    [],
-  );
-
-  const toggleRolePermission = React.useCallback((permission: DatamixPermissionKey) => {
-    setRoleDraft((currentRoleDraft) => {
-      const nextPermissions = currentRoleDraft.permissions.includes(permission)
-        ? currentRoleDraft.permissions.filter(
-            (currentPermission) => currentPermission !== permission,
-          )
-        : [...currentRoleDraft.permissions, permission];
-
-      return {
-        ...currentRoleDraft,
-        permissions: nextPermissions,
-      };
-    });
-    setRoleIssues([]);
-    setRolesMessage(null);
-  }, []);
-
-  const resetRoleDraft = React.useCallback(() => {
-    const selectedRole = isCreatingRole
-      ? null
-      : availableRoles.find((role) => role.id === selectedRoleId) ?? null;
-
-    setRoleDraft(
-      isCreatingRole
-        ? createEmptyRoleDraft()
-        : selectedRole
-          ? createRoleDraftFromRole(selectedRole)
-          : createEmptyRoleDraft(),
-    );
-    setRoleIssues([]);
-    setRolesMessage(null);
-  }, [availableRoles, isCreatingRole, selectedRoleId]);
-
-  const saveRole = React.useCallback(async () => {
-    if (!permissions?.canUpdateSettings) {
-      return null;
-    }
-
-    setIsSavingRole(true);
-    setRoleIssues([]);
-    setRolesMessage(null);
-
-    try {
-      const result = await saveRoleRequest({
-        description: roleDraft.description,
-        id: roleDraft.id,
-        label: roleDraft.label,
-        permissions: [...roleDraft.permissions],
-      });
-
-      setIsCreatingRole(false);
-      setSelectedRoleId(result.role.id);
-      setRoleDraft(createRoleDraftFromRole(result.role));
-      setRolesMessage(result.message);
-      await loadAvailableRoles({ preferredRoleId: result.role.id });
-
-      if (authorization?.role.id === result.role.id) {
-        await loadSessionAuthorizationData();
-      }
-
-      return result.role;
-    } catch (error) {
-      if (error instanceof RoleRequestError) {
-        setRoleIssues(error.issues ?? []);
-        setRolesMessage(error.message);
-      } else {
-        setRolesMessage(error instanceof Error ? error.message : "Unable to save role.");
-      }
-
-      return null;
-    } finally {
-      setIsSavingRole(false);
-    }
-  }, [
-    authorization?.role.id,
-    loadAvailableRoles,
-    loadSessionAuthorizationData,
-    permissions?.canUpdateSettings,
-    roleDraft,
-  ]);
-
-  const setApiKeyDraftField = React.useCallback(
-    (field: keyof ApiKeyDraft, value: string) => {
-      setApiKeyDraft((currentDraft) => ({
-        ...currentDraft,
-        [field]: field === "accessLevel" ? (value as DatamixApiKeyAccessLevel) : value,
-      }));
-      setApiKeysMessage(null);
-      setApiKeySecret(null);
-      setApiKeySecretMessage(null);
-    },
-    [],
-  );
-
-  const setApiKeyField = React.useCallback(
-    (apiKeyId: string, field: keyof ApiKeyDraft, value: string) => {
-      setApiKeyDrafts((currentDrafts) => ({
-        ...currentDrafts,
-        [apiKeyId]: {
-          accessLevel:
-            field === "accessLevel"
-              ? (value as DatamixApiKeyAccessLevel)
-              : currentDrafts[apiKeyId]?.accessLevel ?? "read",
-          label:
-            field === "label" ? value : currentDrafts[apiKeyId]?.label ?? "",
-        },
-      }));
-      setApiKeysMessage(null);
-    },
-    [],
-  );
-
-  const createApiKey = React.useCallback(async () => {
-    if (!permissions?.canUpdateSettings) {
-      return null;
-    }
-
-    setIsCreatingApiKey(true);
-    setApiKeysLoadError(null);
-    setApiKeysMessage(null);
-    setApiKeySecret(null);
-    setApiKeySecretMessage(null);
-
-    try {
-      const result = await createApiKeyRequest(apiKeyDraft);
-
-      setApiKeys((currentApiKeys) => [result.apiKey, ...currentApiKeys]);
-      setApiKeyDrafts((currentDrafts) => ({
-        ...currentDrafts,
-        [result.apiKey.id]: createApiKeyDraftFromApiKey(result.apiKey),
-      }));
-      setApiKeyDraft(createEmptyApiKeyDraft());
-      setApiKeysMessage(result.message);
-      setApiKeySecret(result.secret);
-      setHasLoadedApiKeys(true);
-
-      return result.apiKey;
-    } catch (error) {
-      setApiKeysLoadError(
-        error instanceof Error ? error.message : "Unable to create API key.",
-      );
-      return null;
-    } finally {
-      setIsCreatingApiKey(false);
-    }
-  }, [apiKeyDraft, permissions?.canUpdateSettings]);
-
-  const saveApiKey = React.useCallback(
-    async (apiKey: DatamixApiKeySummary) => {
-      const nextDraft = apiKeyDrafts[apiKey.id];
-
-      if (
-        !permissions?.canUpdateSettings ||
-        !nextDraft ||
-        apiKey.revokedAt ||
-        (nextDraft.label === apiKey.label &&
-          nextDraft.accessLevel === apiKey.accessLevel)
-      ) {
-        return null;
-      }
-
-      setSavingApiKeyId(apiKey.id);
-      setApiKeysLoadError(null);
-      setApiKeysMessage(null);
-
-      try {
-        const result = await updateApiKeyRequest(apiKey.id, nextDraft);
-
-        setApiKeys((currentApiKeys) =>
-          currentApiKeys.map((currentApiKey) =>
-            currentApiKey.id === result.apiKey.id ? result.apiKey : currentApiKey,
-          ),
-        );
-        setApiKeyDrafts((currentDrafts) => ({
-          ...currentDrafts,
-          [result.apiKey.id]: createApiKeyDraftFromApiKey(result.apiKey),
-        }));
-        setApiKeysMessage(result.message);
-
-        return result.apiKey;
-      } catch (error) {
-        setApiKeysLoadError(
-          error instanceof Error ? error.message : "Unable to update API key.",
-        );
-        return null;
-      } finally {
-        setSavingApiKeyId(null);
-      }
-    },
-    [apiKeyDrafts, permissions?.canUpdateSettings],
-  );
-
-  const revokeApiKey = React.useCallback(
-    async (apiKey: DatamixApiKeySummary) => {
-      if (!permissions?.canUpdateSettings || apiKey.revokedAt) {
-        return null;
-      }
-
-      setRevokingApiKeyId(apiKey.id);
-      setApiKeysLoadError(null);
-      setApiKeysMessage(null);
-
-      try {
-        const result = await revokeApiKeyRequest(apiKey.id);
-
-        setApiKeys((currentApiKeys) =>
-          currentApiKeys.map((currentApiKey) =>
-            currentApiKey.id === result.apiKey.id ? result.apiKey : currentApiKey,
-          ),
-        );
-        setApiKeyDrafts((currentDrafts) => ({
-          ...currentDrafts,
-          [result.apiKey.id]: createApiKeyDraftFromApiKey(result.apiKey),
-        }));
-        setApiKeysMessage(result.message);
-
-        return result.apiKey;
-      } catch (error) {
-        setApiKeysLoadError(
-          error instanceof Error ? error.message : "Unable to revoke API key.",
-        );
-        return null;
-      } finally {
-        setRevokingApiKeyId(null);
-      }
-    },
-    [permissions?.canUpdateSettings],
-  );
-
-  const copyApiKeySecret = React.useCallback(async () => {
-    if (!apiKeySecret) {
-      return;
-    }
-
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.clipboard ||
-      typeof navigator.clipboard.writeText !== "function"
-    ) {
-      setApiKeySecretMessage("Clipboard access is unavailable in this browser.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(apiKeySecret);
-      setApiKeySecretMessage("API key secret copied. This is the only time Datamix will show it.");
-    } catch {
-      setApiKeySecretMessage("Clipboard access failed. Copy the API key secret manually.");
-    }
-  }, [apiKeySecret]);
-
   React.useEffect(() => {
     if (session.isPending || setupStatus.isPending || session.data) {
       return;
@@ -1418,56 +811,8 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       return;
     }
 
-    usersLoadRequestId.current += 1;
-    setUsers([]);
-    setUsersLoadError(null);
-    setUsersMessage(null);
-    setHasLoadedUsers(false);
-    setIsLoadingUsers(false);
-    setUpdatingUserRoleId(null);
-    setUserRoleDrafts({});
-  }, [permissions]);
-
-  React.useEffect(() => {
-    if (isCreatingRole) {
-      return;
-    }
-
-    const selectedRole =
-      availableRoles.find((role) => role.id === selectedRoleId) ??
-      availableRoles[0] ??
-      null;
-
-    if (!selectedRole) {
-      setSelectedRoleId(null);
-      return;
-    }
-
-    if (selectedRoleId !== selectedRole.id) {
-      setSelectedRoleId(selectedRole.id);
-      return;
-    }
-
-    setRoleDraft(createRoleDraftFromRole(selectedRole));
-  }, [availableRoles, isCreatingRole, selectedRoleId]);
-
-  React.useEffect(() => {
-    setInviteRoleId((currentInviteRoleId) => {
-      if (availableRoles.some((role) => role.id === currentInviteRoleId)) {
-        return currentInviteRoleId;
-      }
-
-      const defaultInviteRole = availableRoles.find(
-        (role) => role.id === datamixDefaultRoleAssignments.invitedUser,
-      );
-
-      return (
-        defaultInviteRole?.id ??
-        availableRoles[0]?.id ??
-        datamixDefaultRoleAssignments.invitedUser
-      );
-    });
-  }, [availableRoles]);
+    resetUserList();
+  }, [permissions, resetUserList]);
 
   const selectedRecord =
     selectedRecordId && recordCollectionName
@@ -1481,53 +826,23 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     Boolean(session.data) && !authorization && !authorizationError;
   const isResolvingInitialAdmin =
     isResolvingInitialSession || isResolvingInitialAuthorization;
-  const currentAuthorization = authorization ?? createDatamixAuthorizationSummary(null);
-  const currentPermissions =
-    permissions ?? createAdminWorkspacePermissions(currentAuthorization);
   const value: AdminWorkspaceContextValue = {
     ...accountState,
+    ...apiKeysState,
     ...mediaState,
-    apiKeyDraft,
-    apiKeyDrafts,
-    apiKeys,
-    apiKeysLoadError,
-    apiKeysMessage,
-    apiKeySecret,
-    apiKeySecretMessage,
+    ...rolesState,
+    ...teamState,
     authorization: currentAuthorization,
-    availableRoles,
     collectionLoadError,
     collections,
-    copyApiKeySecret,
-    createApiKey,
-    createRole,
-    hasLoadedApiKeys,
     hasLoadedCollections,
     hasLoadedRecords,
-    hasLoadedRoles,
-    hasLoadedUsers,
-    inviteEmail,
-    inviteError,
-    inviteMessage,
-    inviteName,
-    inviteRoleId,
-    isCreatingApiKey,
-    isCreatingRole,
-    isInviting,
-    isLoadingApiKeys,
     isLoadingCollections,
     isLoadingRecords,
-    isLoadingRoles,
-    isLoadingUsers,
     isSavingRecord,
-    isSavingRole,
-    loadApiKeyData,
-    loadAvailableRoles,
     loadCollections,
     loadRecords,
-    loadUserList,
     permissions: currentPermissions,
-    publicApiRuntime,
     prefetchAdminRoute,
     recordDraft,
     recordCollectionName,
@@ -1536,39 +851,12 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     recordMessage,
     records,
     recordSupportedFieldNames,
-    resetRoleDraft,
-    revokeApiKey,
     role: currentAuthorization.role,
-    roleDraft,
-    roleIssues,
-    rolesLoadError,
-    rolesMessage,
-    revokingApiKeyId,
-    saveApiKey,
     saveRecord,
-    saveRole,
-    savingApiKeyId,
     selectedRecord,
-    selectedRoleId,
     selectRecord,
-    selectRole,
-    sendInvite,
-    setApiKeyDraftField,
-    setApiKeyField,
-    setInviteEmail,
-    setInviteName,
-    setInviteRoleId,
     startNewRecord,
-    toggleRolePermission,
     updateRecordDraftValue,
-    updateRoleDraftField,
-    updateUserRole,
-    updateUserRoleDraft,
-    userRoleDrafts,
-    users,
-    usersLoadError,
-    usersMessage,
-    updatingUserRoleId,
   };
 
   const renderAdminWorkspaceContent = () => {

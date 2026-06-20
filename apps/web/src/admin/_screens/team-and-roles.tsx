@@ -19,12 +19,10 @@ import {
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
 import { resolveRoleLabel } from "../_lib/role-drafts";
+import { useAdminRolesState } from "../_state/admin-roles-state";
+import { useAdminTeamState } from "../_state/admin-team-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,20 +47,42 @@ function createRolePermissionSummary(role: DatamixRoleDefinition) {
 
 type TeamAndRolesContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type TeamAndRolesRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 export function TeamAndRolesContent({
   routeAccess,
+  workspace,
 }: TeamAndRolesContentProps) {
-  const workspace = useAdminWorkspace();
   const access = routeAccess;
+  const { permissions, role } = workspace;
+  const reloadWorkspace = React.useCallback(async () => {
+    window.location.reload();
+  }, []);
+  const rolesState = useAdminRolesState({
+    currentRoleId: workspace.authorization.role.id,
+    onCurrentRoleChanged: reloadWorkspace,
+    permissions,
+  });
+  const teamState = useAdminTeamState({
+    availableRoles: rolesState.availableRoles,
+    currentUserId: workspace.account.id,
+    onCurrentUserRoleUpdated: reloadWorkspace,
+    permissions,
+  });
   const {
     availableRoles,
     hasLoadedRoles,
+    isLoadingRoles,
+    loadAvailableRoles,
+    rolesLoadError,
+  } = rolesState;
+  const {
     hasLoadedUsers,
     inviteEmail,
     inviteError,
@@ -70,13 +90,8 @@ export function TeamAndRolesContent({
     inviteName,
     inviteRoleId,
     isInviting,
-    isLoadingRoles,
     isLoadingUsers,
-    loadAvailableRoles,
     loadUserList,
-    permissions,
-    role,
-    rolesLoadError,
     sendInvite,
     setInviteEmail,
     setInviteName,
@@ -84,12 +99,11 @@ export function TeamAndRolesContent({
     updateUserRole,
     updateUserRoleDraft,
     updatingUserRoleId,
-    user: currentUser,
     userRoleDrafts,
     users,
     usersLoadError,
     usersMessage,
-  } = workspace;
+  } = teamState;
   const isInitialUserLoad =
     permissions.canViewUsers && !hasLoadedUsers && !usersLoadError;
   const isInitialRoleLoad =
@@ -197,7 +211,7 @@ export function TeamAndRolesContent({
                           <Badge variant="outline">
                             {resolveRoleLabel(availableRoles, user.roleId)}
                           </Badge>
-                          {currentUser.id === user.id ? (
+                          {workspace.account.id === user.id ? (
                             <Badge variant="secondary">Current session</Badge>
                           ) : null}
                           <Badge variant="outline">
@@ -377,18 +391,9 @@ export function TeamAndRolesContent({
   );
 }
 
-function TeamAndRolesRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <TeamAndRolesContent routeAccess={providerAccess} />;
-}
-
-export function TeamAndRolesRoute({ routeAccess }: TeamAndRolesRouteProps = {}) {
-  const route = adminRoutes.team();
-
-  return routeAccess ? (
-    <TeamAndRolesContent routeAccess={routeAccess} />
-  ) : (
-    <TeamAndRolesRouteWithProviderAccess route={route} />
-  );
+export function TeamAndRolesRoute({
+  routeAccess,
+  workspace,
+}: TeamAndRolesRouteProps) {
+  return <TeamAndRolesContent routeAccess={routeAccess} workspace={workspace} />;
 }
