@@ -67,6 +67,9 @@ const workspaceResolverPath = path.resolve(
 const workspacePropsSourcePath = path.resolve(
   "apps/web/src/admin/_workspace/admin-workspace-props.ts",
 );
+const adminWorkspaceProviderSourcePath = path.resolve(
+  "apps/web/src/admin/_workspace/admin-workspace-provider.tsx",
+);
 const mediaLibrarySourcePath = path.resolve(
   "apps/web/src/admin/_screens/media-library.tsx",
 );
@@ -194,6 +197,53 @@ test("Slice 1 workspace resolver returns serializable workspace data on successf
   );
 });
 
+test("Task 2 account and media state use route-scoped hooks", async () => {
+  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
+  const accountSource = await readFile(userAccountSourcePath, "utf8");
+  const mediaSource = await readFile(mediaLibrarySourcePath, "utf8");
+
+  assert.doesNotMatch(
+    accountSource,
+    /useAdminWorkspace(?:RouteAccess)?/,
+    "user-account.tsx should not import the old admin workspace context hooks",
+  );
+  assert.match(
+    accountSource,
+    /useAdminAccountState/,
+    "user-account.tsx should import the route-scoped account state hook",
+  );
+  assert.doesNotMatch(
+    mediaSource,
+    /useAdminWorkspace(?:RouteAccess)?/,
+    "media-library.tsx should not import the old admin workspace context hooks",
+  );
+  assert.match(
+    mediaSource,
+    /useAdminMediaState/,
+    "media-library.tsx should import the route-scoped media state hook",
+  );
+  assert.match(
+    providerSource,
+    /useAdminAccountState/,
+    "AdminWorkspaceProvider should compose the route-scoped account state hook during migration",
+  );
+  assert.match(
+    providerSource,
+    /useAdminMediaState/,
+    "AdminWorkspaceProvider should compose the route-scoped media state hook during migration",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.accountState/,
+    "AdminWorkspaceProvider should spread account state into the compatibility context",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.mediaState/,
+    "AdminWorkspaceProvider should spread media state into the compatibility context",
+  );
+});
+
 test("Slice 2 media island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
@@ -207,13 +257,13 @@ test("Slice 2 media island forwards explicit route access to the retained body",
 
   assert.match(
     workspaceSource,
-    /<MediaBody\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "MediaIsland should pass explicit route access into the retained media body",
+    /<MediaBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "MediaIsland should pass explicit workspace and route access into the retained media body",
   );
   assert.match(
     bodySource,
-    /<MediaLibraryRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "MediaBody should forward route access into the retained media route",
+    /<MediaLibraryRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "MediaBody should forward workspace and route access into the retained media route",
   );
   assert.match(
     mediaSource,
@@ -244,8 +294,8 @@ test("Slice 11 media body requires explicit route access from the server workspa
   );
   assert.match(
     bodySource,
-    /export function MediaBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "MediaBody should require explicit route access",
+    /export function MediaBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "MediaBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -390,8 +440,8 @@ test("Slice 14 account body requires explicit route access from the server works
   );
   assert.match(
     bodySource,
-    /export function AccountBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "AccountBody should require explicit route access",
+    /export function AccountBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "AccountBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -666,13 +716,13 @@ test("Slice 5 account island forwards explicit route access to the retained body
 
   assert.match(
     workspaceSource,
-    /<AccountBody\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "AccountIsland should pass explicit route access into the retained account body",
+    /<AccountBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "AccountIsland should pass explicit workspace and route access into the retained account body",
   );
   assert.match(
     bodySource,
-    /<UserAccountRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "AccountBody should forward route access into the retained account route",
+    /<UserAccountRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "AccountBody should forward workspace and route access into the retained account route",
   );
   assert.match(
     accountSource,
@@ -684,10 +734,10 @@ test("Slice 5 account island forwards explicit route access to the retained body
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "AccountContent should not derive account route access from AdminWorkspaceProvider",
   );
-  assert.match(
+  assert.doesNotMatch(
     accountSource,
-    /function UserAccountRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<AccountContent\s+routeAccess=\{providerAccess\}/,
-    "UserAccountRoute should keep the provider fallback wrapper for direct production hook hits",
+    /UserAccountRouteWithProviderAccess/,
+    "UserAccountRoute should not keep an account provider fallback after route-scoped state migration",
   );
 });
 

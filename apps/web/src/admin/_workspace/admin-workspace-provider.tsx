@@ -19,10 +19,6 @@ import * as React from "react";
 import { LoaderViewTransitionBoundary } from "@/components/loader-view-transition";
 import { Button } from "@/components/ui/button";
 import {
-  AccountRequestError,
-  updateAccountProfile,
-} from "@/lib/account";
-import {
   createApiKey as createApiKeyRequest,
   listApiKeys,
   revokeApiKey as revokeApiKeyRequest,
@@ -42,11 +38,6 @@ import {
   updateCollectionRecord,
   type StoredCollectionRecord,
 } from "@/lib/records";
-import {
-  listMediaAssets,
-  MediaAssetRequestError,
-  uploadMediaAsset as uploadMediaAssetRequest,
-} from "@/lib/media";
 import {
   listRoles,
   RoleRequestError,
@@ -79,24 +70,17 @@ import {
   createRoleIdSuggestion,
   type RoleDraft,
 } from "../_lib/role-drafts";
+import {
+  createAdminAccountUserFromSession,
+  type AdminAccountUser,
+  useAdminAccountState,
+} from "../_state/admin-account-state";
+import { useAdminMediaState } from "../_state/admin-media-state";
 import type { AdminWorkspaceRouteSection } from "./admin-routes";
 import {
   createAdminWorkspacePermissions,
   type AdminWorkspacePermissions,
 } from "./admin-permissions";
-
-type AdminWorkspaceUser = {
-  displayName: string;
-  email: string | null;
-  id: string | null;
-  image: string | null;
-  initials: string;
-};
-
-type AdminWorkspaceAccountProfile = {
-  image: string | null;
-  name: string;
-};
 
 export type AdminWorkspaceContextValue = {
   accountError: string | null;
@@ -217,7 +201,7 @@ export type AdminWorkspaceContextValue = {
   updateUserRole: (user: DatamixUserSummary) => Promise<DatamixUserSummary | null>;
   updateUserRoleDraft: (userId: string, nextRoleId: string) => void;
   uploadMediaAsset: () => Promise<DatamixMediaAsset | null>;
-  user: AdminWorkspaceUser;
+  user: AdminAccountUser;
   userRoleDrafts: Record<string, string>;
   users: DatamixUserSummary[];
   usersLoadError: string | null;
@@ -251,49 +235,6 @@ function createLoginHref() {
   return `${buildDatamixAdminPath("/login")}?next=${encodeURIComponent(
     createCurrentAdminPath(),
   )}`;
-}
-
-function createInitials(input: { email: string | null; name: string | null }) {
-  const source = input.name || input.email || "Datamix Admin";
-  const parts = source
-    .split(/[\s@._-]+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const initials = parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("");
-
-  return initials || "DM";
-}
-
-function createWorkspaceUser(
-  sessionData: unknown,
-  profile?: AdminWorkspaceAccountProfile | null,
-): AdminWorkspaceUser {
-  const user =
-    typeof sessionData === "object" && sessionData !== null && "user" in sessionData
-      ? (sessionData as {
-          user?: {
-            email?: string | null;
-            id?: string | null;
-            image?: string | null;
-            name?: string | null;
-          };
-        }).user
-      : undefined;
-  const email = user?.email ?? null;
-  const id = user?.id ?? null;
-  const image = profile ? profile.image : user?.image ?? null;
-  const name = profile ? profile.name : user?.name ?? null;
-
-  return {
-    displayName: name || email || "Datamix Admin",
-    email,
-    id,
-    image,
-    initials: createInitials({ email, name }),
-  };
 }
 
 function AdminWorkspaceGateShell({
@@ -337,9 +278,21 @@ function AdminWorkspaceResolutionCanvas() {
 export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps) {
   const session = authClient.useSession();
   const setupStatus = useSetupStatus();
+  const initialAccountUser = React.useMemo(
+    () => createAdminAccountUserFromSession(session.data),
+    [session.data],
+  );
+  const accountState = useAdminAccountState({ initialUser: initialAccountUser });
+  const mediaState = useAdminMediaState();
+  const {
+    hasLoadedMediaAssets,
+    isLoadingMediaAssets,
+    loadMediaAssets,
+    resetMediaAssetList,
+    resetMediaWorkspace,
+  } = mediaState;
   const apiKeysLoadRequestId = React.useRef(0);
   const collectionLoadRequestId = React.useRef(0);
-  const mediaAssetsLoadRequestId = React.useRef(0);
   const prefetchedRouteSectionsRef = React.useRef(
     new Set<AdminWorkspaceRouteSection>(),
   );
@@ -356,20 +309,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [collectionLoadError, setCollectionLoadError] = React.useState<string | null>(null);
   const [hasLoadedCollections, setHasLoadedCollections] = React.useState(false);
   const [isLoadingCollections, setIsLoadingCollections] = React.useState(false);
-  const [mediaAssets, setMediaAssets] = React.useState<DatamixMediaAsset[]>([]);
-  const [mediaLoadError, setMediaLoadError] = React.useState<string | null>(null);
-  const [mediaMessage, setMediaMessage] = React.useState<string | null>(null);
-  const [mediaClipboardMessage, setMediaClipboardMessage] = React.useState<string | null>(
-    null,
-  );
-  const [mediaSearchQuery, setMediaSearchQuery] = React.useState("");
-  const [selectedMediaAssetId, setSelectedMediaAssetId] = React.useState<string | null>(
-    null,
-  );
-  const [selectedMediaFile, setSelectedMediaFile] = React.useState<File | null>(null);
-  const [hasLoadedMediaAssets, setHasLoadedMediaAssets] = React.useState(false);
-  const [isLoadingMediaAssets, setIsLoadingMediaAssets] = React.useState(false);
-  const [isUploadingMedia, setIsUploadingMedia] = React.useState(false);
   const [recordCollectionName, setRecordCollectionName] = React.useState<string | null>(
     null,
   );
@@ -431,13 +370,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const [isCreatingApiKey, setIsCreatingApiKey] = React.useState(false);
   const [savingApiKeyId, setSavingApiKeyId] = React.useState<string | null>(null);
   const [revokingApiKeyId, setRevokingApiKeyId] = React.useState<string | null>(null);
-  const [accountName, setAccountName] = React.useState("");
-  const [accountImage, setAccountImage] = React.useState("");
-  const [accountMessage, setAccountMessage] = React.useState<string | null>(null);
-  const [accountError, setAccountError] = React.useState<string | null>(null);
-  const [accountProfileOverride, setAccountProfileOverride] =
-    React.useState<AdminWorkspaceAccountProfile | null>(null);
-  const [isSavingAccountProfile, setIsSavingAccountProfile] = React.useState(false);
   const permissions = React.useMemo(
     () => (authorization ? createAdminWorkspacePermissions(authorization) : null),
     [authorization],
@@ -676,131 +608,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     },
     [],
   );
-
-  const resetMediaWorkspace = React.useCallback(() => {
-    mediaAssetsLoadRequestId.current += 1;
-    setMediaAssets([]);
-    setMediaLoadError(null);
-    setMediaMessage(null);
-    setMediaClipboardMessage(null);
-    setMediaSearchQuery("");
-    setSelectedMediaAssetId(null);
-    setSelectedMediaFile(null);
-    setHasLoadedMediaAssets(false);
-    setIsLoadingMediaAssets(false);
-    setIsUploadingMedia(false);
-  }, []);
-
-  const loadMediaAssets = React.useCallback(
-    async () => {
-      const requestId = mediaAssetsLoadRequestId.current + 1;
-
-      mediaAssetsLoadRequestId.current = requestId;
-      setMediaLoadError(null);
-      setIsLoadingMediaAssets(true);
-
-      try {
-        const assets = await listMediaAssets();
-
-        if (mediaAssetsLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setMediaAssets(assets);
-        setHasLoadedMediaAssets(true);
-        setSelectedMediaAssetId((currentSelectedAssetId) =>
-          currentSelectedAssetId &&
-          assets.some((asset) => asset.id === currentSelectedAssetId)
-            ? currentSelectedAssetId
-            : assets[0]?.id ?? null,
-        );
-      } catch (error) {
-        if (mediaAssetsLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setMediaLoadError(
-          error instanceof Error ? error.message : "Unable to load media assets.",
-        );
-      } finally {
-        if (mediaAssetsLoadRequestId.current === requestId) {
-          setIsLoadingMediaAssets(false);
-        }
-      }
-    },
-    [],
-  );
-
-  const selectMediaAsset = React.useCallback((assetId: string) => {
-    setSelectedMediaAssetId(assetId);
-    setMediaClipboardMessage(null);
-  }, []);
-
-  const uploadMediaAsset = React.useCallback(async () => {
-    if (!selectedMediaFile) {
-      setMediaLoadError("Choose a file before uploading.");
-      setMediaMessage(null);
-      return null;
-    }
-
-    setIsUploadingMedia(true);
-    setMediaLoadError(null);
-    setMediaMessage(null);
-
-    try {
-      const result = await uploadMediaAssetRequest(selectedMediaFile);
-
-      setMediaAssets((currentAssets) => [result.asset, ...currentAssets]);
-      setHasLoadedMediaAssets(true);
-      setSelectedMediaAssetId(result.asset.id);
-      setMediaMessage(
-        `${result.message} Saved ${result.asset.fileName} to ${result.asset.storageKey}.`,
-      );
-      setMediaClipboardMessage(null);
-      setSelectedMediaFile(null);
-      void loadMediaAssets();
-
-      return result.asset;
-    } catch (error) {
-      setMediaLoadError(
-        error instanceof MediaAssetRequestError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Unable to upload media asset.",
-      );
-
-      return null;
-    } finally {
-      setIsUploadingMedia(false);
-    }
-  }, [loadMediaAssets, selectedMediaFile]);
-
-  const copyMediaStorageKey = React.useCallback(async () => {
-    const selectedMediaAsset = selectedMediaAssetId
-      ? mediaAssets.find((asset) => asset.id === selectedMediaAssetId) ?? null
-      : null;
-
-    if (!selectedMediaAsset) {
-      return;
-    }
-
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.clipboard ||
-      typeof navigator.clipboard.writeText !== "function"
-    ) {
-      setMediaClipboardMessage("Clipboard access is unavailable in this browser.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(selectedMediaAsset.storageKey);
-      setMediaClipboardMessage("Storage key copied for reuse in image fields.");
-    } catch {
-      setMediaClipboardMessage("Clipboard access failed. Copy the storage key manually.");
-    }
-  }, [mediaAssets, selectedMediaAssetId]);
 
   const resetRecordWorkspace = React.useCallback(() => {
     recordLoadRequestId.current += 1;
@@ -1484,51 +1291,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
   }, [apiKeySecret]);
 
-  const updateCurrentUserProfile = React.useCallback(async () => {
-    setIsSavingAccountProfile(true);
-    setAccountError(null);
-    setAccountMessage(null);
-
-    try {
-      const result = await updateAccountProfile({
-        image: accountImage.trim() || null,
-        name: accountName,
-      });
-
-      setAccountName(result.user.name);
-      setAccountImage(result.user.image ?? "");
-      setAccountProfileOverride({
-        image: result.user.image,
-        name: result.user.name,
-      });
-      setAccountMessage(result.message);
-      window.dispatchEvent(
-        new CustomEvent("datamix:account-profile-updated", {
-          detail: {
-            image: result.user.image ?? "",
-            name: result.user.name || result.user.email,
-          },
-        }),
-      );
-
-      return result.user;
-    } catch (error) {
-      setAccountError(
-        error instanceof AccountRequestError || error instanceof Error
-          ? error.message
-          : "Unable to update profile.",
-      );
-      return null;
-    } finally {
-      setIsSavingAccountProfile(false);
-    }
-  }, [accountImage, accountName]);
-
-  const signOut = React.useCallback(async () => {
-    await authClient.signOut();
-    window.location.replace(buildDatamixAdminPath("/login"));
-  }, []);
-
   React.useEffect(() => {
     if (session.isPending || setupStatus.isPending || session.data) {
       return;
@@ -1558,12 +1320,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       resetRoleWorkspace();
       resetUserWorkspace();
       resetApiKeyWorkspace();
-      setAccountName("");
-      setAccountImage("");
-      setAccountMessage(null);
-      setAccountError(null);
-      setAccountProfileOverride(null);
-      setIsSavingAccountProfile(false);
       return;
     }
 
@@ -1577,20 +1333,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     resetUserWorkspace,
     session.data,
   ]);
-
-  React.useEffect(() => {
-    if (!session.data) {
-      return;
-    }
-
-    const sessionUser = createWorkspaceUser(session.data);
-
-    setAccountName(sessionUser.displayName);
-    setAccountImage(sessionUser.image ?? "");
-    setAccountMessage(null);
-    setAccountError(null);
-    setAccountProfileOverride(null);
-  }, [session.data]);
 
   React.useEffect(() => {
     if (!session.data || !authorizationError) {
@@ -1639,14 +1381,9 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     }
 
     if (!permissions.canViewMedia) {
-      mediaAssetsLoadRequestId.current += 1;
-      setMediaAssets([]);
-      setSelectedMediaAssetId(null);
-      setHasLoadedMediaAssets(false);
-      setIsLoadingMediaAssets(false);
-      setMediaLoadError(null);
+      resetMediaAssetList();
     }
-  }, [permissions, resetMediaWorkspace]);
+  }, [permissions, resetMediaAssetList, resetMediaWorkspace]);
 
   React.useEffect(() => {
     if (!permissions) {
@@ -1748,10 +1485,8 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const currentPermissions =
     permissions ?? createAdminWorkspacePermissions(currentAuthorization);
   const value: AdminWorkspaceContextValue = {
-    accountError,
-    accountImage,
-    accountMessage,
-    accountName,
+    ...accountState,
+    ...mediaState,
     apiKeyDraft,
     apiKeyDrafts,
     apiKeys,
@@ -1764,12 +1499,10 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     collectionLoadError,
     collections,
     copyApiKeySecret,
-    copyMediaStorageKey,
     createApiKey,
     createRole,
     hasLoadedApiKeys,
     hasLoadedCollections,
-    hasLoadedMediaAssets,
     hasLoadedRecords,
     hasLoadedRoles,
     hasLoadedUsers,
@@ -1783,25 +1516,16 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     isInviting,
     isLoadingApiKeys,
     isLoadingCollections,
-    isLoadingMediaAssets,
     isLoadingRecords,
     isLoadingRoles,
     isLoadingUsers,
-    isSavingAccountProfile,
     isSavingRecord,
     isSavingRole,
-    isUploadingMedia,
     loadApiKeyData,
     loadAvailableRoles,
     loadCollections,
-    loadMediaAssets,
     loadRecords,
     loadUserList,
-    mediaAssets,
-    mediaClipboardMessage,
-    mediaLoadError,
-    mediaMessage,
-    mediaSearchQuery,
     permissions: currentPermissions,
     publicApiRuntime,
     prefetchAdminRoute,
@@ -1824,33 +1548,22 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     saveRecord,
     saveRole,
     savingApiKeyId,
-    selectedMediaAssetId,
-    selectedMediaFile,
     selectedRecord,
     selectedRoleId,
-    selectMediaAsset,
     selectRecord,
     selectRole,
     sendInvite,
-    setAccountImage,
-    setAccountName,
     setApiKeyDraftField,
     setApiKeyField,
     setInviteEmail,
     setInviteName,
     setInviteRoleId,
-    setMediaSearchQuery,
-    setSelectedMediaFile,
-    signOut,
     startNewRecord,
     toggleRolePermission,
-    updateAccountProfile: updateCurrentUserProfile,
     updateRecordDraftValue,
     updateRoleDraftField,
     updateUserRole,
     updateUserRoleDraft,
-    uploadMediaAsset,
-    user: createWorkspaceUser(session.data, accountProfileOverride),
     userRoleDrafts,
     users,
     usersLoadError,

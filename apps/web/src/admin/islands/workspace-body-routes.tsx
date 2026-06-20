@@ -8,6 +8,7 @@ import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
 import { TeamAndRolesRoute } from "@/admin/_screens/team-and-roles";
 import { UserAccountRoute } from "@/admin/_screens/user-account";
 import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 
 export function AdminHomeBody({
   routeAccess,
@@ -82,10 +83,12 @@ export function ContentRecordBody({
 
 export function MediaBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <MediaLibraryRoute routeAccess={routeAccess} />;
+  return <MediaLibraryRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function TeamBody({
@@ -106,8 +109,10 @@ export function SettingsBody({
 
 export function AccountBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <UserAccountRoute routeAccess={routeAccess} />;
+  return <UserAccountRoute routeAccess={routeAccess} workspace={workspace} />;
 }

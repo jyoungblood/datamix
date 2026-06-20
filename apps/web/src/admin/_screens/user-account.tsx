@@ -9,40 +9,52 @@ import {
   AdminSectionCard,
 } from "../_components/admin-design";
 import { AdminStateBox } from "../_components/admin-state";
-import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
 import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+  createAdminAccountUserFromWorkspaceAccount,
+  useAdminAccountState,
+} from "../_state/admin-account-state";
+import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
+import { adminRoutes } from "../_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 type AccountContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type UserAccountRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
-export function AccountContent({ routeAccess }: AccountContentProps) {
-  const workspace = useAdminWorkspace();
+export function AccountContent({ routeAccess, workspace }: AccountContentProps) {
   const access = routeAccess;
+  const initialUser = React.useMemo(
+    () => createAdminAccountUserFromWorkspaceAccount(workspace.account),
+    [
+      workspace.account.email,
+      workspace.account.id,
+      workspace.account.image,
+      workspace.account.initials,
+      workspace.account.name,
+    ],
+  );
   const {
     accountError,
     accountImage,
     accountMessage,
     accountName,
     isSavingAccountProfile,
-    role,
     setAccountImage,
     setAccountName,
     signOut,
     updateAccountProfile,
     user,
-  } = workspace;
+  } = useAdminAccountState({ initialUser });
+  const role = workspace.role;
 
   const handleSaveProfile = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -175,18 +187,6 @@ export function AccountContent({ routeAccess }: AccountContentProps) {
   );
 }
 
-function UserAccountRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <AccountContent routeAccess={providerAccess} />;
-}
-
-export function UserAccountRoute({ routeAccess }: UserAccountRouteProps = {}) {
-  const route = adminRoutes.account();
-
-  return routeAccess ? (
-    <AccountContent routeAccess={routeAccess} />
-  ) : (
-    <UserAccountRouteWithProviderAccess route={route} />
-  );
+export function UserAccountRoute({ routeAccess, workspace }: UserAccountRouteProps) {
+  return <AccountContent routeAccess={routeAccess} workspace={workspace} />;
 }

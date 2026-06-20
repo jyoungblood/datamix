@@ -21,28 +21,27 @@ import {
   formatByteSize,
   formatRecordTimestamp,
 } from "../_lib/media-formatting";
+import { useAdminMediaState } from "../_state/admin-media-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type MediaLibraryContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type MediaLibraryRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 export function MediaLibraryContent({
   routeAccess,
+  workspace,
 }: MediaLibraryContentProps) {
-  const workspace = useAdminWorkspace();
   const access = routeAccess;
   const mediaFileInputRef = React.useRef<HTMLInputElement | null>(null);
   const {
@@ -56,15 +55,14 @@ export function MediaLibraryContent({
     mediaLoadError,
     mediaMessage,
     mediaSearchQuery,
-    permissions,
-    role,
     selectedMediaAssetId,
     selectedMediaFile,
     selectMediaAsset,
     setMediaSearchQuery,
     setSelectedMediaFile,
     uploadMediaAsset,
-  } = workspace;
+  } = useAdminMediaState();
+  const { permissions, role } = workspace;
   const isInitialMediaLoad =
     permissions.canViewMedia && !hasLoadedMediaAssets && !mediaLoadError;
   const shouldShowMediaSkeleton =
@@ -394,18 +392,9 @@ export function MediaLibraryContent({
   );
 }
 
-function MediaLibraryRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <MediaLibraryContent routeAccess={providerAccess} />;
-}
-
-export function MediaLibraryRoute({ routeAccess }: MediaLibraryRouteProps = {}) {
-  const route = adminRoutes.media();
-
-  return routeAccess ? (
-    <MediaLibraryContent routeAccess={routeAccess} />
-  ) : (
-    <MediaLibraryRouteWithProviderAccess route={route} />
-  );
+export function MediaLibraryRoute({
+  routeAccess,
+  workspace,
+}: MediaLibraryRouteProps) {
+  return <MediaLibraryContent routeAccess={routeAccess} workspace={workspace} />;
 }
