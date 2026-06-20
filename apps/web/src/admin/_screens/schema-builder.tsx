@@ -19,15 +19,10 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
-import {
-  adminRoutes,
-  type AdminWorkspaceRoute,
-} from "../_workspace/admin-routes";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import { adminRoutes } from "../_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 import {
   createDraftFromDefinition,
   createEmptyCollectionDraft,
@@ -67,10 +62,12 @@ type SchemaBuilderContentProps = {
   mode: SchemaBuilderRouteModeProps["mode"];
   routeAccess: AdminWorkspaceRouteAccessState;
   schemaId?: string;
+  workspace: AdminWorkspaceProps;
 };
 
 type SchemaBuilderRouteProps = SchemaBuilderRouteModeProps & {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 function formatFieldTypeLabel(type: DatamixFieldType) {
@@ -117,8 +114,8 @@ export function SchemaBuilderContent({
   mode,
   routeAccess,
   schemaId,
+  workspace,
 }: SchemaBuilderContentProps) {
-  const workspace = useAdminWorkspace();
   const access = routeAccess;
   const {
     collectionLoadError,
@@ -126,8 +123,8 @@ export function SchemaBuilderContent({
     hasLoadedCollections,
     isLoadingCollections,
     loadCollections,
-    permissions,
-  } = workspace;
+  } = useAdminCollectionsState();
+  const { permissions } = workspace;
   const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
   const activeCollection =
     decodedSchemaId === null
@@ -907,29 +904,9 @@ export function SchemaBuilderContent({
   );
 }
 
-function SchemaBuilderRouteWithProviderAccess({
-  route,
-  ...props
-}: SchemaBuilderRouteModeProps & {
-  route: AdminWorkspaceRoute;
-}) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <SchemaBuilderContent routeAccess={providerAccess} {...props} />;
-}
-
 export function SchemaBuilderRoute({
   routeAccess,
   ...props
 }: SchemaBuilderRouteProps) {
-  const route =
-    props.mode === "create"
-      ? adminRoutes.schema.new()
-      : adminRoutes.schema.detail(props.schemaId);
-
-  return routeAccess ? (
-    <SchemaBuilderContent routeAccess={routeAccess} {...props} />
-  ) : (
-    <SchemaBuilderRouteWithProviderAccess route={route} {...props} />
-  );
+  return <SchemaBuilderContent routeAccess={routeAccess} {...props} />;
 }

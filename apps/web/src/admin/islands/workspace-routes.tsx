@@ -21,11 +21,17 @@ type AdminWorkspaceIslandProps = {
   workspace: AdminWorkspaceProps | null;
 };
 
-function AdminWorkspaceIslandFrame({ children }: { children: ReactNode }) {
+function AdminWorkspaceIslandFrame({
+  children,
+  workspace,
+}: {
+  children: ReactNode;
+  workspace: AdminWorkspaceProps | null;
+}) {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <div className="flex justify-end">
-        <AdminWorkspaceCommandPalette />
+        {workspace ? <AdminWorkspaceCommandPalette workspace={workspace} /> : null}
       </div>
       {children}
     </div>
@@ -37,8 +43,10 @@ export function AdminHomeIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
-        {routeAccess ? <AdminHomeBody routeAccess={routeAccess} /> : null}
+      <AdminWorkspaceIslandFrame workspace={workspace}>
+        {routeAccess && workspace ? (
+          <AdminHomeBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -49,7 +57,7 @@ export function SchemaOverviewIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
+      <AdminWorkspaceIslandFrame workspace={workspace}>
         {routeAccess && workspace ? (
           <SchemaOverviewBody routeAccess={routeAccess} workspace={workspace} />
         ) : null}
@@ -63,8 +71,10 @@ export function NewSchemaIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
-        {routeAccess ? <NewSchemaBody routeAccess={routeAccess} /> : null}
+      <AdminWorkspaceIslandFrame workspace={workspace}>
+        {routeAccess && workspace ? (
+          <NewSchemaBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -78,9 +88,13 @@ export function SchemaDetailIsland({
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
-        {routeAccess ? (
-          <SchemaDetailBody routeAccess={routeAccess} schemaId={schemaId} />
+      <AdminWorkspaceIslandFrame workspace={workspace}>
+        {routeAccess && workspace ? (
+          <SchemaDetailBody
+            routeAccess={routeAccess}
+            schemaId={schemaId}
+            workspace={workspace}
+          />
         ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
@@ -92,7 +106,7 @@ export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
+      <AdminWorkspaceIslandFrame workspace={workspace}>
         {routeAccess && workspace ? (
           <ContentIndexBody routeAccess={routeAccess} workspace={workspace} />
         ) : null}
@@ -106,8 +120,10 @@ export function NewContentIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
-        {routeAccess ? <NewContentBody routeAccess={routeAccess} /> : null}
+      <AdminWorkspaceIslandFrame workspace={workspace}>
+        {routeAccess && workspace ? (
+          <NewContentBody routeAccess={routeAccess} workspace={workspace} />
+        ) : null}
       </AdminWorkspaceIslandFrame>
     </AdminWorkspacePage>
   );
@@ -125,12 +141,13 @@ export function ContentRecordIsland({
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
-        {routeAccess ? (
+      <AdminWorkspaceIslandFrame workspace={workspace}>
+        {routeAccess && workspace ? (
           <ContentRecordBody
             routeAccess={routeAccess}
             recordId={recordId}
             schemaId={schemaId}
+            workspace={workspace}
           />
         ) : null}
       </AdminWorkspaceIslandFrame>
@@ -143,7 +160,7 @@ export function MediaIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
+      <AdminWorkspaceIslandFrame workspace={workspace}>
         {routeAccess && workspace ? (
           <MediaBody routeAccess={routeAccess} workspace={workspace} />
         ) : null}
@@ -157,7 +174,7 @@ export function TeamIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
+      <AdminWorkspaceIslandFrame workspace={workspace}>
         {routeAccess && workspace ? (
           <TeamBody routeAccess={routeAccess} workspace={workspace} />
         ) : null}
@@ -171,7 +188,7 @@ export function SettingsIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
+      <AdminWorkspaceIslandFrame workspace={workspace}>
         {routeAccess && workspace ? (
           <SettingsBody routeAccess={routeAccess} workspace={workspace} />
         ) : null}
@@ -185,7 +202,7 @@ export function AccountIsland({ workspace }: AdminWorkspaceIslandProps) {
 
   return (
     <AdminWorkspacePage>
-      <AdminWorkspaceIslandFrame>
+      <AdminWorkspaceIslandFrame workspace={workspace}>
         {routeAccess && workspace ? (
           <AccountBody routeAccess={routeAccess} workspace={workspace} />
         ) : null}

@@ -70,6 +70,9 @@ const workspacePropsSourcePath = path.resolve(
 const adminWorkspaceProviderSourcePath = path.resolve(
   "apps/web/src/admin/_workspace/admin-workspace-provider.tsx",
 );
+const adminCommandPaletteSourcePath = path.resolve(
+  "apps/web/src/admin/_workspace/admin-command-palette.tsx",
+);
 const mediaLibrarySourcePath = path.resolve(
   "apps/web/src/admin/_screens/media-library.tsx",
 );
@@ -348,6 +351,66 @@ test("Task 4 schema overview and content index use route-scoped collection state
   );
 });
 
+test("Task 5 editor dashboard and command palette use route-scoped state", async () => {
+  const providerSource = await readFile(adminWorkspaceProviderSourcePath, "utf8");
+  const schemaBuilderSource = await readFile(schemaBuilderSourcePath, "utf8");
+  const contentEditorSource = await readFile(contentEditorSourcePath, "utf8");
+  const adminHomeSource = await readFile(adminHomeSourcePath, "utf8");
+  const adminCommandPaletteSource = await readFile(
+    adminCommandPaletteSourcePath,
+    "utf8",
+  );
+
+  for (const [label, source] of [
+    ["schema-builder.tsx", schemaBuilderSource],
+    ["content-editor.tsx", contentEditorSource],
+    ["admin-home.tsx", adminHomeSource],
+    ["admin-command-palette.tsx", adminCommandPaletteSource],
+  ] as const) {
+    assert.doesNotMatch(
+      source,
+      /useAdminWorkspace(?:RouteAccess)?/,
+      `${label} should not import the old admin workspace context hooks`,
+    );
+  }
+
+  assert.match(
+    schemaBuilderSource,
+    /useAdminCollectionsState/,
+    "schema-builder.tsx should import the route-scoped collection state hook",
+  );
+  assert.match(
+    contentEditorSource,
+    /useAdminCollectionsState/,
+    "content-editor.tsx should import the route-scoped collection state hook",
+  );
+  assert.match(
+    contentEditorSource,
+    /useAdminRecordsState/,
+    "content-editor.tsx should import the route-scoped record state hook",
+  );
+  assert.match(
+    adminHomeSource,
+    /useAdminDashboardData/,
+    "admin-home.tsx should import the route-scoped dashboard data hook",
+  );
+  assert.match(
+    adminCommandPaletteSource,
+    /createAdminCommandPaletteItems/,
+    "admin-command-palette.tsx should assemble items from explicit command-palette data",
+  );
+  assert.match(
+    providerSource,
+    /useAdminRecordsState/,
+    "AdminWorkspaceProvider should compose record state during migration",
+  );
+  assert.match(
+    providerSource,
+    /\.\.\.recordsState/,
+    "AdminWorkspaceProvider should spread record state into the compatibility context",
+  );
+});
+
 test("Slice 2 media island forwards explicit route access to the retained body", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
@@ -571,8 +634,8 @@ test("Slice 15 admin home body requires explicit route access from the server wo
   );
   assert.match(
     bodySource,
-    /export function AdminHomeBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "AdminHomeBody should require explicit route access",
+    /export function AdminHomeBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "AdminHomeBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -604,13 +667,13 @@ test("Slice 16 schema builder bodies require explicit route access from the serv
   );
   assert.match(
     bodySource,
-    /export function NewSchemaBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "NewSchemaBody should require explicit route access",
+    /export function NewSchemaBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "NewSchemaBody should require explicit workspace and route access",
   );
   assert.match(
     bodySource,
-    /export function SchemaDetailBody\(\{\s*routeAccess,\s*schemaId,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*schemaId: string;\s*\}\)/,
-    "SchemaDetailBody should require explicit route access",
+    /export function SchemaDetailBody\(\{\s*routeAccess,\s*schemaId,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*schemaId: string;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "SchemaDetailBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -622,10 +685,10 @@ test("Slice 16 schema builder bodies require explicit route access from the serv
     /<SchemaBuilderRoute\s+mode="edit"\s+schemaId=\{schemaId\}\s*\/>/,
     "SchemaDetailBody should not rely on the schema builder route provider fallback",
   );
-  assert.match(
+  assert.doesNotMatch(
     schemaBuilderSource,
-    /function SchemaBuilderRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<SchemaBuilderContent\s+routeAccess=\{providerAccess\}/,
-    "SchemaBuilderRoute should keep the provider fallback wrapper for direct production hook hits",
+    /SchemaBuilderRouteWithProviderAccess/,
+    "SchemaBuilderRoute should not keep a provider fallback after editor state migration",
   );
 });
 
@@ -685,13 +748,13 @@ test("Slice 18 content editor bodies require explicit route access from the serv
   );
   assert.match(
     bodySource,
-    /export function NewContentBody\(\{\s*routeAccess,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*\}\)/,
-    "NewContentBody should require explicit route access",
+    /export function NewContentBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "NewContentBody should require explicit workspace and route access",
   );
   assert.match(
     bodySource,
-    /export function ContentRecordBody\(\{\s*recordId,\s*routeAccess,\s*schemaId,\s*\}: \{\s*recordId: string;\s*routeAccess: AdminWorkspaceRouteAccessState;\s*schemaId: string;\s*\}\)/,
-    "ContentRecordBody should require explicit route access",
+    /export function ContentRecordBody\(\{\s*recordId,\s*routeAccess,\s*schemaId,\s*workspace,\s*\}: \{\s*recordId: string;\s*routeAccess: AdminWorkspaceRouteAccessState;\s*schemaId: string;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
+    "ContentRecordBody should require explicit workspace and route access",
   );
   assert.doesNotMatch(
     bodySource,
@@ -703,10 +766,10 @@ test("Slice 18 content editor bodies require explicit route access from the serv
     /<ContentEditorRoute\s+mode="edit"\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>/,
     "ContentRecordBody should not rely on the content editor route provider fallback",
   );
-  assert.match(
+  assert.doesNotMatch(
     contentEditorSource,
-    /function ContentEditorRouteWithProviderAccess\([\s\S]*?useAdminWorkspaceRouteAccess\(route\)[\s\S]*?<ContentEditorContent\s+routeAccess=\{providerAccess\}/,
-    "ContentEditorRoute should keep the provider fallback wrapper for direct production hook hits",
+    /ContentEditorRouteWithProviderAccess/,
+    "ContentEditorRoute should not keep a provider fallback after editor state migration",
   );
 });
 
@@ -1002,23 +1065,23 @@ test("Slice 24 schema builder islands consume serialized workspace route access"
   );
   assert.match(
     newSchemaIslandSource,
-    /<NewSchemaBody\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "NewSchemaIsland should pass explicit route access into the retained schema builder body",
+    /<NewSchemaBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "NewSchemaIsland should pass explicit workspace and route access into the retained schema builder body",
   );
   assert.match(
     schemaDetailIslandSource,
-    /<SchemaDetailBody\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>/,
-    "SchemaDetailIsland should pass explicit route access into the retained schema builder body",
+    /<SchemaDetailBody\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s+workspace=\{workspace\}\s*\/>/,
+    "SchemaDetailIsland should pass explicit workspace and route access into the retained schema builder body",
   );
   assert.match(
     bodySource,
-    /<SchemaBuilderRoute\s+mode="create"\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "NewSchemaBody should forward route access into the retained schema builder route",
+    /<SchemaBuilderRoute\s+mode="create"\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "NewSchemaBody should forward workspace and route access into the retained schema builder route",
   );
   assert.match(
     bodySource,
-    /<SchemaBuilderRoute\s+mode="edit"\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>/,
-    "SchemaDetailBody should forward route access into the retained schema builder route",
+    /<SchemaBuilderRoute\s+mode="edit"\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s+workspace=\{workspace\}\s*\/>/,
+    "SchemaDetailBody should forward workspace and route access into the retained schema builder route",
   );
   assert.match(
     schemaBuilderSource,
@@ -1094,23 +1157,23 @@ test("Slice 9 content editor islands consume serialized route access from server
 
   assert.match(
     workspaceSource,
-    /export function NewContentIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<NewContentBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    /export function NewContentIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<NewContentBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>[\s\S]*?\}/,
     "NewContentIsland should consume serialized route access from the server workspace prop",
   );
   assert.match(
     workspaceSource,
-    /export function ContentRecordIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{[\s\S]*?recordId: string;[\s\S]*?schemaId: string;[\s\S]*?\}\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentRecordBody\s+routeAccess=\{routeAccess\}\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>[\s\S]*?\}/,
+    /export function ContentRecordIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{[\s\S]*?recordId: string;[\s\S]*?schemaId: string;[\s\S]*?\}\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentRecordBody\s+routeAccess=\{routeAccess\}\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s+workspace=\{workspace\}\s*\/>[\s\S]*?\}/,
     "ContentRecordIsland should consume serialized route access from the server workspace prop",
   );
   assert.match(
     bodySource,
-    /<ContentEditorRoute\s+mode="create"\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "NewContentBody should forward route access into the retained content editor route",
+    /<ContentEditorRoute\s+mode="create"\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "NewContentBody should forward workspace and route access into the retained content editor route",
   );
   assert.match(
     bodySource,
-    /<ContentEditorRoute\s+mode="edit"\s+recordId=\{recordId\}\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s*\/>/,
-    "ContentRecordBody should forward route access into the retained content editor route",
+    /<ContentEditorRoute\s+mode="edit"\s+recordId=\{recordId\}\s+routeAccess=\{routeAccess\}\s+schemaId=\{schemaId\}\s+workspace=\{workspace\}\s*\/>/,
+    "ContentRecordBody should forward workspace and route access into the retained content editor route",
   );
   assert.match(
     contentEditorSource,
@@ -1137,13 +1200,13 @@ test("Slice 10 admin home island consumes serialized route access from server wo
 
   assert.match(
     workspaceSource,
-    /export function AdminHomeIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<AdminHomeBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    /export function AdminHomeIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<AdminHomeBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>[\s\S]*?\}/,
     "AdminHomeIsland should consume serialized route access from the server workspace prop",
   );
   assert.match(
     bodySource,
-    /<AdminHomeRoute\s+routeAccess=\{routeAccess\}\s*\/>/,
-    "AdminHomeBody should forward route access into the retained admin home route",
+    /<AdminHomeRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
+    "AdminHomeBody should forward workspace and route access into the retained admin home route",
   );
   assert.match(
     adminHomeSource,

@@ -12,10 +12,12 @@ import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-pro
 
 export function AdminHomeBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <AdminHomeRoute routeAccess={routeAccess} />;
+  return <AdminHomeRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function SchemaOverviewBody({
@@ -30,21 +32,36 @@ export function SchemaOverviewBody({
 
 export function NewSchemaBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <SchemaBuilderRoute mode="create" routeAccess={routeAccess} />;
+  return (
+    <SchemaBuilderRoute
+      mode="create"
+      routeAccess={routeAccess}
+      workspace={workspace}
+    />
+  );
 }
 
 export function SchemaDetailBody({
   routeAccess,
   schemaId,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
   schemaId: string;
+  workspace: AdminWorkspaceProps;
 }) {
   return (
-    <SchemaBuilderRoute mode="edit" routeAccess={routeAccess} schemaId={schemaId} />
+    <SchemaBuilderRoute
+      mode="edit"
+      routeAccess={routeAccess}
+      schemaId={schemaId}
+      workspace={workspace}
+    />
   );
 }
 
@@ -60,20 +77,30 @@ export function ContentIndexBody({
 
 export function NewContentBody({
   routeAccess,
+  workspace,
 }: {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 }) {
-  return <ContentEditorRoute mode="create" routeAccess={routeAccess} />;
+  return (
+    <ContentEditorRoute
+      mode="create"
+      routeAccess={routeAccess}
+      workspace={workspace}
+    />
+  );
 }
 
 export function ContentRecordBody({
   recordId,
   routeAccess,
   schemaId,
+  workspace,
 }: {
   recordId: string;
   routeAccess: AdminWorkspaceRouteAccessState;
   schemaId: string;
+  workspace: AdminWorkspaceProps;
 }) {
   return (
     <ContentEditorRoute
@@ -81,6 +108,7 @@ export function ContentRecordBody({
       recordId={recordId}
       routeAccess={routeAccess}
       schemaId={schemaId}
+      workspace={workspace}
     />
   );
 }

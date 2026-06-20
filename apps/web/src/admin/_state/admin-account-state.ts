@@ -93,6 +93,11 @@ export function createAdminAccountUserFromWorkspaceAccount(
   };
 }
 
+export async function signOutAdminSession() {
+  await authClient.signOut();
+  window.location.replace(buildDatamixAdminPath("/login"));
+}
+
 function applyAccountProfileOverride(
   initialUser: AdminAccountUser | null,
   profileOverride: AdminAccountProfileOverride | null,
@@ -189,10 +194,7 @@ export function useAdminAccountState({ initialUser }: AdminAccountStateOptions) 
     }
   }, [accountImage, accountName]);
 
-  const signOut = React.useCallback(async () => {
-    await authClient.signOut();
-    window.location.replace(buildDatamixAdminPath("/login"));
-  }, []);
+  const signOut = React.useCallback(signOutAdminSession, []);
 
   const user = React.useMemo(
     () => applyAccountProfileOverride(initialUser, accountProfileOverride),

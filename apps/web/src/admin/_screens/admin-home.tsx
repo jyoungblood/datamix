@@ -24,12 +24,15 @@ import {
   useDelayedLoadingIndicator,
 } from "../_components/admin-skeleton";
 import { AdminStateBox } from "../_components/admin-state";
+import { useAdminApiKeysState } from "../_state/admin-api-keys-state";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
+import { useAdminDashboardData } from "../_state/admin-dashboard-data";
+import { useAdminMediaState } from "../_state/admin-media-state";
+import { useAdminRolesState } from "../_state/admin-roles-state";
+import { useAdminTeamState } from "../_state/admin-team-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
 import { adminRoutes, type AdminWorkspaceRoute } from "../_workspace/admin-routes";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,10 +70,12 @@ type DatasetStatusInput = {
 
 type AdminHomeContentProps = {
   routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 type AdminHomeRouteProps = {
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
 };
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
@@ -163,67 +168,71 @@ function createDatasetStatus({
   };
 }
 
-export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
-  const workspace = useAdminWorkspace();
+export function AdminHomeContent({
+  routeAccess,
+  workspace,
+}: AdminHomeContentProps) {
   const access = routeAccess;
+  const { authorization, permissions, role, account } = workspace;
+  const collectionsState = useAdminCollectionsState();
+  const mediaState = useAdminMediaState();
+  const rolesState = useAdminRolesState({
+    currentRoleId: role.id,
+    permissions,
+  });
+  const teamState = useAdminTeamState({
+    availableRoles: rolesState.availableRoles,
+    currentUserId: account.id,
+    permissions,
+  });
+  const apiKeysState = useAdminApiKeysState({ permissions });
   const {
-    apiKeys,
-    apiKeysLoadError,
-    availableRoles,
     collectionLoadError,
     collections,
-    hasLoadedApiKeys,
     hasLoadedCollections,
-    hasLoadedMediaAssets,
-    hasLoadedRoles,
-    hasLoadedUsers,
-    isLoadingApiKeys,
     isLoadingCollections,
+  } = collectionsState;
+  const {
+    hasLoadedMediaAssets,
     isLoadingMediaAssets,
-    isLoadingRoles,
-    isLoadingUsers,
     mediaAssets,
     mediaLoadError,
-    permissions,
-    prefetchAdminRoute,
+  } = mediaState;
+  const {
+    availableRoles,
+    hasLoadedRoles,
+    isLoadingRoles,
     rolesLoadError,
+  } = rolesState;
+  const {
+    hasLoadedUsers,
+    isLoadingUsers,
     users,
     usersLoadError,
-  } = workspace;
-  const { contentReadyCount, recentSchemas, totalFieldCount } = React.useMemo(() => {
-    const nextRecentSchemas = [...collections]
-      .sort((firstCollection, secondCollection) => {
-        const firstTime = Date.parse(firstCollection.updatedAt);
-        const secondTime = Date.parse(secondCollection.updatedAt);
-
-        return (
-          (Number.isNaN(secondTime) ? 0 : secondTime) -
-          (Number.isNaN(firstTime) ? 0 : firstTime)
-        );
-      })
-      .slice(0, 4);
-
-    return {
-      contentReadyCount: collections.filter(
-        (collection) => collection.definition.fields.length > 0,
-      ).length,
-      recentSchemas: nextRecentSchemas,
-      totalFieldCount: collections.reduce(
-        (count, collection) => count + collection.definition.fields.length,
-        0,
-      ),
-    };
-  }, [collections]);
-  const activeApiKeyCount = React.useMemo(
-    () => apiKeys.filter((apiKey) => !apiKey.revokedAt).length,
-    [apiKeys],
-  );
+  } = teamState;
+  const {
+    apiKeysLoadError,
+    hasLoadedApiKeys,
+    isLoadingApiKeys,
+  } = apiKeysState;
+  const {
+    activeApiKeyCount,
+    contentReadyCount,
+    recentSchemas,
+    roleDataIsAllowed,
+    totalFieldCount,
+  } = useAdminDashboardData({
+    apiKeysState,
+    collectionsState,
+    mediaState,
+    permissions,
+    rolesState,
+    teamState,
+  });
   const isInitialCollectionLoad =
     permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError;
   const shouldShowRecentSchemaSkeleton =
     useDelayedLoadingIndicator(isInitialCollectionLoad);
-  const roleDataIsAllowed =
-    permissions.canAccessTeamAccess || permissions.canAccessSettingsWorkspace;
   const collectionStatus = createDatasetStatus({
     error: collectionLoadError,
     hasLoaded: hasLoadedCollections,
@@ -281,7 +290,7 @@ export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
     restrictedBody: "This role cannot access settings data.",
   });
   const accountStatus: OverviewStatus = {
-    body: `${workspace.user.displayName} is signed in with the ${workspace.role.label} role.`,
+    body: `${account.name || account.email || "Datamix Admin"} is signed in with the ${role.label} role.`,
     label: "Ready",
     variant: "secondary",
   };
@@ -394,12 +403,12 @@ export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
       }),
     },
     {
-      detail: workspace.user.email ?? "Current session",
+      detail: account.email ?? "Current session",
       icon: UserCircle,
       isAllowed: true,
       route: adminRoutes.account(),
       status: accountStatus,
-      value: workspace.role.label,
+      value: role.label,
     },
   ];
   const statusRows: AdminHomeStatusRow[] = [
@@ -440,10 +449,6 @@ export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
       status: apiKeysStatus,
     },
   ];
-  React.useEffect(() => {
-    void prefetchAdminRoute({ section: "home" });
-  }, [prefetchAdminRoute]);
-
   return (
     <>
       <AdminPageHeader title="Workspace overview" />
@@ -609,10 +614,10 @@ export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
                   Current role
                 </div>
                 <p className="mt-2 font-data text-xl text-slate-950">
-                  {workspace.role.label}
+                  {role.label}
                 </p>
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  {workspace.authorization.permissions.length} permissions granted.
+                  {authorization.permissions.length} permissions granted.
                 </p>
               </div>
               <a
@@ -665,18 +670,9 @@ export function AdminHomeContent({ routeAccess }: AdminHomeContentProps) {
   );
 }
 
-function AdminHomeRouteWithProviderAccess({ route }: { route: AdminWorkspaceRoute }) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <AdminHomeContent routeAccess={providerAccess} />;
-}
-
-export function AdminHomeRoute({ routeAccess }: AdminHomeRouteProps = {}) {
-  const route = adminRoutes.home();
-
-  return routeAccess ? (
-    <AdminHomeContent routeAccess={routeAccess} />
-  ) : (
-    <AdminHomeRouteWithProviderAccess route={route} />
-  );
+export function AdminHomeRoute({
+  routeAccess,
+  workspace,
+}: AdminHomeRouteProps) {
+  return <AdminHomeContent routeAccess={routeAccess} workspace={workspace} />;
 }

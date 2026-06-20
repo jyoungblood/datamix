@@ -26,15 +26,11 @@ import {
   summarizeRecord,
 } from "../_lib/record-drafts";
 import { formatIssuePath } from "../_lib/schema-drafts";
-import {
-  adminRoutes,
-  type AdminWorkspaceRoute,
-} from "../_workspace/admin-routes";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
+import { useAdminRecordsState } from "../_state/admin-records-state";
 import type { AdminWorkspaceRouteAccessState } from "../_workspace/admin-permissions";
-import {
-  useAdminWorkspace,
-  useAdminWorkspaceRouteAccess,
-} from "../_workspace/admin-workspace-hooks";
+import { adminRoutes } from "../_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "../_workspace/admin-workspace-props";
 
 type ContentEditorMode = "create" | "edit";
 
@@ -43,13 +39,15 @@ type ContentEditorContentProps = {
   recordId?: string;
   routeAccess: AdminWorkspaceRouteAccessState;
   schemaId?: string;
+  workspace: AdminWorkspaceProps;
 };
 
 type ContentEditorRouteProps = {
   mode: ContentEditorMode;
   recordId?: string;
-  routeAccess?: AdminWorkspaceRouteAccessState;
+  routeAccess: AdminWorkspaceRouteAccessState;
   schemaId?: string;
+  workspace: AdminWorkspaceProps;
 };
 
 const selectClassName =
@@ -68,20 +66,21 @@ export function ContentEditorContent({
   recordId,
   routeAccess,
   schemaId,
+  workspace,
 }: ContentEditorContentProps) {
-  const workspace = useAdminWorkspace();
   const access = routeAccess;
   const {
     collectionLoadError,
     collections,
     hasLoadedCollections,
-    hasLoadedRecords,
     isLoadingCollections,
+    loadCollections,
+  } = useAdminCollectionsState();
+  const {
+    hasLoadedRecords,
     isLoadingRecords,
     isSavingRecord,
-    loadCollections,
     loadRecords,
-    permissions,
     recordCollectionName,
     recordDraft,
     recordIssues,
@@ -89,13 +88,13 @@ export function ContentEditorContent({
     recordMessage,
     records,
     recordSupportedFieldNames,
-    role,
     saveRecord,
     selectedRecord,
     selectRecord,
     startNewRecord,
     updateRecordDraftValue,
-  } = workspace;
+  } = useAdminRecordsState();
+  const { permissions, role } = workspace;
   const decodedSchemaId = schemaId ? decodeSchemaId(schemaId) : null;
   const [selectedSchemaId, setSelectedSchemaId] = React.useState<string | null>(
     decodedSchemaId,
@@ -592,29 +591,9 @@ export function ContentEditorContent({
   );
 }
 
-function ContentEditorRouteWithProviderAccess({
-  route,
-  ...props
-}: Omit<ContentEditorRouteProps, "routeAccess"> & {
-  route: AdminWorkspaceRoute;
-}) {
-  const providerAccess = useAdminWorkspaceRouteAccess(route);
-
-  return <ContentEditorContent routeAccess={providerAccess} {...props} />;
-}
-
 export function ContentEditorRoute({
   routeAccess,
   ...props
 }: ContentEditorRouteProps) {
-  const route =
-    props.mode === "create"
-      ? adminRoutes.content.newRecord()
-      : adminRoutes.content.record(props.schemaId ?? "", props.recordId ?? "");
-
-  return routeAccess ? (
-    <ContentEditorContent routeAccess={routeAccess} {...props} />
-  ) : (
-    <ContentEditorRouteWithProviderAccess route={route} {...props} />
-  );
+  return <ContentEditorContent routeAccess={routeAccess} {...props} />;
 }

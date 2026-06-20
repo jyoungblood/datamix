@@ -6,45 +6,57 @@ import * as React from "react";
 import {
   CommandPaletteDialog,
   filterCommandPaletteItems,
-  type CommandPaletteItem,
 } from "../_components/command-palette-dialog";
-import { summarizeRecord } from "../_lib/record-drafts";
-import { adminRoutes, type AdminWorkspaceRoute } from "./admin-routes";
-import { useAdminWorkspace } from "./admin-workspace-hooks";
+import { signOutAdminSession } from "../_state/admin-account-state";
+import { createAdminCommandPaletteItems } from "../_state/admin-command-palette-data";
+import { useAdminCollectionsState } from "../_state/admin-collections-state";
+import type { AdminWorkspaceProps } from "./admin-workspace-props";
 
 function navigateTo(href: string) {
   window.location.href = href;
 }
 
-function createNavigationCommand(route: AdminWorkspaceRoute): CommandPaletteItem {
-  return {
-    group: "navigation",
-    id: `navigate-${route.id}`,
-    keywords: [route.id, route.section, route.label],
-    onSelect: () => navigateTo(route.href),
-    subtitle: route.description,
-    title: `Open ${route.label}`,
-  };
-}
+type AdminWorkspaceCommandPaletteProps = {
+  workspace: AdminWorkspaceProps;
+};
 
-export function AdminWorkspaceCommandPalette() {
-  const workspace = useAdminWorkspace();
+export function AdminWorkspaceCommandPalette({
+  workspace,
+}: AdminWorkspaceCommandPaletteProps) {
+  const {
+    collections,
+    hasLoadedCollections,
+    isLoadingCollections,
+    loadCollections,
+  } = useAdminCollectionsState();
   const [isOpen, setIsOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const deferredQuery = React.useDeferredValue(query);
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const currentCollection = workspace.recordCollectionName
-    ? workspace.collections.find(
-        (collection) =>
-          collection.definition.name === workspace.recordCollectionName,
-      ) ?? null
-    : null;
+
+  const loadPaletteCollections = React.useCallback(() => {
+    if (
+      !workspace.permissions.canViewCollections ||
+      hasLoadedCollections ||
+      isLoadingCollections
+    ) {
+      return;
+    }
+
+    void loadCollections();
+  }, [
+    hasLoadedCollections,
+    isLoadingCollections,
+    loadCollections,
+    workspace.permissions.canViewCollections,
+  ]);
 
   const openPalette = React.useCallback(() => {
+    loadPaletteCollections();
     setQuery("");
     setActiveIndex(0);
     setIsOpen(true);
-  }, []);
+  }, [loadPaletteCollections]);
 
   const closePalette = React.useCallback(() => {
     setIsOpen(false);
@@ -66,6 +78,7 @@ export function AdminWorkspaceCommandPalette() {
           return false;
         }
 
+        loadPaletteCollections();
         setQuery("");
         setActiveIndex(0);
         return true;
@@ -77,114 +90,18 @@ export function AdminWorkspaceCommandPalette() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [loadPaletteCollections]);
 
   const commandPaletteItems = React.useMemo(() => {
-    const routeCommands = [
-      adminRoutes.home(),
-      adminRoutes.schema.index(),
-      adminRoutes.content.index(),
-      adminRoutes.media(),
-      adminRoutes.team(),
-      adminRoutes.settings(),
-      adminRoutes.account(),
-    ].map(createNavigationCommand);
-    const createCommands: CommandPaletteItem[] = [
-      {
-        disabled: !workspace.permissions.canCreateCollections,
-        group: "create",
-        id: "create-schema",
-        keywords: ["new", "create", "schema", "collection", "model"],
-        onSelect: () => navigateTo(adminRoutes.schema.new().href),
-        subtitle: workspace.permissions.canCreateCollections
-          ? "Create a schema in the routed builder."
-          : "Schema creation is restricted for the current role.",
-        title: "New schema",
-      },
-    ];
-
-    createCommands.push({
-      disabled: !workspace.permissions.canCreateRecords,
-      group: "create",
-      id: "create-record",
-      keywords: ["new", "create", "record", "content"],
-      onSelect: () => navigateTo(adminRoutes.content.newRecord().href),
-      subtitle: workspace.permissions.canCreateRecords
-        ? "Choose a schema and create content."
-        : "Content creation is restricted for the current role.",
-      title: "New content",
+    return createAdminCommandPaletteItems({
+      collections,
+      onNavigate: navigateTo,
+      onSignOut: signOutAdminSession,
+      permissions: workspace.permissions,
+      recordCollectionName: null,
+      records: [],
     });
-
-    const collectionCommands = workspace.collections.map((collection) => ({
-      group: "collections" as const,
-      id: `open-schema-${collection.id}`,
-      keywords: [
-        "schema",
-        "collection",
-        "model",
-        collection.definition.name,
-        collection.definition.label,
-      ],
-      onSelect: () => navigateTo(adminRoutes.schema.detail(collection.id).href),
-      subtitle: `Edit ${collection.definition.fields.length} schema fields.`,
-      title: `Schema: ${collection.definition.label}`,
-    }));
-    const recordCommands: CommandPaletteItem[] = currentCollection
-      ? workspace.records.map((record) => ({
-          group: "records",
-          id: `open-record-${currentCollection.definition.name}-${record.id}`,
-          keywords: [
-            "record",
-            "content",
-            currentCollection.definition.name,
-            currentCollection.definition.label,
-            record.id,
-          ],
-          onSelect: () =>
-            navigateTo(
-              adminRoutes.content.record(
-                currentCollection.id,
-                record.id,
-              ).href,
-            ),
-          subtitle: `Open ${currentCollection.definition.label} record ${record.id}.`,
-          title: summarizeRecord(currentCollection.definition, record),
-        }))
-      : [];
-    const accountCommands: CommandPaletteItem[] = [
-      {
-        group: "account",
-        id: "account-profile",
-        keywords: ["account", "profile", "session"],
-        onSelect: () => navigateTo(adminRoutes.account().href),
-        subtitle: "Open profile and session controls.",
-        title: "Open account",
-      },
-      {
-        group: "account",
-        id: "sign-out",
-        keywords: ["logout", "log out", "sign out", "session"],
-        onSelect: workspace.signOut,
-        subtitle: "End the current admin session.",
-        title: "Sign out",
-      },
-    ];
-
-    return [
-      ...routeCommands,
-      ...createCommands,
-      ...collectionCommands,
-      ...recordCommands,
-      ...accountCommands,
-    ];
-  }, [
-    currentCollection,
-    workspace.collections,
-    workspace.permissions.canCreateCollections,
-    workspace.permissions.canCreateRecords,
-    workspace.records,
-    workspace.signOut,
-  ]);
+  }, [collections, workspace.permissions]);
   const filteredCommandPaletteItems = filterCommandPaletteItems(
     commandPaletteItems,
     deferredQuery,

@@ -16,23 +16,13 @@ import { Button } from "@/components/ui/button";
 import type { PublicApiRuntimeSummary } from "@/lib/api-keys";
 import { authClient } from "@/lib/auth-client";
 import type { StoredCollectionDefinition } from "@/lib/collection-definitions";
-import {
-  CollectionRecordRequestError,
-  createCollectionRecord,
-  listCollectionRecords,
-  updateCollectionRecord,
-  type StoredCollectionRecord,
-} from "@/lib/records";
+import type { StoredCollectionRecord } from "@/lib/records";
 import { buildDatamixAdminPath } from "@/lib/runtime";
 import { loadSessionAccess, SessionAccessError } from "@/lib/session";
 import { useSetupStatus } from "@/lib/setup";
 import type { DatamixUserSummary } from "@/lib/users";
 import type { ApiKeyDraft } from "../_lib/api-key-drafts";
 import {
-  createGeneratedRecordFormState,
-  createGeneratedRecordFormStateFromRecord,
-  createPersistedRecordPayload,
-  upsertRecord,
   type GeneratedRecordFormState,
   type GeneratedRecordFormValue,
 } from "../_lib/record-drafts";
@@ -45,6 +35,7 @@ import {
 } from "../_state/admin-account-state";
 import { useAdminCollectionsState } from "../_state/admin-collections-state";
 import { useAdminMediaState } from "../_state/admin-media-state";
+import { useAdminRecordsState } from "../_state/admin-records-state";
 import { useAdminRolesState } from "../_state/admin-roles-state";
 import { useAdminTeamState } from "../_state/admin-team-state";
 import type { AdminWorkspaceRouteSection } from "./admin-routes";
@@ -256,6 +247,7 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
   const accountState = useAdminAccountState({ initialUser: initialAccountUser });
   const collectionsState = useAdminCollectionsState();
   const mediaState = useAdminMediaState();
+  const recordsState = useAdminRecordsState();
   const {
     hasLoadedCollections,
     isLoadingCollections,
@@ -269,32 +261,16 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     resetMediaAssetList,
     resetMediaWorkspace,
   } = mediaState;
+  const { resetRecordWorkspace } = recordsState;
   const prefetchedRouteSectionsRef = React.useRef(
     new Set<AdminWorkspaceRouteSection>(),
   );
-  const recordLoadRequestId = React.useRef(0);
   const [authorization, setAuthorization] =
     React.useState<DatamixAuthorizationSummary | null>(null);
   const [authorizationError, setAuthorizationError] = React.useState<string | null>(null);
   const [authorizationStatusCode, setAuthorizationStatusCode] = React.useState<number | null>(
     null,
   );
-  const [recordCollectionName, setRecordCollectionName] = React.useState<string | null>(
-    null,
-  );
-  const [records, setRecords] = React.useState<StoredCollectionRecord[]>([]);
-  const [selectedRecordId, setSelectedRecordId] = React.useState<string | null>(null);
-  const [recordDraft, setRecordDraft] = React.useState<GeneratedRecordFormState>({});
-  const [recordIssues, setRecordIssues] = React.useState<DatamixSchemaValidationIssue[]>(
-    [],
-  );
-  const [recordLoadError, setRecordLoadError] = React.useState<string | null>(null);
-  const [recordMessage, setRecordMessage] = React.useState<string | null>(null);
-  const [recordSupportedFieldNames, setRecordSupportedFieldNames] =
-    React.useState("none");
-  const [hasLoadedRecords, setHasLoadedRecords] = React.useState(false);
-  const [isLoadingRecords, setIsLoadingRecords] = React.useState(false);
-  const [isSavingRecord, setIsSavingRecord] = React.useState(false);
   const permissions = React.useMemo(
     () => (authorization ? createAdminWorkspacePermissions(authorization) : null),
     [authorization],
@@ -365,93 +341,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     loadApiKeyData,
     resetApiKeyWorkspace,
   } = apiKeysState;
-
-  const resetRecordWorkspace = React.useCallback(() => {
-    recordLoadRequestId.current += 1;
-    setRecordCollectionName(null);
-    setRecords([]);
-    setSelectedRecordId(null);
-    setRecordDraft({});
-    setRecordIssues([]);
-    setRecordLoadError(null);
-    setRecordMessage(null);
-    setRecordSupportedFieldNames("none");
-    setHasLoadedRecords(false);
-    setIsLoadingRecords(false);
-    setIsSavingRecord(false);
-  }, []);
-
-  const loadRecords = React.useCallback(
-    async (
-      collection: StoredCollectionDefinition,
-      options?: { selectedRecordId?: string | null },
-    ) => {
-      const nextCollectionName = collection.definition.name;
-      const isSameCollection = recordCollectionName === nextCollectionName;
-      const requestId = recordLoadRequestId.current + 1;
-
-      recordLoadRequestId.current = requestId;
-      setRecordCollectionName(nextCollectionName);
-      setRecordIssues([]);
-      setRecordLoadError(null);
-      setHasLoadedRecords(false);
-      setIsLoadingRecords(true);
-      setRecordMessage(null);
-      setRecords([]);
-      setSelectedRecordId(options?.selectedRecordId ?? null);
-      setRecordDraft(createGeneratedRecordFormState(collection.definition));
-      setRecordSupportedFieldNames("none");
-
-      try {
-        const result = await listCollectionRecords(nextCollectionName);
-
-        if (recordLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        const preferredRecordId = options?.selectedRecordId ?? null;
-        const nextSelectedRecordId =
-          preferredRecordId && result.records.some((record) => record.id === preferredRecordId)
-            ? preferredRecordId
-            : selectedRecordId &&
-                isSameCollection &&
-                result.records.some((record) => record.id === selectedRecordId)
-              ? selectedRecordId
-              : null;
-        const nextSelectedRecord = nextSelectedRecordId
-          ? result.records.find((record) => record.id === nextSelectedRecordId) ?? null
-          : null;
-
-        setRecords(result.records);
-        setRecordSupportedFieldNames(result.supportedFieldNames);
-        setHasLoadedRecords(true);
-        setSelectedRecordId(nextSelectedRecordId);
-        setRecordDraft(
-          nextSelectedRecord
-            ? createGeneratedRecordFormStateFromRecord(
-                collection.definition,
-                nextSelectedRecord,
-              )
-            : createGeneratedRecordFormState(collection.definition),
-        );
-      } catch (error) {
-        if (recordLoadRequestId.current !== requestId) {
-          return;
-        }
-
-        setRecords([]);
-        setRecordSupportedFieldNames("none");
-        setRecordLoadError(
-          error instanceof Error ? error.message : "Unable to load collection records.",
-        );
-      } finally {
-        if (recordLoadRequestId.current === requestId) {
-          setIsLoadingRecords(false);
-        }
-      }
-    },
-    [recordCollectionName, selectedRecordId],
-  );
 
   const prefetchAdminRoute = React.useCallback(
     async (route: { section: AdminWorkspaceRouteSection }) => {
@@ -563,89 +452,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
       loadUserList,
       permissions,
     ],
-  );
-
-  const selectRecord = React.useCallback(
-    (collection: StoredCollectionDefinition, record: StoredCollectionRecord | null) => {
-      setRecordCollectionName(collection.definition.name);
-      setSelectedRecordId(record?.id ?? null);
-      setRecordDraft(
-        record
-          ? createGeneratedRecordFormStateFromRecord(collection.definition, record)
-          : createGeneratedRecordFormState(collection.definition),
-      );
-      setRecordIssues([]);
-      setRecordMessage(null);
-    },
-    [],
-  );
-
-  const startNewRecord = React.useCallback(
-    (collection: StoredCollectionDefinition) => {
-      selectRecord(collection, null);
-    },
-    [selectRecord],
-  );
-
-  const updateRecordDraftValue = React.useCallback(
-    (fieldName: string, nextValue: GeneratedRecordFormValue) => {
-      setRecordDraft((currentRecordDraft) => ({
-        ...currentRecordDraft,
-        [fieldName]: nextValue,
-      }));
-      setRecordIssues([]);
-      setRecordMessage(null);
-    },
-    [],
-  );
-
-  const saveRecord = React.useCallback(
-    async (collection: StoredCollectionDefinition) => {
-      const currentSelectedRecordId =
-        recordCollectionName === collection.definition.name ? selectedRecordId : null;
-      const persistedRecordPayload = createPersistedRecordPayload(
-        collection.definition,
-        recordDraft,
-      );
-
-      setIsSavingRecord(true);
-      setRecordIssues([]);
-      setRecordMessage(null);
-
-      try {
-        const result = currentSelectedRecordId
-          ? await updateCollectionRecord(
-              collection.definition.name,
-              currentSelectedRecordId,
-              persistedRecordPayload,
-            )
-          : await createCollectionRecord(collection.definition.name, persistedRecordPayload);
-
-        setRecordCollectionName(collection.definition.name);
-        setRecords((currentRecords) => upsertRecord(currentRecords, result.record));
-        setSelectedRecordId(result.record.id);
-        setRecordSupportedFieldNames(result.supportedFieldNames);
-        setRecordDraft(
-          createGeneratedRecordFormStateFromRecord(collection.definition, result.record),
-        );
-        setRecordMessage(result.message);
-        setRecordLoadError(null);
-
-        return result.record;
-      } catch (error) {
-        if (error instanceof CollectionRecordRequestError) {
-          setRecordIssues(error.issues ?? []);
-          setRecordMessage(error.message);
-        } else {
-          setRecordMessage(error instanceof Error ? error.message : "Unable to save record.");
-        }
-
-        return null;
-      } finally {
-        setIsSavingRecord(false);
-      }
-    },
-    [recordCollectionName, recordDraft, selectedRecordId],
   );
 
   React.useEffect(() => {
@@ -775,10 +581,6 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     resetUserList();
   }, [permissions, resetUserList]);
 
-  const selectedRecord =
-    selectedRecordId && recordCollectionName
-      ? records.find((record) => record.id === selectedRecordId) ?? null
-      : null;
   const isResolvingInitialSession =
     !session.data &&
     !setupStatus.errorMessage &&
@@ -792,28 +594,13 @@ export function AdminWorkspaceProvider({ children }: AdminWorkspaceProviderProps
     ...apiKeysState,
     ...collectionsState,
     ...mediaState,
+    ...recordsState,
     ...rolesState,
     ...teamState,
     authorization: currentAuthorization,
-    hasLoadedRecords,
-    isLoadingRecords,
-    isSavingRecord,
-    loadRecords,
     permissions: currentPermissions,
     prefetchAdminRoute,
-    recordDraft,
-    recordCollectionName,
-    recordIssues,
-    recordLoadError,
-    recordMessage,
-    records,
-    recordSupportedFieldNames,
     role: currentAuthorization.role,
-    saveRecord,
-    selectedRecord,
-    selectRecord,
-    startNewRecord,
-    updateRecordDraftValue,
   };
 
   const renderAdminWorkspaceContent = () => {

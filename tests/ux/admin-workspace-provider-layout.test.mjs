@@ -261,10 +261,14 @@ assert(
 );
 
 assert(
-  providerSource.includes('route.section === "home"') &&
-    providerSource.includes("dashboardPrefetchTasks") &&
-    adminHomeSource.includes('void prefetchAdminRoute({ section: "home" })'),
-  "The admin dashboard should use the route-aware data prefetcher for initial dashboard loads.",
+  adminHomeSource.includes("useAdminDashboardData") &&
+    existsSync(
+      path.join(
+        repoRoot,
+        "apps/web/src/admin/_state/admin-dashboard-data.ts",
+      ),
+    ),
+  "The admin dashboard should use the route-scoped dashboard data hook for initial dashboard loads.",
 );
 
 assert(
