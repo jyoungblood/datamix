@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
 import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
-import { resolveAdminWorkspaceRouteAccess } from "@/admin/_workspace/admin-permissions";
 import { AdminWorkspacePage } from "@/admin/_workspace/admin-workspace-page";
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 import {
@@ -34,9 +33,7 @@ function AdminWorkspaceIslandFrame({ children }: { children: ReactNode }) {
 }
 
 export function AdminHomeIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace
-    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
-    : undefined;
+  const routeAccess = workspace?.routeAccess;
 
   return (
     <AdminWorkspacePage>
@@ -101,9 +98,7 @@ export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
 }
 
 export function NewContentIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace
-    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
-    : undefined;
+  const routeAccess = workspace?.routeAccess;
 
   return (
     <AdminWorkspacePage>
@@ -122,9 +117,7 @@ export function ContentRecordIsland({
   recordId: string;
   schemaId: string;
 }) {
-  const routeAccess = workspace
-    ? resolveAdminWorkspaceRouteAccess(workspace.activeRoute, workspace.permissions)
-    : undefined;
+  const routeAccess = workspace?.routeAccess;
 
   return (
     <AdminWorkspacePage>

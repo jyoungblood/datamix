@@ -151,6 +151,34 @@ test("Slice 1 workspace islands accept explicit server workspace props", async (
   );
 });
 
+test("Task 1 workspace islands consume serialized route access globally", async () => {
+  const workspaceSource = await readFile(
+    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    workspaceSource,
+    /resolveAdminWorkspaceRouteAccess/,
+    "workspace islands should consume serialized workspace.routeAccess instead of re-deriving route access in React",
+  );
+
+  for (const islandName of workspaceIslands) {
+    const islandSource =
+      workspaceSource.match(
+        new RegExp(
+          `export function ${islandName}\\([\\s\\S]*?\\nexport function |export function ${islandName}\\([\\s\\S]*?$`,
+        ),
+      )?.[0] ?? "";
+
+    assert.match(
+      islandSource,
+      /const routeAccess = workspace\?\.routeAccess;/,
+      `${islandName} should consume serialized route access from workspace props`,
+    );
+  }
+});
+
 test("Slice 1 workspace resolver returns serializable workspace data on successful shell results", async () => {
   const resolverSource = await readFile(workspaceResolverPath, "utf8");
 
@@ -899,7 +927,7 @@ test("Slice 8 content index island consumes serialized route access from server 
   );
 });
 
-test("Slice 9 content editor islands derive route access from server workspace props", async () => {
+test("Slice 9 content editor islands consume serialized route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -912,13 +940,13 @@ test("Slice 9 content editor islands derive route access from server workspace p
 
   assert.match(
     workspaceSource,
-    /export function NewContentIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<NewContentBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "NewContentIsland should derive route access from the server workspace prop",
+    /export function NewContentIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<NewContentBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "NewContentIsland should consume serialized route access from the server workspace prop",
   );
   assert.match(
     workspaceSource,
-    /export function ContentRecordIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{[\s\S]*?recordId: string;[\s\S]*?schemaId: string;[\s\S]*?\}\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<ContentRecordBody\s+routeAccess=\{routeAccess\}\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>[\s\S]*?\}/,
-    "ContentRecordIsland should derive route access from the server workspace prop",
+    /export function ContentRecordIsland\(\{[\s\S]*?workspace[\s\S]*?\}: AdminWorkspaceIslandProps & \{[\s\S]*?recordId: string;[\s\S]*?schemaId: string;[\s\S]*?\}\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentRecordBody\s+routeAccess=\{routeAccess\}\s+recordId=\{recordId\}\s+schemaId=\{schemaId\}\s*\/>[\s\S]*?\}/,
+    "ContentRecordIsland should consume serialized route access from the server workspace prop",
   );
   assert.match(
     bodySource,
@@ -942,7 +970,7 @@ test("Slice 9 content editor islands derive route access from server workspace p
   );
 });
 
-test("Slice 10 admin home island derives route access from server workspace props", async () => {
+test("Slice 10 admin home island consumes serialized route access from server workspace props", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -955,8 +983,8 @@ test("Slice 10 admin home island derives route access from server workspace prop
 
   assert.match(
     workspaceSource,
-    /export function AdminHomeIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)[\s\S]*?<AdminHomeBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
-    "AdminHomeIsland should derive route access from the server workspace prop",
+    /export function AdminHomeIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<AdminHomeBody\s+routeAccess=\{routeAccess\}\s*\/>[\s\S]*?\}/,
+    "AdminHomeIsland should consume serialized route access from the server workspace prop",
   );
   assert.match(
     bodySource,
