@@ -16,6 +16,10 @@ const schemaOverviewRouteBody = path.join(
   repoRoot,
   "apps/web/src/components/admin/SchemaOverviewRouteBody.astro",
 );
+const contentIndexRouteBody = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/ContentIndexRouteBody.astro",
+);
 const adminSidebar = path.join(
   repoRoot,
   "apps/web/src/components/admin/AdminWorkspaceSidebar.astro",
@@ -45,8 +49,8 @@ const contentEditorSourcePath = path.join(
   "_screens/content-editor.tsx",
 );
 const contentIndexSourcePath = path.join(
-  adminRoot,
-  "_screens/content-index.tsx",
+  repoRoot,
+  "apps/web/src/components/admin/ContentIndexRouteBody.astro",
 );
 const mediaLibrarySourcePath = path.join(
   adminRoot,
@@ -63,7 +67,6 @@ const teamAndRolesSourcePath = path.join(
 const manualRefreshFreeScreens = [
   "admin-home.tsx",
   "content-editor.tsx",
-  "content-index.tsx",
   "media-library.tsx",
   "schema-builder.tsx",
   "settings-api-keys.tsx",
@@ -74,7 +77,6 @@ const nextLinkImport = `from "next${"/"}link"`;
 
 const protectedWorkspacePages = [
   ["index.astro", "AdminHomeIsland"],
-  ["content/index.astro", "ContentIndexIsland"],
   ["content/new.astro", "NewContentIsland"],
   ["content/[schemaId]/[recordId].astro", "ContentRecordIsland"],
   ["media.astro", "MediaIsland"],
@@ -95,7 +97,6 @@ const standaloneAuthPages = [
 const screenFiles = [
   "admin-home.tsx",
   "content-editor.tsx",
-  "content-index.tsx",
   "media-library.tsx",
   "schema-builder.tsx",
   "settings-api-keys.tsx",
@@ -189,6 +190,10 @@ const schemaOverviewPageSource = readFileSync(
   path.join(adminPagesRoot, "schema/index.astro"),
   "utf8",
 );
+const contentIndexPageSource = readFileSync(
+  path.join(adminPagesRoot, "content/index.astro"),
+  "utf8",
+);
 
 assert(
   schemaOverviewPageSource.includes("AdminWorkspaceShell") &&
@@ -207,6 +212,29 @@ assert(
   !schemaOverviewPageSource.includes("SchemaOverviewIsland") &&
     !schemaOverviewPageSource.includes(reactClientDirective),
   "schema/index.astro should not mount the retained whole-route schema overview island.",
+);
+
+assert(
+  contentIndexPageSource.includes("AdminWorkspaceShell") &&
+    contentIndexPageSource.includes("ContentIndexRouteBody") &&
+    contentIndexPageSource.includes("resolveContentIndexPage") &&
+    contentIndexPageSource.includes(
+      "collectionLoadError={page.contentIndex.collectionLoadError}",
+    ) &&
+    contentIndexPageSource.includes("collections={page.contentIndex.collections}") &&
+    contentIndexPageSource.includes(
+      "recordLoadError={page.contentIndex.recordLoadError}",
+    ) &&
+    contentIndexPageSource.includes("recordRows={page.contentIndex.recordRows}") &&
+    contentIndexPageSource.includes("routeAccess={page.workspace.routeAccess}") &&
+    contentIndexPageSource.includes("workspace={page.workspace}"),
+  "content/index.astro should render the Astro-native content index body with server-loaded collection and record data.",
+);
+
+assert(
+  !contentIndexPageSource.includes("ContentIndexIsland") &&
+    !contentIndexPageSource.includes(reactClientDirective),
+  "content/index.astro should not mount the retained whole-route content index island.",
 );
 
 for (const pagePath of standaloneAuthPages) {
@@ -245,6 +273,7 @@ for (const screenFile of screenFiles) {
 const shellSource = readFileSync(adminShell, "utf8");
 const accountRouteBodySource = readFileSync(accountRouteBody, "utf8");
 const schemaOverviewRouteBodySource = readFileSync(schemaOverviewRouteBody, "utf8");
+const contentIndexRouteBodySource = readFileSync(contentIndexRouteBody, "utf8");
 const sidebarSource = readFileSync(adminSidebar, "utf8");
 const workspaceRoutesIslandSource = readFileSync(workspaceRoutesIsland, "utf8");
 const buttonComponentSource = readFileSync(buttonComponent, "utf8");
@@ -334,7 +363,6 @@ for (const skeletonExport of [
 }
 
 for (const [screenFile, expectedSkeleton] of [
-  ["content-index.tsx", "AdminTableSkeleton"],
   ["media-library.tsx", "AdminMiniListSkeleton"],
   ["settings-api-keys.tsx", "AdminMiniListSkeleton"],
   ["team-and-roles.tsx", "AdminMiniListSkeleton"],
@@ -355,6 +383,18 @@ assert(
     !schemaOverviewRouteBodySource.includes("useAdminCollectionsState") &&
     !schemaOverviewRouteBodySource.includes("AdminTableSkeleton"),
   "The Astro-native schema overview body should render server-loaded collections and keep only the command palette hydrated.",
+);
+
+assert(
+  contentIndexRouteBodySource.includes("AdminWorkspaceCommandPalette") &&
+    contentIndexRouteBodySource.includes('client:only="react"') &&
+    contentIndexRouteBodySource.includes("recordRows.map") &&
+    contentIndexRouteBodySource.includes("collectionLoadError") &&
+    contentIndexRouteBodySource.includes("recordLoadError") &&
+    !contentIndexRouteBodySource.includes("useAdminCollectionsState") &&
+    !contentIndexRouteBodySource.includes("listCollectionRecords") &&
+    !contentIndexRouteBodySource.includes("AdminTableSkeleton"),
+  "The Astro-native content index body should render server-loaded records and keep only the command palette hydrated.",
 );
 
 for (const screenFile of manualRefreshFreeScreens) {
@@ -470,16 +510,13 @@ assert(
 );
 
 assert(
-  contentIndexSource.includes("const shouldShowCollectionSkeleton =") &&
-    contentIndexSource.includes("permissions.canViewCollections && !hasLoadedCollections && !collectionLoadError") &&
-    contentIndexSource.includes("const shouldShowContentRecordsSkeleton =") &&
-    /!hasCurrentContentRecords\s*&&\s*!recordLoadError/.test(contentIndexSource) &&
-    contentIndexSource.includes("const shouldShowSkeleton =") &&
-    /shouldShowCollectionSkeleton\s*\|\|\s*shouldShowContentRecordsSkeleton/.test(contentIndexSource) &&
-    /const shouldShowDelayedSkeleton\s*=\s*useDelayedLoadingIndicator\(shouldShowSkeleton\)/.test(contentIndexSource) &&
-    contentIndexSource.includes("shouldShowDelayedSkeleton ?") &&
-    contentIndexSource.includes("AdminLoadingReserve"),
-  "Content index should keep first-paint collection/content empty states hidden and delay skeletons until loading is perceptible.",
+  contentIndexSource.includes("recordRows.map") &&
+    contentIndexSource.includes("collectionLoadError && collections.length === 0") &&
+    contentIndexSource.includes("recordLoadError && recordRows.length === 0") &&
+    contentIndexSource.includes("Content list may be out of date") &&
+    !contentIndexSource.includes("useDelayedLoadingIndicator") &&
+    !contentIndexSource.includes("AdminLoadingReserve"),
+  "Astro-native content index should render server-loaded content states without client-side initial-load skeletons.",
 );
 
 assert(

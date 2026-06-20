@@ -9,7 +9,14 @@ const adminPagesRoot = path.join(repoRoot, "apps/web/src/pages/admin");
 const workspaceContentRoot = path.join(adminPagesRoot, "content");
 
 const adminRoutesPath = path.join(adminRoot, "_workspace/admin-routes.ts");
-const contentIndexPath = path.join(adminRoot, "_screens/content-index.tsx");
+const contentIndexRouteBodyPath = path.join(
+  repoRoot,
+  "apps/web/src/components/admin/ContentIndexRouteBody.astro",
+);
+const contentIndexResolverPath = path.join(
+  repoRoot,
+  "apps/web/src/server/routes/astro-admin-content-index-page.ts",
+);
 const contentEditorPath = path.join(adminRoot, "_screens/content-editor.tsx");
 const schemaBuilderPath = path.join(adminRoot, "_screens/schema-builder.tsx");
 const collectionDefinitionsPath = path.join(
@@ -18,7 +25,8 @@ const collectionDefinitionsPath = path.join(
 );
 
 const adminRoutesSource = readFileSync(adminRoutesPath, "utf8");
-const contentIndexSource = readFileSync(contentIndexPath, "utf8");
+const contentIndexRouteBodySource = readFileSync(contentIndexRouteBodyPath, "utf8");
+const contentIndexResolverSource = readFileSync(contentIndexResolverPath, "utf8");
 const contentEditorSource = readFileSync(contentEditorPath, "utf8");
 const schemaBuilderSource = readFileSync(schemaBuilderPath, "utf8");
 const collectionDefinitionsSource = readFileSync(collectionDefinitionsPath, "utf8");
@@ -57,13 +65,13 @@ assert.ok(
 );
 
 assert.match(
-  contentIndexSource,
+  contentIndexResolverSource,
   /listCollectionRecords/,
   "The content index should load records, not just schema definitions.",
 );
 
 assert.match(
-  contentIndexSource,
+  contentIndexRouteBodySource,
   /adminRoutes\.schema\.detail\(collection\.id\)/,
   "The all-content table should link each schema name to the id-based schema editor.",
 );

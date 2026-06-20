@@ -1,0 +1,221 @@
+---
+import { Plus } from "lucide-react";
+
+import { formatRecordTimestamp } from "@/admin/_lib/media-formatting";
+import { summarizeRecord } from "@/admin/_lib/record-drafts";
+import type { AdminWorkspaceRouteAccessState } from "@/admin/_workspace/admin-permissions";
+import { adminRoutes } from "@/admin/_workspace/admin-routes";
+import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
+import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-palette";
+import { buttonVariants } from "@/components/ui/button";
+import type { StoredCollectionDefinition } from "@/server/collections";
+import type { ContentIndexRecordRow } from "@/server/routes/astro-admin-content-index-page";
+
+import AdminPageHeader from "./AdminPageHeader.astro";
+import AdminStateBox from "./AdminStateBox.astro";
+
+type Props = {
+  collectionLoadError: string | null;
+  collections: StoredCollectionDefinition[];
+  recordLoadError: string | null;
+  recordRows: ContentIndexRecordRow[];
+  routeAccess: AdminWorkspaceRouteAccessState;
+  workspace: AdminWorkspaceProps;
+};
+
+const {
+  collectionLoadError,
+  collections,
+  recordLoadError,
+  recordRows,
+  routeAccess,
+  workspace,
+} = Astro.props;
+const { permissions, role } = workspace;
+const newContentHref = adminRoutes.content.newRecord().href;
+const newSchemaHref = adminRoutes.schema.new().href;
+const buttonClass = buttonVariants();
+---
+
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-4">
+  <div class="flex justify-end">
+    <AdminWorkspaceCommandPalette client:only="react" workspace={workspace} />
+  </div>
+
+  <AdminPageHeader title="Content">
+    <Fragment slot="action">
+      {
+        permissions.canCreateRecords ? (
+          <a class={buttonClass} href={newContentHref}>
+            <Plus className="size-4" />
+            New content
+          </a>
+        ) : (
+          <button class={buttonClass} disabled type="button">
+            <Plus className="size-4" />
+            New content
+          </button>
+        )
+      }
+    </Fragment>
+  </AdminPageHeader>
+
+  {
+    !routeAccess.isAllowed ? (
+      <AdminStateBox body={routeAccess.body} title={routeAccess.title} tone="warning" />
+    ) : !permissions.canViewCollections ? (
+      <AdminStateBox
+        body="Your current role can access content, but it cannot browse saved schema definitions."
+        title="Content list is restricted"
+        tone="warning"
+      />
+    ) : !permissions.canViewRecords && permissions.canCreateRecords ? (
+      <AdminStateBox
+        body={`Your ${role.label} role can create content, but it cannot browse saved content.`}
+        title="Content list is restricted"
+        tone="warning"
+      >
+        <Fragment slot="action">
+          <a class={buttonClass} href={newContentHref}>
+            New content
+          </a>
+        </Fragment>
+      </AdminStateBox>
+    ) : !permissions.canViewRecords ? (
+      <AdminStateBox
+        body={`Your ${role.label} role cannot browse saved content.`}
+        title="Content list is restricted"
+        tone="warning"
+      />
+    ) : (
+      <div class="overflow-hidden rounded-lg border border-border bg-white">
+        <div class="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-[11px] font-bold text-slate-500">
+          <span>Content</span>
+          <span>Schema</span>
+          <span>Updated</span>
+          <span>Created</span>
+          <span>Record ID</span>
+        </div>
+
+        {
+          collectionLoadError && collections.length === 0 ? (
+            <div class="p-4">
+              <AdminStateBox
+                body={collectionLoadError}
+                compact
+                title="Content schemas are unavailable"
+                tone="error"
+              />
+            </div>
+          ) : collections.length === 0 ? (
+            <div class="p-4">
+              {permissions.canCreateCollections ? (
+                <AdminStateBox
+                  body="Create a schema before adding content."
+                  compact
+                  title="No content schemas yet"
+                >
+                  <Fragment slot="action">
+                    <a class={buttonClass} href={newSchemaHref}>
+                      Create first schema
+                    </a>
+                  </Fragment>
+                </AdminStateBox>
+              ) : (
+                <AdminStateBox
+                  body="Create a schema before adding content."
+                  compact
+                  title="No content schemas yet"
+                />
+              )}
+            </div>
+          ) : recordLoadError && recordRows.length === 0 ? (
+            <div class="p-4">
+              <AdminStateBox
+                body={recordLoadError}
+                compact
+                title="Content list is unavailable"
+                tone="error"
+              />
+            </div>
+          ) : recordRows.length === 0 ? (
+            <div class="p-4">
+              {permissions.canCreateRecords ? (
+                <AdminStateBox
+                  body="Create a first content entry from any saved schema."
+                  compact
+                  title="No saved content yet"
+                >
+                  <Fragment slot="action">
+                    <a class={buttonClass} href={newContentHref}>
+                      Create first content
+                    </a>
+                  </Fragment>
+                </AdminStateBox>
+              ) : (
+                <AdminStateBox
+                  body="No saved content entries are available yet."
+                  compact
+                  title="No saved content yet"
+                />
+              )}
+            </div>
+          ) : (
+            <>
+              {
+                recordRows.map(({ collection, record }) => {
+                  const definition = collection.definition;
+
+                  return (
+                    <div class="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_0.8fr_0.8fr_0.9fr] gap-3 border-b px-4 py-3 text-xs last:border-b-0 hover:bg-muted/60">
+                      <a
+                        class="min-w-0 font-medium text-slate-950 transition hover:text-slate-700"
+                        href={adminRoutes.content.record(collection.id, record.id).href}
+                      >
+                        <span class="block truncate">
+                          {summarizeRecord(definition, record)}
+                        </span>
+                      </a>
+                      <a
+                        class="min-w-0 transition hover:text-slate-700"
+                        href={adminRoutes.schema.detail(collection.id).href}
+                      >
+                        <span class="block truncate font-medium text-slate-950">
+                          {definition.label}
+                        </span>
+                        <span class="block truncate font-data text-[10px] text-slate-500">
+                          {definition.name}
+                        </span>
+                      </a>
+                      <span class="text-slate-500">
+                        {formatRecordTimestamp(record.updatedAt)}
+                      </span>
+                      <span class="text-slate-500">
+                        {formatRecordTimestamp(record.createdAt)}
+                      </span>
+                      <span class="truncate font-data text-[10px] text-slate-500">
+                        {record.id}
+                      </span>
+                    </div>
+                  );
+                })
+              }
+              {
+                recordLoadError ? (
+                  <div class="border-t p-4">
+                    <AdminStateBox
+                      body={`${recordLoadError} Showing the content that loaded successfully.`}
+                      compact
+                      title="Content list may be out of date"
+                      tone="error"
+                    />
+                  </div>
+                ) : null
+              }
+            </>
+          )
+        }
+      </div>
+    )
+  }
+</div>

@@ -27,7 +27,6 @@ const workspacePageExpectations: WorkspacePageExpectation[] = [
   { island: "AdminHomeIsland", route: "index.astro" },
   { island: "NewSchemaIsland", route: "schema/new.astro" },
   { island: "SchemaDetailIsland", route: "schema/[schemaId].astro" },
-  { island: "ContentIndexIsland", route: "content/index.astro" },
   { island: "NewContentIsland", route: "content/new.astro" },
   {
     island: "ContentRecordIsland",
@@ -41,6 +40,7 @@ const workspacePageExpectations: WorkspacePageExpectation[] = [
 const protectedWorkspaceRoutes = [
   ...workspacePageExpectations.map(({ route }) => route),
   "account.astro",
+  "content/index.astro",
   "schema/index.astro",
 ];
 
@@ -78,12 +78,12 @@ const workspaceBodyMigrationInventory: WorkspaceBodyMigrationInventoryItem[] = [
     stage: "client-only-deferred",
   },
   {
-    clientOnlySignals: ["useAdminCollectionsState", "listCollectionRecords"],
-    island: "ContentIndexIsland",
-    rendering: "retained-react-body",
+    clientOnlySignals: ["AdminWorkspaceCommandPalette"],
+    island: "ContentIndexRouteBody",
+    rendering: "astro-native-body",
     route: "content/index.astro",
-    screen: "apps/web/src/admin/_screens/content-index.tsx",
-    stage: "server-data-needed",
+    screen: "apps/web/src/components/admin/ContentIndexRouteBody.astro",
+    stage: "server-data-resolved",
   },
   {
     clientOnlySignals: ["ContentEditorRoute", "GeneratedRecordFieldInput"],
@@ -139,7 +139,6 @@ const workspaceIslands = [
   "AdminHomeIsland",
   "NewSchemaIsland",
   "SchemaDetailIsland",
-  "ContentIndexIsland",
   "NewContentIsland",
   "ContentRecordIsland",
   "MediaIsland",
@@ -158,7 +157,6 @@ const reactClientDirective = `client:only=${'"react"'}`;
 const workspaceScreenPaths = [
   "apps/web/src/admin/_screens/admin-home.tsx",
   "apps/web/src/admin/_screens/schema-builder.tsx",
-  "apps/web/src/admin/_screens/content-index.tsx",
   "apps/web/src/admin/_screens/content-editor.tsx",
   "apps/web/src/admin/_screens/media-library.tsx",
   "apps/web/src/admin/_screens/team-and-roles.tsx",
@@ -187,7 +185,7 @@ const schemaBuilderSourcePath = path.resolve(
   "apps/web/src/admin/_screens/schema-builder.tsx",
 );
 const contentIndexSourcePath = path.resolve(
-  "apps/web/src/admin/_screens/content-index.tsx",
+  "apps/web/src/components/admin/ContentIndexRouteBody.astro",
 );
 const contentEditorSourcePath = path.resolve(
   "apps/web/src/admin/_screens/content-editor.tsx",
@@ -209,6 +207,9 @@ const schemaOverviewRouteBodySourcePath = path.resolve(
 );
 const schemaOverviewPageResolverPath = path.resolve(
   "apps/web/src/server/routes/astro-admin-schema-overview-page.ts",
+);
+const contentIndexPageResolverPath = path.resolve(
+  "apps/web/src/server/routes/astro-admin-content-index-page.ts",
 );
 const noProviderSourceRoots = [
   path.resolve("apps/web/src/admin"),
@@ -475,18 +476,18 @@ test("Task 3 team and settings state use route-scoped hooks", async () => {
   );
 });
 
-test("Task 4 content index uses route-scoped collection state", async () => {
-  const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
+test("Task 4 content index renders from explicit server route data", async () => {
+  const contentBodySource = await readFile(contentIndexSourcePath, "utf8");
 
   assert.doesNotMatch(
-    contentIndexSource,
-    /useAdminWorkspace(?:RouteAccess)?/,
-    "content-index.tsx should not import the old admin workspace context hooks",
+    contentBodySource,
+    /useAdminWorkspace(?:RouteAccess)?|useAdminCollectionsState/,
+    "ContentIndexRouteBody should not import old workspace context hooks or client collection state",
   );
   assert.match(
-    contentIndexSource,
-    /useAdminCollectionsState/,
-    "content-index.tsx should import the route-scoped collection state hook",
+    contentBodySource,
+    /recordRows: ContentIndexRecordRow\[\]/,
+    "ContentIndexRouteBody should receive server-loaded content rows as explicit props",
   );
 });
 
@@ -887,7 +888,12 @@ test("Slice 16 schema builder bodies require explicit route access from the serv
   );
 });
 
-test("Slice 17 content index body requires explicit route access from the server workspace prop", async () => {
+test("Slice 17 content index renders as an Astro-native body with server data", async () => {
+  const contentPageSource = await readFile(
+    path.join(pagesAdminDirectory, "content/index.astro"),
+    "utf8",
+  );
+  const contentBodySource = await readFile(contentIndexSourcePath, "utf8");
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
     "utf8",
@@ -896,27 +902,51 @@ test("Slice 17 content index body requires explicit route access from the server
     path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
     "utf8",
   );
-  const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
 
-  assert.doesNotMatch(
-    workspaceSource,
-    /<ContentIndexBody\s*\/>/,
-    "ContentIndexIsland should not render ContentIndexBody without server-derived route access",
+  assert.match(
+    contentPageSource,
+    /import ContentIndexRouteBody from "@\/components\/admin\/ContentIndexRouteBody\.astro"/,
+    "content/index.astro should render through the Astro-native content index body",
   );
   assert.match(
-    bodySource,
-    /export function ContentIndexBody\(\{\s*routeAccess,\s*workspace,\s*\}: \{\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}\)/,
-    "ContentIndexBody should require explicit workspace and route access",
+    contentPageSource,
+    /resolveContentIndexPage\(Astro\.request\)/,
+    "content/index.astro should use the route-specific content index resolver",
+  );
+  assert.match(
+    contentPageSource,
+    /<ContentIndexRouteBody\s+collectionLoadError=\{page\.contentIndex\.collectionLoadError\}\s+collections=\{page\.contentIndex\.collections\}\s+recordLoadError=\{page\.contentIndex\.recordLoadError\}\s+recordRows=\{page\.contentIndex\.recordRows\}\s+routeAccess=\{page\.workspace\.routeAccess\}\s+workspace=\{page\.workspace\}\s*\/>/,
+    "content/index.astro should pass server-loaded content data and serialized route access into the Astro body",
+  );
+  assert.match(
+    contentBodySource,
+    /type Props = \{\s*collectionLoadError: string \| null;\s*collections: StoredCollectionDefinition\[\];\s*recordLoadError: string \| null;\s*recordRows: ContentIndexRecordRow\[\];\s*routeAccess: AdminWorkspaceRouteAccessState;\s*workspace: AdminWorkspaceProps;\s*\}/,
+    "ContentIndexRouteBody should require explicit server data, workspace, and route access",
+  );
+  assert.match(
+    contentBodySource,
+    /AdminWorkspaceCommandPalette[^>]*client:only="react"[^>]*workspace=\{workspace\}/,
+    "ContentIndexRouteBody should keep the command palette as a targeted client island",
+  );
+  assert.match(
+    contentBodySource,
+    /routeAccess\.isAllowed/,
+    "ContentIndexRouteBody should branch on the serialized route access decision",
+  );
+  assert.doesNotMatch(
+    contentBodySource,
+    /useAdminCollectionsState|loadCollections|useDelayedLoadingIndicator|AdminTableSkeleton/,
+    "ContentIndexRouteBody should not keep client collection loading state or initial-load skeletons",
+  );
+  assert.doesNotMatch(
+    workspaceSource,
+    /ContentIndexIsland|ContentIndexBody/,
+    "Retained workspace islands should no longer include the Astro-native content index route body",
   );
   assert.doesNotMatch(
     bodySource,
-    /<ContentIndexRoute\s*\/>/,
-    "ContentIndexBody should not rely on the content index route provider fallback",
-  );
-  assert.doesNotMatch(
-    contentIndexSource,
-    /ContentIndexRouteWithProviderAccess/,
-    "ContentIndexRoute should not keep a provider fallback after route-scoped collection migration",
+    /ContentIndexBody|ContentIndexRoute/,
+    "Retained workspace body routes should no longer include the Astro-native content index route body",
   );
 });
 
@@ -1231,6 +1261,66 @@ test("Slice 23 schema overview resolver mirrors collection read permission befor
   );
 });
 
+test("Slice 23 content index resolver preserves collection and record permission boundaries", async () => {
+  const resolverSource = await readFile(contentIndexPageResolverPath, "utf8");
+
+  assert.match(
+    resolverSource,
+    /resolveWorkspacePage\(request,\s*route\)/,
+    "Content index resolver should reuse the shared workspace page resolver",
+  );
+  assert.match(
+    resolverSource,
+    /workspace\.permissions\.canViewCollections/,
+    "Content index resolver should check serialized collection read permission before loading schemas",
+  );
+  assert.match(
+    resolverSource,
+    /workspace\.permissions\.canViewRecords/,
+    "Content index resolver should check serialized record read permission before loading records",
+  );
+  assert.match(
+    resolverSource,
+    /listCollectionDefinitions\(env\)/,
+    "Content index resolver should load collection definitions server-side",
+  );
+  assert.match(
+    resolverSource,
+    /listCollectionRecords\(env,\s*collection\.definition\.name\)/,
+    "Content index resolver should load records server-side for each collection by API name",
+  );
+  assert.match(
+    resolverSource,
+    /CollectionSchemaError/,
+    "Content index resolver should preserve collection schema errors as route data",
+  );
+  assert.match(
+    resolverSource,
+    /CollectionRecordError/,
+    "Content index resolver should preserve collection record errors as route data",
+  );
+  assert.match(
+    resolverSource,
+    /Promise\.all\(\s*collections\.map/,
+    "Content index resolver should load records across all collections without serializing each query",
+  );
+  assert.match(
+    resolverSource,
+    /failedLoads\.length > 0\s*\?\s*`\$\{failedLoads\.length\} schema/,
+    "Content index resolver should summarize partial record-load failures without dropping successful rows",
+  );
+  assert.match(
+    resolverSource,
+    /new Date\(right\.record\.updatedAt\)\.getTime\(\)\s*-\s*new Date\(left\.record\.updatedAt\)\.getTime\(\)/,
+    "Content index resolver should sort the combined content rows by newest updated record first",
+  );
+  assert.doesNotMatch(
+    resolverSource,
+    /\bfetch\(/,
+    "Content index resolver should use server services rather than calling the admin API over fetch",
+  );
+});
+
 test("Slice 24 schema builder islands consume serialized workspace route access", async () => {
   const workspaceSource = await readFile(
     path.join(adminIslandsDirectory, "workspace-routes.tsx"),
@@ -1247,7 +1337,7 @@ test("Slice 24 schema builder islands consume serialized workspace route access"
     )?.[0] ?? "";
   const schemaDetailIslandSource =
     workspaceSource.match(
-      /export function SchemaDetailIsland\([\s\S]*?\nexport function ContentIndexIsland/,
+      /export function SchemaDetailIsland\([\s\S]*?\nexport function NewContentIsland/,
     )?.[0] ?? "";
 
   assert.match(
@@ -1309,55 +1399,6 @@ test("Slice 24 schema builder islands consume serialized workspace route access"
     schemaBuilderSource,
     /const access = useAdminWorkspaceRouteAccess\(route\);/,
     "SchemaBuilderContent should not derive schema builder route access from AdminWorkspaceProvider",
-  );
-});
-
-test("Slice 8 content index island consumes serialized route access from server workspace props", async () => {
-  const workspaceSource = await readFile(
-    path.join(adminIslandsDirectory, "workspace-routes.tsx"),
-    "utf8",
-  );
-  const bodySource = await readFile(
-    path.join(adminIslandsDirectory, "workspace-body-routes.tsx"),
-    "utf8",
-  );
-  const contentIndexSource = await readFile(contentIndexSourcePath, "utf8");
-  const contentIndexIslandStart = workspaceSource.indexOf(
-    "export function ContentIndexIsland",
-  );
-  const contentIndexIslandEnd = workspaceSource.indexOf(
-    "export function NewContentIsland",
-    contentIndexIslandStart,
-  );
-  const contentIndexIslandSource = workspaceSource.slice(
-    contentIndexIslandStart,
-    contentIndexIslandEnd,
-  );
-
-  assert.match(
-    contentIndexIslandSource,
-    /export function ContentIndexIsland\(\{\s*workspace\s*\}: AdminWorkspaceIslandProps\) \{[\s\S]*?const routeAccess = workspace\?\.routeAccess;[\s\S]*?<ContentIndexBody\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>[\s\S]*?\}/,
-    "ContentIndexIsland should consume serialized route access from the server workspace prop",
-  );
-  assert.doesNotMatch(
-    contentIndexIslandSource,
-    /resolveAdminWorkspaceRouteAccess\(workspace\.activeRoute, workspace\.permissions\)/,
-    "ContentIndexIsland should not recompute route access from workspace permissions",
-  );
-  assert.match(
-    bodySource,
-    /<ContentIndexRoute\s+routeAccess=\{routeAccess\}\s+workspace=\{workspace\}\s*\/>/,
-    "ContentIndexBody should forward workspace and route access into the retained content index route",
-  );
-  assert.match(
-    contentIndexSource,
-    /routeAccess: AdminWorkspaceRouteAccessState/,
-    "ContentIndexContent should receive route access as explicit route-scoped state",
-  );
-  assert.doesNotMatch(
-    contentIndexSource,
-    /const access = useAdminWorkspaceRouteAccess\(route\);/,
-    "ContentIndexContent should not derive content index route access from AdminWorkspaceProvider",
   );
 });
 

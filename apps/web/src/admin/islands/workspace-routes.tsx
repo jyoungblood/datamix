@@ -4,7 +4,6 @@ import { AdminWorkspaceCommandPalette } from "@/admin/_workspace/admin-command-p
 import type { AdminWorkspaceProps } from "@/admin/_workspace/admin-workspace-props";
 import {
   AdminHomeBody,
-  ContentIndexBody,
   ContentRecordBody,
   MediaBody,
   NewContentBody,
@@ -73,18 +72,6 @@ export function SchemaDetailIsland({
           schemaId={schemaId}
           workspace={workspace}
         />
-      ) : null}
-    </AdminWorkspaceIslandFrame>
-  );
-}
-
-export function ContentIndexIsland({ workspace }: AdminWorkspaceIslandProps) {
-  const routeAccess = workspace?.routeAccess;
-
-  return (
-    <AdminWorkspaceIslandFrame workspace={workspace}>
-      {routeAccess && workspace ? (
-        <ContentIndexBody routeAccess={routeAccess} workspace={workspace} />
       ) : null}
     </AdminWorkspaceIslandFrame>
   );

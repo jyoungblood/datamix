@@ -1,6 +1,5 @@
 import { AdminHomeRoute } from "@/admin/_screens/admin-home";
 import { ContentEditorRoute } from "@/admin/_screens/content-editor";
-import { ContentIndexRoute } from "@/admin/_screens/content-index";
 import { MediaLibraryRoute } from "@/admin/_screens/media-library";
 import { SchemaBuilderRoute } from "@/admin/_screens/schema-builder";
 import { SettingsApiKeysRoute } from "@/admin/_screens/settings-api-keys";
@@ -51,16 +50,6 @@ export function SchemaDetailBody({
       workspace={workspace}
     />
   );
-}
-
-export function ContentIndexBody({
-  routeAccess,
-  workspace,
-}: {
-  routeAccess: AdminWorkspaceRouteAccessState;
-  workspace: AdminWorkspaceProps;
-}) {
-  return <ContentIndexRoute routeAccess={routeAccess} workspace={workspace} />;
 }
 
 export function NewContentBody({
