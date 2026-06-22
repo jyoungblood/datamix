@@ -1,6 +1,6 @@
 declare namespace NodeJS {
   interface ProcessEnv {
-    NEXT_PUBLIC_APP_ORIGIN?: string;
-    NEXT_PUBLIC_APP_ENV?: import("@datamix/core").DatamixEnvironment;
+    PUBLIC_DATAMIX_APP_ORIGIN?: string;
+    PUBLIC_DATAMIX_APP_ENV?: import("@datamix/core").DatamixEnvironment;
   }
 }

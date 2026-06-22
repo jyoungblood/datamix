@@ -22,16 +22,16 @@ function readPublicImportMetaEnv(): DatamixPublicImportMetaEnv {
 export function readAdminPublicEnv(env: DatamixPublicImportMetaEnv): AdminPublicEnv {
   const appEnv = env.PUBLIC_DATAMIX_APP_ENV;
   const appOrigin = normalizeDatamixOrigin(
-    env.PUBLIC_DATAMIX_APP_ORIGIN ?? defaultAdminPublicEnv.NEXT_PUBLIC_APP_ORIGIN,
+    env.PUBLIC_DATAMIX_APP_ORIGIN ?? defaultAdminPublicEnv.appOrigin,
     "PUBLIC_DATAMIX_APP_ORIGIN",
   );
 
   return {
-    NEXT_PUBLIC_APP_ORIGIN: appOrigin,
-    NEXT_PUBLIC_APP_ENV:
+    appOrigin,
+    appEnvironment:
       appEnv && isDatamixEnvironment(appEnv)
         ? appEnv
-        : defaultAdminPublicEnv.NEXT_PUBLIC_APP_ENV,
+        : defaultAdminPublicEnv.appEnvironment,
   };
 }
 
@@ -44,7 +44,7 @@ export function getAdminAppOrigin() {
     return normalizeDatamixOrigin(window.location.origin, "window.location.origin");
   }
 
-  return adminPublicEnv.NEXT_PUBLIC_APP_ORIGIN;
+  return adminPublicEnv.appOrigin;
 }
 
 export function buildDatamixAppUrl(pathname: string) {

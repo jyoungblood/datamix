@@ -17,7 +17,7 @@ export const datamixSurfaces = [
   {
     id: "admin",
     label: "Admin",
-    description: "Client-rendered authoring surface built with Vinext.",
+    description: "Browser-first authoring surface served by the Astro Worker app.",
     status: "in_progress",
   },
   {
@@ -38,8 +38,8 @@ export type DatamixEnvironment = (typeof datamixEnvironments)[number];
 export type DatamixSurfaceId = (typeof datamixSurfaces)[number]["id"];
 
 export type AdminPublicEnv = {
-  NEXT_PUBLIC_APP_ORIGIN: string;
-  NEXT_PUBLIC_APP_ENV: DatamixEnvironment;
+  appOrigin: string;
+  appEnvironment: DatamixEnvironment;
 };
 
 export type ApiRuntimeEnv = {
@@ -85,8 +85,8 @@ export type DatamixAuthRuntimeSummary = {
 };
 
 export const defaultAdminPublicEnv: AdminPublicEnv = {
-  NEXT_PUBLIC_APP_ORIGIN: "http://127.0.0.1:3000",
-  NEXT_PUBLIC_APP_ENV: "development",
+  appOrigin: "http://127.0.0.1:3000",
+  appEnvironment: "development",
 };
 
 export const defaultApiRuntimeEnv: ApiRuntimeEnv = {

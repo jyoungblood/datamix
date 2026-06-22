@@ -10,7 +10,7 @@ Datamix is intentionally Cloudflare-only in v0. We do not maintain a separate ge
 - Astro API endpoints live under `apps/web/src/pages/api/**`.
 - Admin route templates live under `apps/web/src/pages/admin/**`.
 - Auth pages are Astro templates with small DOM scripts under `apps/web/src/scripts/admin-auth/**`.
-- Authenticated workspace pages render an Astro shell and resolve route access in Astro frontmatter. `/admin/account`, `/admin/schema`, and `/admin/content` now use Astro-native route bodies with targeted React islands where needed. State-heavy routes still hydrate retained React route bodies under `apps/web/src/admin/**`; new migrations should prefer Astro-native route bodies with explicit serialized workspace props and keep React islands only for client-only controls such as forms, editors, uploads, or mutation state.
+- Authenticated workspace pages render an Astro shell and resolve route access in Astro frontmatter. Admin routes now use Astro route bodies with targeted React islands for client-only controls such as command palette navigation, forms, editors, uploads, or mutation state. React state hooks live under `apps/web/src/admin/**` and receive explicit serialized workspace props; new work should keep this targeted-island shape instead of reintroducing a global workspace provider.
 - The single deployed-app topology is documented separately in [deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1).
 
 ## First-Time Setup

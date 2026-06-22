@@ -16,7 +16,7 @@ Datamix is an edge-native, Cloudflare-only content modeling studio that ships as
 
 ## Workspace Layout
 
-- `apps/web`: unified Vinext App Router Worker that serves the admin UI, JSON API, auth, media routes, and Cloudflare bindings
+- `apps/web`: unified Astro Cloudflare Worker that serves the admin UI, JSON API, auth, media routes, and Cloudflare bindings
 - `packages/core`: shared schema, RBAC, media, and API-key types/helpers
 - `packages/create-datamix`: secondary local-first scaffolder for new Datamix workspaces
 - `tests/smoke`: end-to-end smoke coverage for must-not-break flows

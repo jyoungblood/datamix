@@ -21,24 +21,23 @@ Use the root `db:*` scripts to generate and apply checked-in migrations under
 
 The authenticated admin workspace is routed through the shared Astro workspace
 shell. Astro resolves setup, session, authorization, permissions, and active
-route access before rendering the route body. Routes that can render from
-server props or server-loaded data use Astro-native bodies; interaction-heavy
-routes still hydrate retained React route body islands. Retained route bodies
-receive explicit serialized `workspace` props and use route-scoped state hooks
-from `src/admin/_state/**`; there is no global admin workspace React provider.
+route access before rendering each Astro route body. Client-only interactions
+hydrate targeted React islands that receive explicit serialized `workspace`
+props and use route-scoped state hooks from `src/admin/_state/**`; there is no
+global admin workspace React provider.
 
 | Route | Screen | Rendering mode |
 | --- | --- | --- |
-| `/admin` | Workspace overview and primary route map | Retained React body |
-| `/admin/schema` | Schema overview | Astro-native body |
-| `/admin/schema/new` | New schema builder | Retained React body |
-| `/admin/schema/[schemaId]` | Existing schema builder | Retained React body |
-| `/admin/content` | All content browser | Astro-native body |
-| `/admin/content/new` | New generated record editor with schema selection | Retained React body |
-| `/admin/content/[schemaId]/[recordId]` | Existing generated record editor | Retained React body |
-| `/admin/media` | Media library | Retained React body |
-| `/admin/team` | Users, invites, and role assignment | Retained React body |
-| `/admin/settings` | API keys, OAuth posture, and role definitions | Retained React body |
+| `/admin` | Workspace overview and primary route map | Astro body with command palette island |
+| `/admin/schema` | Schema overview | Astro body with command palette island |
+| `/admin/schema/new` | New schema builder | Astro body with form/save islands |
+| `/admin/schema/[schemaId]` | Existing schema builder | Astro body with form/save islands |
+| `/admin/content` | All content browser | Astro body with command palette island |
+| `/admin/content/new` | New generated record editor with schema selection | Astro body with editor island |
+| `/admin/content/[schemaId]/[recordId]` | Existing generated record editor | Astro body with editor island |
+| `/admin/media` | Media library | Astro body with media interaction island |
+| `/admin/team` | Users, invites, and role assignment | Astro body with team/roles interaction island |
+| `/admin/settings` | API keys, OAuth posture, and role definitions | Astro body with settings interaction island |
 | `/admin/account` | Current profile and session actions | Astro-native body with targeted React islands |
 | `/admin/setup` | First-run setup | Astro auth template |
 | `/admin/login` | Admin sign-in | Astro auth template |
