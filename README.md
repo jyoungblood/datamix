@@ -1,11 +1,43 @@
 # Datamix
 
-Datamix is an edge-native, Cloudflare-only content modeling studio that ships as a single Cloudflare Worker app: one deployed domain that serves a browser-first admin and a JSON-first API.
+**The 1-click edge content studio for Cloudflare.**
+
+Datamix is an open-source content modeling studio for teams that want a clean admin UI, structured content, media management, team access, and a JSON API without assembling a custom backend from scratch.
+
+The goal is simple: deploy one Cloudflare app, finish setup in the browser, model your content visually, and use the generated API to power websites, apps, and client projects. Datamix is built for Cloudflare from the start, with one Worker serving the admin, auth, media routes, and content API from a single origin.
+
+## What Datamix Does
+
+- Helps you create custom content collections without writing schema code.
+- Turns each collection schema into the matching editor form automatically.
+- Lets editors create records, write rich text or markdown, and upload images from the admin.
+- Stores structured content in Cloudflare D1 and media assets in Cloudflare R2.
+- Exposes predictable REST JSON endpoints for every collection.
+- Supports API keys, user roles, invite-based onboarding, and persistent auth.
+- Keeps setup browser-first so deployed instances do not require local development.
+
+## Why Use It
+
+Datamix is for people who want the flexibility of a headless content backend without the usual setup overhead. Designers, agency operators, IT teams, and developers can deploy a focused content studio, define the content model they need, and hand editors a calm admin experience that is centered around collections.
+
+The product is intentionally narrow. Datamix is not trying to be a page builder, ecommerce platform, plugin marketplace, or GraphQL server in v0. It focuses on the core workflow: model content, edit content, manage media and access, then deliver JSON from the edge.
+
+## Core Features
+
+- **Browser-first setup:** deploy to Cloudflare and initialize the first admin account from the app.
+- **Visual collection builder:** define fields, labels, relationships, ordering, and editor behavior in one place.
+- **Generated edit screens:** the schema is the form, so editors get usable record screens automatically.
+- **JSON-first delivery:** every collection gets REST-style API routes for structured content output.
+- **Media library:** upload, browse, reuse, and transform R2-backed image assets through Worker-managed routes.
+- **Team controls:** manage users, roles, permissions, invites, API keys, and optional OAuth providers.
+- **Cloudflare-native architecture:** one deployed Worker app backed by D1 and R2, with no separate admin/API deployment.
+- **Contributor-friendly code:** readable, focused implementation choices for an open-source project.
 
 ## Start Here
 
 - Contributor walkthrough: [docs/contributor-onboarding.md](/Users/jy/Desktop/projects/datamix/docs/contributor-onboarding.md:1)
 - Architecture map: [docs/architecture-overview.md](/Users/jy/Desktop/projects/datamix/docs/architecture-overview.md:1)
+- Public marketing site content draft: [marketing-site.md](/Users/jy/Desktop/projects/datamix/marketing-site.md:1)
 - Local setup details: [docs/local-development.md](/Users/jy/Desktop/projects/datamix/docs/local-development.md:1)
 - Deploy/runtime contract: [docs/deploy-runtime-contract.md](/Users/jy/Desktop/projects/datamix/docs/deploy-runtime-contract.md:1)
 - Secondary bootstrap path: [docs/create-datamix-bootstrap.md](/Users/jy/Desktop/projects/datamix/docs/create-datamix-bootstrap.md:1)
