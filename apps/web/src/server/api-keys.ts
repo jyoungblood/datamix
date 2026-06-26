@@ -16,7 +16,10 @@ import {
   updateApiKeyRow,
   type DatamixApiKeyRow,
 } from "./db/api-keys";
-import type { PublicApiKeyAuthHookInput, PublicApiPrincipal } from "./public-api-auth";
+import type {
+  PublicApiKeyAuthHookInput,
+  PublicApiKeyAuthResult,
+} from "./public-api-auth";
 
 export class DatamixApiKeyError extends Error {
   readonly statusCode: number;
@@ -208,16 +211,22 @@ export async function revokeDatamixApiKey(env: DatamixBindings, apiKeyId: string
 
 export async function authorizeManagedPublicApiKey(
   input: PublicApiKeyAuthHookInput,
-): Promise<PublicApiPrincipal | null> {
+): Promise<PublicApiKeyAuthResult> {
   const secretHash = await hashApiKeySecret(input.apiKey);
   const key = await getApiKeyAuthRowBySecretHash(input.env, secretHash);
 
   if (!key || key.revokedAt) {
-    return null;
+    return {
+      reason: "invalid",
+      success: false,
+    };
   }
 
   if (!canDatamixApiKeyAccess(key.accessLevel, input.permission)) {
-    return null;
+    return {
+      reason: "insufficient-access",
+      success: false,
+    };
   }
 
   const now = new Date().toISOString();
@@ -229,7 +238,10 @@ export async function authorizeManagedPublicApiKey(
   });
 
   return {
-    accessLevel: key.accessLevel,
-    type: "api-key",
+    principal: {
+      accessLevel: key.accessLevel,
+      type: "api-key",
+    },
+    success: true,
   };
 }

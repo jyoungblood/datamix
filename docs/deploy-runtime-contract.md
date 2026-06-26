@@ -100,7 +100,7 @@ Suggested remote resource names:
 ## Content API Contract
 
 - Admin-facing collection management, media, user, role, API key, and record editing routes stay session-protected under `/api/admin/*`.
-- Public content delivery routes live at `/api/collections/*`.
+- External integration routes live at `/api/collections/*` and support record CRUD without an admin session.
 - Public read access is controlled by `PUBLIC_API_READ_ACCESS`:
   `public` allows anonymous reads,
   `api-key` requires either `X-API-Key` or `Authorization: Bearer <key>`,
@@ -111,6 +111,26 @@ Suggested remote resource names:
 - API keys are managed from the Datamix admin. Raw secrets are shown once,
   stored as hashes in D1, revocable, access-level aware, and tracked with
   `lastUsedAt`.
+- External record CRUD routes are:
+  `GET /api/collections`,
+  `GET /api/collections/:name`,
+  `GET /api/collections/:name/records`,
+  `POST /api/collections/:name/records`,
+  `GET /api/collections/:name/records/:id`,
+  `PUT /api/collections/:name/records/:id`, and
+  `DELETE /api/collections/:name/records/:id`.
+- Read keys can only satisfy read access. Write keys satisfy both read and write access.
+  A valid key without the required access returns `403`; an invalid, missing, or
+  revoked key returns `401`.
+
+Example external create request:
+
+```bash
+curl -X POST "$DATAMIX_ORIGIN/api/collections/articles/records" \
+  -H "Authorization: Bearer $DATAMIX_WRITE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"values":{"title":"External article"}}'
+```
 
 ## Provisioning Notes
 

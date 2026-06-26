@@ -10,8 +10,10 @@ function readSource(relativePath) {
 }
 
 const adminAuthSource = readSource("apps/web/src/server/routes/admin-auth.ts");
+const astroConfigSource = readSource("apps/web/astro.config.mjs");
 const apiKeyClientSource = readSource("apps/web/src/lib/api-keys.ts");
 const mediaSource = readSource("apps/web/src/server/media.ts");
+const middlewareSource = readSource("apps/web/src/middleware.ts");
 const apiKeysSource = readSource("apps/web/src/server/api-keys.ts");
 const envSource = readSource("apps/web/src/server/env.ts");
 const publicApiAuthSource = readSource("apps/web/src/server/public-api-auth.ts");
@@ -87,4 +89,28 @@ assert.doesNotMatch(
   deployRuntimeContractSource,
   /PUBLIC_API_(READ|WRITE)_KEY/,
   "Deploy docs should direct users to managed API keys instead of static env secrets.",
+);
+
+assert.match(
+  astroConfigSource,
+  /security:\s*{\s*checkOrigin:\s*false,\s*}/s,
+  "Astro's global origin check should stay disabled so external API-key DELETE requests without browser Origin headers can reach public handlers.",
+);
+
+assert.match(
+  middlewareSource,
+  /"\/api\/admin\/"/,
+  "Custom middleware should keep unsafe admin API requests same-origin protected.",
+);
+
+assert.match(
+  middlewareSource,
+  /"\/api\/auth\/"/,
+  "Custom middleware should keep unsafe auth API requests same-origin protected.",
+);
+
+assert.doesNotMatch(
+  middlewareSource,
+  /"\/api\/collections\/"/,
+  "Custom same-origin middleware should not protect external collection API routes; those use API-key auth and public CORS.",
 );

@@ -21,7 +21,7 @@ Datamix v0 is a Cloudflare-only content studio with a browser-first admin, JSON-
 - `packages/create-datamix`
   Secondary bootstrap CLI. It assembles a clean local template from this repo and helps contributors start a new Datamix workspace without changing the primary browser-first deployment story.
 - `tests/smoke`
-  End-to-end smoke harness that exercises first-run setup, login, collection CRUD, record CRUD, media, and public JSON routes against the unified app on port `3000`.
+  End-to-end smoke harness that exercises first-run setup, login, collection CRUD, admin record CRUD, media, public JSON reads, and external API-key record CRUD against the unified app on port `3000`.
 - `docs`
   Contributor-facing documentation. Update these docs when a runtime or onboarding contract changes.
 

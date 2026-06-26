@@ -12,7 +12,7 @@ The goal is simple: deploy one Cloudflare app, finish setup in the browser, mode
 - Turns each collection schema into the matching editor form automatically.
 - Lets editors create records, write rich text or markdown, and upload images from the admin.
 - Stores structured content in Cloudflare D1 and media assets in Cloudflare R2.
-- Exposes predictable REST JSON endpoints for every collection.
+- Exposes predictable REST JSON endpoints for every collection, including API-key record CRUD for external integrations.
 - Supports API keys, user roles, invite-based onboarding, and persistent auth.
 - Keeps setup browser-first so deployed instances do not require local development.
 
@@ -27,7 +27,7 @@ The product is intentionally narrow. Datamix is not trying to be a page builder,
 - **Browser-first setup:** deploy to Cloudflare and initialize the first admin account from the app.
 - **Visual collection builder:** define fields, labels, relationships, ordering, and editor behavior in one place.
 - **Generated edit screens:** the schema is the form, so editors get usable record screens automatically.
-- **JSON-first delivery:** every collection gets REST-style API routes for structured content output.
+- **JSON-first delivery:** every collection gets REST-style API routes for structured content reads and API-key record CRUD.
 - **Media library:** upload, browse, reuse, and transform R2-backed image assets through Worker-managed routes.
 - **Team controls:** manage users, roles, permissions, invites, API keys, and optional OAuth providers.
 - **Cloudflare-native architecture:** one deployed Worker app backed by D1 and R2, with no separate admin/API deployment.

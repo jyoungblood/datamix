@@ -15,6 +15,9 @@ export default defineConfig({
   }),
   integrations: [react()],
   output: "server",
+  security: {
+    checkOrigin: false,
+  },
   vite: {
     plugins: [tailwindcss()],
     resolve: {

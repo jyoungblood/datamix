@@ -26,9 +26,19 @@ export type PublicApiKeyAuthHookInput = {
   runtime: PublicApiRuntimeEnv;
 };
 
+export type PublicApiKeyAuthResult =
+  | {
+      principal: Extract<PublicApiPrincipal, { type: "api-key" }>;
+      success: true;
+    }
+  | {
+      reason: "insufficient-access" | "invalid";
+      success: false;
+    };
+
 export type PublicApiKeyAuthHook = (
   input: PublicApiKeyAuthHookInput,
-) => Promise<PublicApiPrincipal | null>;
+) => Promise<PublicApiKeyAuthResult>;
 
 export type PublicApiAccessResult =
   | {
@@ -111,14 +121,27 @@ export async function resolvePublicApiAccess(
     }
 
     const keyAuthHook = options?.keyAuthHook ?? authorizeManagedPublicApiKey;
-    const principal = await keyAuthHook({
+    const keyAuthResult = await keyAuthHook({
       apiKey,
       env,
       permission,
       runtime,
     });
 
-    if (!principal) {
+    if (!keyAuthResult.success) {
+      if (keyAuthResult.reason === "insufficient-access") {
+        return {
+          body: {
+            error:
+              permission === "read"
+                ? "API key does not have read access."
+                : "API key does not have write access.",
+          },
+          statusCode: 403,
+          success: false,
+        };
+      }
+
       return {
         body: { error: "Invalid API key." },
         statusCode: 401,
@@ -127,7 +150,7 @@ export async function resolvePublicApiAccess(
     }
 
     return {
-      principal,
+      principal: keyAuthResult.principal,
       success: true,
     };
   } catch (error) {

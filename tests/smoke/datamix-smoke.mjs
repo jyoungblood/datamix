@@ -282,7 +282,7 @@ async function main() {
         `PUBLIC_DATAMIX_APP_ORIGIN=${appOrigin}`,
         `BETTER_AUTH_SECRET=${smokeAuthSecret}`,
         "PUBLIC_API_READ_ACCESS=public",
-        "PUBLIC_API_WRITE_ACCESS=disabled",
+        "PUBLIC_API_WRITE_ACCESS=api-key",
       ].join("\n") + "\n",
     );
 
@@ -426,6 +426,16 @@ async function main() {
       sessionAfterProfileUpdate.json?.session?.user?.image,
       "https://example.com/smoke-avatar.png",
     );
+
+    const crossSiteProfileUpdate = await requestJson(`${adminApiOrigin}/account`, {
+      body: {
+        image: "https://example.com/cross-site-avatar.png",
+        name: "Cross-site Admin Attempt",
+      },
+      cookieJar,
+      method: "PUT",
+    });
+    assert.equal(crossSiteProfileUpdate.response.status, 403);
 
     console.log("Checking routed admin workspace pages...");
 
@@ -642,6 +652,140 @@ async function main() {
     assert.equal(
       publicRecordResponse.json?.record?.values?.title,
       "Smoke article updated",
+    );
+
+    console.log("Checking external API-key record CRUD...");
+
+    const createReadOnlyApiKeyResponse = await requestJson(`${adminApiOrigin}/api-keys`, {
+      body: {
+        accessLevel: "read",
+        label: "Smoke read-only external key",
+      },
+      cookieJar,
+      method: "POST",
+      origin: appOrigin,
+    });
+    assertOk(createReadOnlyApiKeyResponse.response, "Expected read-only API key creation to succeed.");
+    const readOnlyApiKeySecret = createReadOnlyApiKeyResponse.json?.secret;
+
+    assert.equal(typeof readOnlyApiKeySecret, "string");
+
+    const createWriteApiKeyResponse = await requestJson(`${adminApiOrigin}/api-keys`, {
+      body: {
+        accessLevel: "write",
+        label: "Smoke write external key",
+      },
+      cookieJar,
+      method: "POST",
+      origin: appOrigin,
+    });
+    assertOk(createWriteApiKeyResponse.response, "Expected write API key creation to succeed.");
+    assert.equal(createWriteApiKeyResponse.json?.apiKey?.accessLevel, "write");
+    const writeApiKeySecret = createWriteApiKeyResponse.json?.secret;
+
+    assert.equal(typeof writeApiKeySecret, "string");
+
+    const publicRecordsPath = `${appOrigin}/api/collections/${collectionDefinition.name}/records`;
+    const readOnlyWriteAttempt = await requestJson(publicRecordsPath, {
+      body: {
+        values: {
+          body: "# Read-only key should not write",
+          title: "Read-only external attempt",
+        },
+      },
+      headers: {
+        "x-api-key": readOnlyApiKeySecret,
+      },
+      method: "POST",
+    });
+
+    assert.equal(readOnlyWriteAttempt.response.status, 403);
+    assert.equal(readOnlyWriteAttempt.json?.error, "API key does not have write access.");
+
+    const externalCreateResponse = await requestJson(publicRecordsPath, {
+      body: {
+        values: {
+          body: "# External API body",
+          title: "External API article",
+        },
+      },
+      headers: {
+        "x-api-key": writeApiKeySecret,
+      },
+      method: "POST",
+    });
+    assertOk(externalCreateResponse.response, "Expected external write-key record creation to succeed.");
+    assert.equal(externalCreateResponse.json?.access?.type, "api-key");
+    assert.equal(externalCreateResponse.json?.access?.accessLevel, "write");
+    assert.equal(
+      externalCreateResponse.json?.record?.values?.title,
+      "External API article",
+    );
+    const externalRecordId = externalCreateResponse.json?.record?.id;
+
+    assert.equal(typeof externalRecordId, "string");
+
+    const externalUpdateResponse = await requestJson(
+      `${publicRecordsPath}/${externalRecordId}`,
+      {
+        body: {
+          values: {
+            body: "# External API body updated",
+            title: "External API article updated",
+          },
+        },
+        headers: {
+          authorization: `Bearer ${writeApiKeySecret}`,
+        },
+        method: "PUT",
+      },
+    );
+    assertOk(externalUpdateResponse.response, "Expected external bearer-key record update to succeed.");
+    assert.equal(
+      externalUpdateResponse.json?.record?.values?.title,
+      "External API article updated",
+    );
+
+    const externalDeleteResponse = await requestJson(
+      `${publicRecordsPath}/${externalRecordId}`,
+      {
+        headers: {
+          "x-api-key": writeApiKeySecret,
+        },
+        method: "DELETE",
+      },
+    );
+    assertOk(
+      externalDeleteResponse.response,
+      `Expected external write-key record delete to succeed. Body: ${JSON.stringify(
+        externalDeleteResponse.json,
+      )}`,
+    );
+    assert.equal(externalDeleteResponse.json?.deletedRecordId, externalRecordId);
+
+    const externalDeletedRecordResponse = await requestJson(
+      `${publicRecordsPath}/${externalRecordId}`,
+    );
+    assert.equal(externalDeletedRecordResponse.response.status, 404);
+
+    const publicRecordsAfterExternalCrud = await requestJson(publicRecordsPath);
+    assertOk(
+      publicRecordsAfterExternalCrud.response,
+      "Expected public records to load after external CRUD.",
+    );
+    assert.equal(publicRecordsAfterExternalCrud.json?.records?.length, 1);
+
+    const apiKeysAfterExternalCrud = await requestJson(`${adminApiOrigin}/api-keys`, {
+      cookieJar,
+      origin: appOrigin,
+    });
+    assertOk(apiKeysAfterExternalCrud.response, "Expected API key list to load after external CRUD.");
+    assert.equal(apiKeysAfterExternalCrud.json?.runtime?.writeAccess, "api-key");
+    assert.equal(
+      typeof apiKeysAfterExternalCrud.json?.apiKeys?.find(
+        (apiKey) => apiKey.label === "Smoke write external key",
+      )?.lastUsedAt,
+      "string",
     );
 
     console.log("Datamix smoke flow completed successfully.");
