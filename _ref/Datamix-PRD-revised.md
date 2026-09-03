@@ -231,25 +231,43 @@ Do not implement or architect for these in v0 or v1. Listed for awareness only.
 
 ## 7. Monetization Strategy
 
-Datamix is open-source. Revenue is not a v0 requirement, but the architecture should not foreclose these options.
+Datamix is open-source. Revenue is not a v0 requirement. This section records options, not product commitments.
 
-### 7.1 Indirect (Highest Near-Term Probability)
+The preferred long-term outcome is strategic value to Cloudflare, with acquisition as the ultimate goal. Datamix must remain useful without founder-led support.
 
-- Consulting pipeline and agency work - open source as lead generation
-- Developer mindshare, portfolio credibility, and luck surface area
-- Strategic partnerships (Cloudflare sponsorship or acquisition interest)
+### 7.1 Preferred Path: Strategic Acquisition
 
-### 7.2 Direct
+- Establish Datamix as the best content studio for the Cloudflare platform.
+- Drive measurable adoption of Workers, D1, R2, and related Cloudflare services.
+- Build a visible user community and strong public case studies.
+- Pursue Cloudflare sponsorship, co-marketing, marketplace placement, or an eventual acquisition.
+- Keep the codebase, license, trademarks, and contributor rights clean for due diligence.
 
-- GitHub Sponsors / Open Collective for community sponsorship
-- Corporate sponsorships
-- Premium first-party add-ons (commercial plugins): advanced image processing, RBAC workflows, SSO/SAML, enterprise connectors, AI integrations
-- Pre-built premium starter kits for specific verticals
+### 7.2 Low-Operation Revenue Options
 
-### 7.3 Acquisition Path
+- GitHub Sponsors, Open Collective, and direct corporate sponsorships.
+- Commercial licenses for proprietary embedding, resale, or white-label distribution.
+- Paid starter products for specific markets, such as directories, portfolios, publications, or event sites.
+- Paid templates, reference frontends, migration kits, and deployment guides.
+- Carefully selected brand partnerships that do not influence the core product.
+- Audience products, such as a job board, sponsor placements, or a verified agency directory.
 
-- Cloudflare is a natural acquirer - Datamix is purpose-built for their platform
-- Build demonstrable adoption and community before approaching
+### 7.3 Higher-Operation Options
+
+These options can produce more revenue, but they are not preferred because they create an ongoing operating burden.
+
+- A managed Datamix Cloud service with provisioning, upgrades, backups, and monitoring.
+- A control plane for agencies that manage many Datamix installations.
+- Enterprise features such as SAML, SCIM, audit logs, approval workflows, and long-term support releases.
+- Paid support, training, migration work, and implementation services.
+- A plugin marketplace or paid plugin ecosystem.
+
+### 7.4 Product Boundaries
+
+- Do not weaken the open-source product to force payment.
+- Do not build a cloud service, support organization, or plugin marketplace without a separate decision.
+- Prefer revenue that scales with adoption and requires little recurring founder labor.
+- Treat attention, trust, and Cloudflare platform usage as the main strategic assets.
 
 ## 8. Explicitly Out of Scope
 
